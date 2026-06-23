@@ -51,17 +51,24 @@ let gameState = {
   isLoading: false,
   gameStarted: false,
   originalPrompt: '',   // 原始提示词备份
+  customPrompt: '',     // 用户自定义提示词（localStorage）
 };
 
 // ── 初始化 ──
 async function init() {
-  // 加载原始提示词（用作恢复默认的备份）
+  // 加载提示词
   try {
     const resp = await fetch('/api/prompt');
     const data = await resp.json();
     gameState.originalPrompt = data.prompt;
+    // 检查是否有本地自定义提示词
+    const localPrompt = localStorage.getItem('xixi_custom_prompt');
+    if (localPrompt && localPrompt.trim()) {
+      gameState.customPrompt = localPrompt;
+      console.log('已加载本地自定义提示词');
+    }
   } catch (e) {
-    console.warn('无法加载原始提示词:', e);
+    console.warn('无法加载提示词:', e);
   }
 
   // 检查是否已经通过年龄验证
@@ -219,6 +226,7 @@ async function sendMessage(userContent) {
       body: JSON.stringify({
         messages: recentMessages,
         summary: gameState.summary,
+        customPrompt: gameState.customPrompt || undefined,
       }),
     });
 
@@ -555,16 +563,23 @@ function showError(msg) {
 // ── 设置弹窗 ──
 async function openSettings() {
   dom.settingsMsg.textContent = '';
-  // 加载当前提示词
-  try {
-    const resp = await fetch('/api/prompt');
-    const data = await resp.json();
-    dom.promptEditor.value = data.prompt || '';
-    dom.promptLength.textContent = `字数: ${dom.promptEditor.value.length}`;
-  } catch (e) {
-    dom.promptEditor.value = '';
-    dom.settingsMsg.textContent = '⚠ 加载失败';
-    dom.settingsMsg.style.color = 'var(--red)';
+  // 优先显示本地自定义提示词，否则加载默认
+  const localPrompt = localStorage.getItem('xixi_custom_prompt');
+  if (localPrompt && localPrompt.trim()) {
+    dom.promptEditor.value = localPrompt;
+    dom.promptLength.textContent = `字数: ${dom.promptEditor.value.length} (本地版本)`;
+  } else {
+    try {
+      const resp = await fetch('/api/prompt');
+      const data = await resp.json();
+      dom.promptEditor.value = data.prompt || '';
+      dom.promptLength.textContent = `字数: ${dom.promptEditor.value.length}`;
+    } catch (e) {
+      dom.promptEditor.value = '';
+      dom.promptLength.textContent = '字数: 0';
+      dom.settingsMsg.textContent = '⚠ 加载失败';
+      dom.settingsMsg.style.color = 'var(--red)';
+    }
   }
   dom.settingsOverlay.classList.add('active');
 }
@@ -581,29 +596,24 @@ async function savePrompt() {
     return;
   }
 
+  // 保存到 localStorage
+  localStorage.setItem('xixi_custom_prompt', prompt);
+  gameState.customPrompt = prompt;
+
+  // 同时尝试保存到服务器（本地运行时生效，Vercel 上无害）
   dom.settingsMsg.textContent = '⏳ 保存中...';
   dom.settingsMsg.style.color = 'var(--text-dim)';
-
   try {
-    const resp = await fetch('/api/prompt', {
+    await fetch('/api/prompt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
     });
+  } catch (e) { /* Vercel 上忽略 */ }
 
-    if (resp.ok) {
-      dom.settingsMsg.textContent = '✅ 提示词已保存。建议开始新游戏以使用新的提示词。';
-      dom.settingsMsg.style.color = 'var(--green)';
-      // 更新备份
-      gameState.originalPrompt = prompt;
-    } else {
-      const err = await resp.json();
-      throw new Error(err.error);
-    }
-  } catch (e) {
-    dom.settingsMsg.textContent = `❌ 保存失败: ${e.message}`;
-    dom.settingsMsg.style.color = 'var(--red)';
-  }
+  dom.settingsMsg.textContent = '✅ 提示词已保存！开始新游戏后生效。';
+  dom.settingsMsg.style.color = 'var(--green)';
+  dom.promptLength.textContent = `字数: ${prompt.length} (本地版本)`;
 }
 
 async function reloadPrompt() {
@@ -630,19 +640,11 @@ async function resetPrompt() {
   dom.promptEditor.value = gameState.originalPrompt;
   dom.promptLength.textContent = `字数: ${dom.promptEditor.value.length}`;
 
-  // 同时保存到服务器
-  try {
-    await fetch('/api/prompt', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: gameState.originalPrompt }),
-    });
-    dom.settingsMsg.textContent = '✅ 已恢复默认提示词并保存';
-    dom.settingsMsg.style.color = 'var(--green)';
-  } catch (e) {
-    dom.settingsMsg.textContent = '⚠ 已恢复到编辑器，但服务器保存失败';
-    dom.settingsMsg.style.color = 'var(--red)';
-  }
+  // 清除本地自定义提示词
+  localStorage.removeItem('xixi_custom_prompt');
+  gameState.customPrompt = '';
+  dom.settingsMsg.textContent = '✅ 已恢复默认提示词';
+  dom.settingsMsg.style.color = 'var(--green)';
 }
 
 // ── 启动 ──
