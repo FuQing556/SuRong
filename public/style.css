@@ -247,6 +247,36 @@ html, body {
 }
 .top-actions { display: flex; gap: 8px; }
 
+/* ── 上回合结算框 ── */
+.settlement-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold-dim);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  margin-bottom: 10px;
+  min-height: 28px;
+  flex-shrink: 0;
+  position: relative;
+}
+.settlement-box::before {
+  content: '上回合';
+  position: absolute;
+  top: -9px; left: 16px;
+  font-size: 10px;
+  color: var(--gold-dim);
+  background: var(--bg);
+  padding: 0 8px;
+  letter-spacing: 2px;
+}
+#settlement-content {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* ── 故事框 ── */
 #story-box {
   flex: 1;

@@ -15,6 +15,8 @@ const dom = {
   promptLength: $('#prompt-length'),
   settingsMsg: $('#settings-msg'),
   // 游戏
+  settlementContent: $('#settlement-content'),
+  settlementBox: $('#settlement-box'),
   storyContent: $('#story-content'),
   initialPlaceholder: $('#initial-placeholder'),
   loadingIndicator: $('#loading-indicator'),
@@ -189,6 +191,7 @@ async function startNewGame() {
   `;
   dom.initialPlaceholder = $('#initial-placeholder');
   dom.errorBox.classList.add('hidden');
+  dom.settlementContent.textContent = '—';
   updateStatusDisplay({});
   updateVariablesDisplay({});
   updateOptionButtons([]);
@@ -258,9 +261,7 @@ async function sendMessage(userContent) {
 // ── 处理选择 ──
 async function handleChoice(num) {
   if (gameState.isLoading) return;
-  // 强制场景跳转指令：直接嵌入用户消息，AI 无法忽略
-  const jumpCmd = '\n\n【场景跳转指令 — 优先级最高】结算完我的选择后，立即跳到一个完全不同的新场景。新的时间（至少过了一天或换了一个时段）、新的地点、新的事件。不要停留在当前场景。不要写同一事件的延续。';
-  await sendMessage(`选择 ${num}${jumpCmd}`);
+  await sendMessage(`选择 ${num}`);
 }
 
 // ── 重试 ──
@@ -321,6 +322,7 @@ async function maybeSummarize() {
 function parseAIResponse(text) {
   const result = {
     sceneType: '',
+    settlement: '',
     situation: '',
     options: [],
     status: {},
@@ -332,6 +334,16 @@ function parseAIResponse(text) {
   const sceneMatch = text.match(/\[场景类型[：:]\s*(.+?)\]/);
   if (sceneMatch) {
     result.sceneType = sceneMatch[1].trim();
+  }
+
+  // 0.5 提取上回合结算（支持跨行）
+  const settleMatch = text.match(/上回合[：:]\s*([\s\S]*?)(?=现状[：:])/);
+  if (settleMatch) {
+    result.settlement = settleMatch[1].trim();
+    // 跳过"游戏开始"这种无意义结算
+    if (result.settlement === '游戏开始。' || result.settlement === '游戏开始') {
+      result.settlement = '';
+    }
   }
 
   // 1. 提取现状
@@ -433,6 +445,15 @@ function renderGameState(parsed) {
   // 切换场景图片
   if (parsed.sceneType) {
     switchSceneImage(parsed.sceneType);
+  }
+
+  // 渲染上回合结算
+  if (parsed.settlement) {
+    dom.settlementContent.textContent = parsed.settlement;
+    dom.settlementBox.style.display = '';
+  } else if (!parsed.settlement && !parsed.situation) {
+    // 初始状态，隐藏结算框
+    dom.settlementBox.style.display = 'none';
   }
 
   // 渲染现状
