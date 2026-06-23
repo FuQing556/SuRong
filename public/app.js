@@ -56,30 +56,28 @@ let gameState = {
 
 // ── 初始化 ──
 async function init() {
-  // 加载提示词
+  // 先绑定事件（确保按钮立即可点击，不等待网络请求）
+  bindEvents();
+
+  // 检查是否已经通过年龄验证
+  if (localStorage.getItem('xixi_age_verified') === 'true') {
+    dom.warningOverlay.classList.remove('active');
+    dom.prologueOverlay.classList.add('active');
+  }
+
+  // 后台加载提示词（不阻塞 UI）
   try {
     const resp = await fetch('/api/prompt');
     const data = await resp.json();
     gameState.originalPrompt = data.prompt;
-    // 检查是否有本地自定义提示词
     const localPrompt = localStorage.getItem('xixi_custom_prompt');
     if (localPrompt && localPrompt.trim()) {
       gameState.customPrompt = localPrompt;
       console.log('已加载本地自定义提示词');
     }
   } catch (e) {
-    console.warn('无法加载提示词:', e);
+    console.warn('无法加载提示词（不影响游戏功能）:', e);
   }
-
-  // 检查是否已经通过年龄验证
-  if (localStorage.getItem('xixi_age_verified') === 'true') {
-    dom.warningOverlay.classList.remove('active');
-    // 老玩家跳过警告，但序章仍然展示（每次打开页面都情怀一波）
-    dom.prologueOverlay.classList.add('active');
-  }
-
-  // 事件绑定
-  bindEvents();
 }
 
 // ── 事件绑定 ──
@@ -260,7 +258,9 @@ async function sendMessage(userContent) {
 // ── 处理选择 ──
 async function handleChoice(num) {
   if (gameState.isLoading) return;
-  await sendMessage(`选择 ${num}`);
+  // 强制场景跳转指令：直接嵌入用户消息，AI 无法忽略
+  const jumpCmd = '\n\n【场景跳转指令 — 优先级最高】结算完我的选择后，立即跳到一个完全不同的新场景。新的时间（至少过了一天或换了一个时段）、新的地点、新的事件。不要停留在当前场景。不要写同一事件的延续。';
+  await sendMessage(`选择 ${num}${jumpCmd}`);
 }
 
 // ── 重试 ──
