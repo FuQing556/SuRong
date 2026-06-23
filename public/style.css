@@ -253,14 +253,14 @@ html, body {
   border: 1px solid var(--border);
   border-left: 3px solid var(--gold-dim);
   border-radius: var(--radius);
-  padding: 10px 16px;
-  margin-bottom: 10px;
+  padding: 16px 16px 10px 16px;
+  margin-bottom: 16px;
   min-height: 28px;
   flex-shrink: 0;
   position: relative;
 }
 .settlement-box::before {
-  content: '上回合';
+  content: '上回合结算';
   position: absolute;
   top: -9px; left: 16px;
   font-size: 10px;
@@ -299,6 +299,7 @@ html, body {
   background: var(--bg-panel);
   padding: 0 8px;
   letter-spacing: 2px;
+  z-index: 1;
 }
 #story-content {
   font-size: 16px;
@@ -473,6 +474,37 @@ html, body {
 .vars-grid.collapsed { display: none; }
 .var-item .status-label { font-size: 10px; color: var(--text-dim); }
 .var-item .status-value { font-size: 12px; }
+
+/* ── 成就弹窗动画 ── */
+.achievement-toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 2px solid var(--gold);
+  border-radius: 12px; padding: 12px 24px;
+  display: flex; align-items: center; gap: 10px;
+  z-index: 2000;
+  box-shadow: 0 0 30px rgba(201,169,110,.3);
+  animation: achSlideIn .5s ease, achSlideOut .5s ease 3s forwards;
+}
+.achievement-toast.hidden { display: none; }
+.ach-toast-icon { font-size: 28px; }
+#ach-toast-text { font-size: 15px; color: var(--gold); font-weight: 600; }
+@keyframes achSlideIn  { from { opacity: 0; transform: translateX(-50%) translateY(-40px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes achSlideOut { from { opacity: 1; } to { opacity: 0; transform: translateX(-50%) translateY(-40px); } }
+
+/* ── 成就面板 ── */
+.achievements-modal { max-width: 480px; }
+.achievements-modal h2 { margin-bottom: 16px; }
+.ach-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; margin-bottom: 4px;
+  border-radius: 6px; background: var(--bg-card);
+  font-size: 14px;
+}
+.ach-item.locked { opacity: .35; }
+.ach-item .ach-icon { font-size: 20px; flex-shrink: 0; }
+.ach-item .ach-name { flex: 1; }
+.ach-item .ach-date { font-size: 11px; color: var(--text-dim); }
 
 /* ── 响应式 (移动端) ── */
 @media (max-width: 900px) {

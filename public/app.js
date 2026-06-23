@@ -42,8 +42,90 @@ const dom = {
   varEvents: $('#var-events'),
 };
 
+// ── 成就定义 ──
+const ACHIEVEMENTS = {
+  '坚韧不拔': { icon: '💪', desc: '压力值曾达到90+但未崩溃' },
+  '情报女王': { icon: '👁️', desc: '情报进展≥5' },
+  '梦红尘的藏品': { icon: '💎', desc: '梦红尘好感≥70' },
+  '笑红尘的认可': { icon: '⚔️', desc: '笑红尘态度≥50' },
+  '行走的悬崖': { icon: '🪢', desc: '暴露风险≥80但未被揭穿' },
+  '反击者': { icon: '🗡️', desc: '成功设局反杀至少一次' },
+  '幸存者': { icon: '🍀', desc: '轮次≥30且未触发任何结局' },
+  '崩坏': { icon: '💔', desc: '触发任一结局' },
+  '极限操作': { icon: '🎲', desc: '孤注一掷选项成功' },
+  '情报商人': { icon: '💰', desc: '用情报碎片完成至少一次交易' },
+};
+
+// ── 成就管理 ──
+function getUnlockedAchievements() {
+  try {
+    return JSON.parse(localStorage.getItem('xixi_achievements') || '{}');
+  } catch { return {}; }
+}
+
+function saveAchievements(data) {
+  localStorage.setItem('xixi_achievements', JSON.stringify(data));
+}
+
+function unlockAchievement(name) {
+  const all = getUnlockedAchievements();
+  if (all[name]) return false; // 已解锁
+  all[name] = new Date().toISOString().slice(0, 10);
+  saveAchievements(all);
+  showAchievementToast(name);
+  return true;
+}
+
+function showAchievementToast(name) {
+  const ach = ACHIEVEMENTS[name];
+  const toast = $('#achievement-toast');
+  $('#ach-toast-text').textContent = `${ach?.icon || '🏆'} ${name}`;
+  toast.classList.remove('hidden');
+  // 重新触发动画
+  toast.style.animation = 'none';
+  toast.offsetHeight;
+  toast.style.animation = 'achSlideIn .5s ease, achSlideOut .5s ease 3s forwards';
+  setTimeout(() => toast.classList.add('hidden'), 3500);
+}
+
+function checkAchievementsFromResponse(text) {
+  // 解析 AI 输出中的成就解锁标记
+  const matches = text.matchAll(/【[🏆🏅⭐🎖️]?\s*成就解锁[：:]\s*(.+?)】/g);
+  for (const m of matches) {
+    const name = m[1].trim();
+    if (ACHIEVEMENTS[name]) {
+      unlockAchievement(name);
+    }
+  }
+  // 也检查变量追踪中的成就行
+  const achLine = text.match(/成就[：:]\s*(.+)/);
+  if (achLine) {
+    const names = achLine[1].split(/[\/,，]/).map(s => s.trim()).filter(Boolean);
+    for (const name of names) {
+      if (name !== '无' && ACHIEVEMENTS[name]) {
+        unlockAchievement(name);
+      }
+    }
+  }
+}
+
+function renderAchievementsPanel() {
+  const all = getUnlockedAchievements();
+  const list = $('#achievements-list');
+  const entries = Object.entries(ACHIEVEMENTS);
+  list.innerHTML = entries.map(([name, ach]) => {
+    const unlocked = all[name];
+    return `
+      <div class="ach-item${unlocked ? '' : ' locked'}">
+        <span class="ach-icon">${unlocked ? ach.icon : '🔒'}</span>
+        <span class="ach-name">${name} — ${ach.desc}</span>
+        ${unlocked ? `<span class="ach-date">${unlocked}</span>` : ''}
+      </div>`;
+  }).join('');
+}
+
 // ── 游戏状态 ──
-const KEEP_ROUNDS = 8; // 保留最近 N 回合的完整对话
+const KEEP_ROUNDS = 8;
 
 let gameState = {
   fullHistory: [],      // 全部消息 [{role, content}]
@@ -140,6 +222,26 @@ function bindEvents() {
   $('#btn-prologue-start').addEventListener('click', () => {
     dom.prologueOverlay.classList.remove('active');
     startNewGame();
+  });
+
+  // 跳过序章
+  $('#btn-prologue-skip').addEventListener('click', () => {
+    dom.prologueOverlay.classList.remove('active');
+    startNewGame();
+  });
+
+  // 成就面板
+  $('#btn-achievements').addEventListener('click', () => {
+    renderAchievementsPanel();
+    $('#achievements-overlay').classList.add('active');
+  });
+  $('#btn-close-achievements').addEventListener('click', () => {
+    $('#achievements-overlay').classList.remove('active');
+  });
+  $('#achievements-overlay').addEventListener('click', (e) => {
+    if (e.target === $('#achievements-overlay')) {
+      $('#achievements-overlay').classList.remove('active');
+    }
   });
 
   // 序章点击外部不关闭（必须点按钮）
@@ -244,6 +346,9 @@ async function sendMessage(userContent) {
     // 解析并渲染
     const parsed = parseAIResponse(data.content);
     renderGameState(parsed);
+
+    // 检查成就解锁
+    checkAchievementsFromResponse(data.content);
 
     gameState.gameStarted = true;
 

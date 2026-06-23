@@ -47,6 +47,7 @@
       </div>
       <div class="prologue-footer">
         <button id="btn-prologue-start" class="btn btn-primary btn-start">▶ 进入游戏</button>
+        <button id="btn-prologue-skip" class="btn btn-ghost" style="margin-top:8px;">跳过序章，直接开始</button>
       </div>
     </div>
   </div>
@@ -86,6 +87,7 @@
       <header id="top-bar">
         <h1 class="game-title">互动叙事</h1>
         <div class="top-actions">
+          <button id="btn-achievements" class="btn btn-small" title="成就记录">🏆 成就</button>
           <button id="btn-new-game" class="btn btn-small" title="开始新游戏">🔄 新游戏</button>
           <button id="btn-settings" class="btn btn-small" title="编辑提示词">⚙️ 设置</button>
         </div>
@@ -185,6 +187,22 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- 成就解锁弹窗 -->
+  <div id="achievement-toast" class="achievement-toast hidden">
+    <span class="ach-toast-icon">🏆</span>
+    <span id="ach-toast-text"></span>
+  </div>
+
+  <!-- 成就面板 -->
+  <div id="achievements-overlay" class="overlay">
+    <div class="modal achievements-modal">
+      <h2>🏆 成就记录</h2>
+      <div id="achievements-list"></div>
+      <br>
+      <button id="btn-close-achievements" class="btn btn-secondary">关闭</button>
+    </div>
   </div>
 
   <script src="app.js"></script>
