@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>互动叙事 · 苏蓉蓉</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ═══════════ 18+ 警告弹窗 ═══════════ -->
+  <div id="warning-overlay" class="overlay active">
+    <div class="modal warning-modal">
+      <div class="warning-icon">🔞</div>
+      <h1>内容警告</h1>
+      <p>本游戏包含成人向黑暗叙事内容，包括但不限于：</p>
+      <ul>
+        <li>权力压迫与羞辱</li>
+        <li>性暗示与性交易情节</li>
+        <li>心理操控与社交暴力</li>
+      </ul>
+      <p class="warning-note">所有内容均为虚构叙事，请在心理上做好相应准备。</p>
+      <p class="warning-age">仅限 <strong>18岁以上</strong> 玩家进入</p>
+      <div class="warning-buttons">
+        <button id="btn-enter" class="btn btn-primary">我已满18岁，进入游戏</button>
+        <button id="btn-leave" class="btn btn-ghost">离开</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 序章：背景故事 ═══════════ -->
+  <div id="prologue-overlay" class="overlay">
+    <div class="modal prologue-modal">
+      <div class="prologue-header">
+        <span class="prologue-icon">📖</span>
+        <h2>序章 · 铃兰落入荆棘丛</h2>
+      </div>
+      <div class="prologue-body">
+        <p>苏蓉蓉，十八岁，史莱克学院内门高年级弟子，往届史莱克七怪之一。</p>
+        <p>武魂<span class="highlight">圣光铃兰</span>——极致之光，顶级治愈系，纯辅助。六十四级魂帝。周身伴有淡淡铃兰花香。草绿色眼睛，橘黄色头发，身形娇小，外貌倾国倾城。</p>
+        <p>她被派往<span class="highlight">日月帝国皇家魂导师学院</span>做交换生。表面是学术交流，实则是史莱克学院的<span class="highlight">政治筹码</span>。母舰需要她"出事"，以换取外交主动权。</p>
+        <p>她是被抛弃的棋子，也是潜伏的先发队。在霍雨浩到来之前，她必须获取足够的情报与功绩，才能换取撤离资格。</p>
+        <p>明面上，她是珍贵的活体研究样本——伤害她等于"损害帝国资产"。暗地里，贵族学员、军方、间谍对她进行系统性的羞辱试探，在不影响研究数据的前提下挑战她的底线。</p>
+        <p>她在<span class="highlight">"被羞辱"</span>和<span class="highlight">"被玩坏"</span>之间走钢丝。身体可以交易，但必须换到足够价值。底线不是清白，是还能站着走出日月帝国。</p>
+        <hr>
+        <p class="prologue-question">她的命运，由你决定。</p>
+      </div>
+      <div class="prologue-footer">
+        <button id="btn-prologue-start" class="btn btn-primary btn-start">▶ 进入游戏</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 设置弹窗 ═══════════ -->
+  <div id="settings-overlay" class="overlay">
+    <div class="modal settings-modal">
+      <h2>⚙️ 提示词设置</h2>
+      <p class="settings-hint">修改后点击保存，下次对话即生效。修改前请备份原版。</p>
+      <textarea id="prompt-editor" spellcheck="false"></textarea>
+      <div class="settings-info">
+        <span id="prompt-length">字数: 0</span>
+      </div>
+      <div class="settings-buttons">
+        <button id="btn-save-prompt" class="btn btn-primary">💾 保存到服务器</button>
+        <button id="btn-reload-prompt" class="btn btn-secondary">🔄 重新加载</button>
+        <button id="btn-reset-prompt" class="btn btn-ghost">↺ 恢复默认</button>
+        <button id="btn-close-settings" class="btn btn-ghost">关闭</button>
+      </div>
+      <div id="settings-msg"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 主游戏界面 ═══════════ -->
+  <div id="game-container">
+    <!-- 左侧: 角色图片 -->
+    <aside id="image-panel">
+      <div class="image-frame">
+        <img src="日常.png" alt="苏蓉蓉" id="character-image">
+        <div class="image-caption">苏蓉蓉 · 圣光铃兰</div>
+      </div>
+    </aside>
+
+    <!-- 右侧: 游戏内容 -->
+    <main id="content-panel">
+      <!-- 顶部标题栏 -->
+      <header id="top-bar">
+        <h1 class="game-title">互动叙事</h1>
+        <div class="top-actions">
+          <button id="btn-new-game" class="btn btn-small" title="开始新游戏">🔄 新游戏</button>
+          <button id="btn-settings" class="btn btn-small" title="编辑提示词">⚙️ 设置</button>
+        </div>
+      </header>
+
+      <!-- 故事框 -->
+      <section id="story-box">
+        <div id="story-content">
+          <div id="initial-placeholder">
+            <p class="placeholder-text">命运之轮等待转动</p>
+            <button id="btn-start-game" class="btn btn-primary btn-start">▶ 开始游戏</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 加载指示器 -->
+      <div id="loading-indicator" class="hidden">
+        <div class="spinner"></div>
+        <span>命运正在编织中...</span>
+      </div>
+
+      <!-- 错误提示 -->
+      <div id="error-box" class="hidden">
+        <p id="error-message"></p>
+        <button id="btn-retry" class="btn btn-secondary">重试</button>
+      </div>
+
+      <!-- 选项按钮 -->
+      <section id="options-container">
+        <div class="options-grid">
+          <button class="option-btn" data-index="0">
+            <span class="option-num">1</span>
+            <span class="option-action"></span>
+            <span class="option-cost"></span>
+          </button>
+          <button class="option-btn" data-index="1">
+            <span class="option-num">2</span>
+            <span class="option-action"></span>
+            <span class="option-cost"></span>
+          </button>
+          <button class="option-btn" data-index="2">
+            <span class="option-num">3</span>
+            <span class="option-action"></span>
+            <span class="option-cost"></span>
+          </button>
+          <button class="option-btn" data-index="3">
+            <span class="option-num">4</span>
+            <span class="option-action"></span>
+            <span class="option-cost"></span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 状态栏 -->
+      <section id="status-panel">
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-label">魂力残余</span>
+            <span class="status-value" id="status-soul">—</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">异常状态</span>
+            <span class="status-value" id="status-abnorm">—</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">压力值</span>
+            <span class="status-value" id="status-pressure">—</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">轮次</span>
+            <span class="status-value" id="status-round">—</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">潜伏任务</span>
+            <span class="status-value" id="status-mission">—</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">待办事项</span>
+            <span class="status-value" id="status-todo">—</span>
+          </div>
+        </div>
+        <div id="variables-panel" class="variables-panel">
+          <div class="vars-toggle" id="vars-toggle">📊 变量追踪 ▼</div>
+          <div class="vars-grid" id="vars-grid">
+            <div class="status-item var-item"><span class="status-label">梦红尘好感</span><span class="status-value" id="var-meng">—</span></div>
+            <div class="status-item var-item"><span class="status-label">笑红尘态度</span><span class="status-value" id="var-xiao">—</span></div>
+            <div class="status-item var-item"><span class="status-label">暴露风险</span><span class="status-value" id="var-expose">—</span></div>
+            <div class="status-item var-item"><span class="status-label">把柄积累</span><span class="status-value" id="var-leverage">—</span></div>
+            <div class="status-item var-item"><span class="status-label">情报进展</span><span class="status-value" id="var-intel">—</span></div>
+            <div class="status-item var-item"><span class="status-label">重大事件</span><span class="status-value" id="var-events">—</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
