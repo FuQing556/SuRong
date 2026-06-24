@@ -1,0 +1,11 @@
+/* 🌃 子夜 — 锐利直角、霓虹发光、星空感 */
+:root{--bg:#0a0a18;--bg-panel:#0f0f20;--bg-card:#151530;--bg-hover:#1e1e40;--border:#2a2a50;--border-focus:#7c4dff;--text:#c0c0e0;--text-dim:#5a5a90;--text-bright:#e8e8ff;--gold:#b388ff;--gold-dim:#5a40a0;--purple:#7c4dff;--red:#ff5370;--green:#69f0ae;--option-1:#651fff;--option-2:#304ffe;--option-3:#00bfa5;--option-4:#ff4081;--radius:2px}
+body{font-family:'Consolas','Courier New',monospace;font-size:13px}
+.game-title{text-shadow:0 0 30px rgba(124,77,255,.4);letter-spacing:8px;text-transform:uppercase;font-size:18px}
+.option-btn{border:1px solid var(--border);transition:all .2s;position:relative}
+.option-btn::before{content:'';position:absolute;top:0;left:0;width:0;height:100%;background:var(--gold);opacity:.05;transition:width .3s}
+.option-btn:hover::before{width:100%}
+.option-btn:hover{border-color:var(--gold);box-shadow:0 0 15px rgba(124,77,255,.2)}
+.image-frame{border:1px solid var(--purple);box-shadow:0 0 30px rgba(124,77,255,.1),inset 0 0 30px rgba(124,77,255,.03)}
+.status-item{border:1px solid var(--border)}
+#top-bar{border-bottom:1px solid var(--purple)}

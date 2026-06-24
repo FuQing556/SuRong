@@ -1,0 +1,9 @@
+/* 🌊 深海 — 圆角、波浪感、宽大舒展 */
+:root{--bg:#0a1018;--bg-panel:#0d1520;--bg-card:#111d2a;--bg-hover:#162638;--border:#1a3a4a;--border-focus:#00bcd4;--text:#b8d0d8;--text-dim:#406878;--text-bright:#e0f4f8;--gold:#00bcd4;--gold-dim:#006878;--purple:#5c9ce0;--red:#e05555;--green:#3bb878;--option-1:#0097a7;--option-2:#0277bd;--option-3:#00897b;--option-4:#d8434f;--radius:16px}
+body{font-family:'Segoe UI',sans-serif}
+.option-btn{border-radius:20px;border-width:2px;transition:all .3s ease}
+.option-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,188,212,.15)}
+.image-frame{border-radius:16px;overflow:hidden}
+#top-bar{border-bottom:2px solid var(--border-focus);background:linear-gradient(180deg,var(--bg-panel),transparent)}
+.status-item{border-radius:12px;border:1px solid var(--border)}
+.overlay-panel{border-radius:16px}

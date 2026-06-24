@@ -1,0 +1,10 @@
+/* 🌅 日落 — 温暖渐变、大字体、发光边框 */
+:root{--bg:#1a1008;--bg-panel:#221810;--bg-card:#2d2018;--bg-hover:#382820;--border:#4a3020;--border-focus:#ff9800;--text:#d8c8b8;--text-dim:#8a6a50;--text-bright:#f8e8d8;--gold:#ff9800;--gold-dim:#8a5000;--purple:#e8734a;--red:#f44336;--green:#8bc34a;--option-1:#e65100;--option-2:#bf360c;--option-3:#ff6f00;--option-4:#c0392b;--radius:6px}
+body{font-family:'Segoe UI',sans-serif;font-size:15px}
+.game-title{color:var(--gold);text-shadow:0 0 20px rgba(255,152,0,.3);font-size:22px}
+.option-btn{border:2px solid transparent;border-image:linear-gradient(135deg,var(--gold-dim),var(--gold)) 1;transition:all .3s}
+.option-btn:hover{box-shadow:0 0 20px rgba(255,152,0,.2);transform:scale(1.02)}
+.image-frame{border:2px solid var(--gold-dim);box-shadow:0 0 30px rgba(255,152,0,.1)}
+.status-item{border-bottom:1px solid var(--gold-dim)}
+#top-bar{background:linear-gradient(180deg,rgba(255,152,0,.05),transparent);border-bottom:1px solid var(--gold-dim)}
+.settlement-box{border-left:3px solid var(--gold)}

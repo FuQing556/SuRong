@@ -1,0 +1,11 @@
+/* ✨ 鎏金 — 双层边框、华丽装饰、衬线体 */
+:root{--bg:#0d0a04;--bg-panel:#141008;--bg-card:#1c160c;--bg-hover:#282014;--border:#3a2e18;--border-focus:#d4a853;--text:#d0c8b0;--text-dim:#7a6a40;--text-bright:#f8f0d8;--gold:#d4a853;--gold-dim:#8a6a28;--purple:#b8963c;--red:#c05040;--green:#6a9a40;--option-1:#9a7830;--option-2:#7a5a20;--option-3:#8a6a30;--option-4:#b85a3a;--radius:2px}
+body{font-family:Georgia,'Times New Roman',serif;font-size:14px}
+.game-title{font-family:Georgia,serif;font-weight:700;letter-spacing:6px;text-transform:uppercase;color:var(--gold);border-top:2px solid var(--gold-dim);border-bottom:2px solid var(--gold-dim);padding:8px 0;display:inline-block}
+.option-btn{border:2px solid var(--border);outline:1px solid var(--gold-dim);outline-offset:-4px;transition:all .3s}
+.option-btn:hover{outline-color:var(--gold);border-color:var(--gold);box-shadow:0 0 20px rgba(212,168,83,.15)}
+.image-frame{border:3px double var(--gold-dim);padding:4px}
+.status-item{border:1px solid var(--gold-dim)}
+.overlay-panel{border:2px solid var(--gold-dim);outline:1px solid var(--border);outline-offset:-6px}
+.settlement-box{border-left:4px double var(--gold)}
+#top-bar{border-bottom:2px solid var(--gold-dim)}

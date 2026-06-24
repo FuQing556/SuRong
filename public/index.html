@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* https://api.deepseek.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* https://api.deepseek.com;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -34,26 +35,69 @@
     </div>
   </div>
 
-  <!-- ═══════════ 序章：背景故事 ═══════════ -->
-  <div id="prologue-overlay" class="overlay">
-    <div class="modal prologue-modal">
-      <div class="prologue-header">
-        <span class="prologue-icon">📖</span>
-        <h2>序章 · 铃兰落入荆棘丛</h2>
+  <!-- ═══════════ 存档选择页 ═══════════ -->
+  <div id="save-selector-overlay" class="overlay">
+    <div class="modal save-selector-modal">
+      <h2>📂 选择存档</h2>
+      <p class="settings-hint">每个存档对应一个独立的故事世界，使用不同的提示词和设定。</p>
+      <div class="save-grid" id="save-grid">
+        <!-- 动态生成存档卡片 -->
       </div>
-      <div class="prologue-body">
-        <p>苏蓉蓉，十八岁，史莱克学院内门高年级弟子，往届史莱克七怪之一。</p>
-        <p>武魂<span class="highlight">圣光铃兰</span>——极致之光，顶级治愈系，纯辅助。六十四级魂帝。周身伴有淡淡铃兰花香。草绿色眼睛，橘黄色头发，身形娇小，外貌倾国倾城。</p>
-        <p>她被派往<span class="highlight">日月帝国皇家魂导师学院</span>做交换生。表面是学术交流，实则是史莱克学院的<span class="highlight">政治筹码</span>。母舰需要她"出事"，以换取外交主动权。</p>
-        <p>她是被抛弃的棋子，也是潜伏的先发队。在霍雨浩到来之前，她必须获取足够的情报与功绩，才能换取撤离资格。</p>
-        <p>明面上，她是珍贵的活体研究样本——伤害她等于"损害帝国资产"。暗地里，贵族学员、军方、间谍对她进行系统性的羞辱试探，在不影响研究数据的前提下挑战她的底线。</p>
-        <p>她在<span class="highlight">"被羞辱"</span>和<span class="highlight">"被玩坏"</span>之间走钢丝。身体可以交易，但必须换到足够价值。底线不是清白，是还能站着走出日月帝国。</p>
-        <hr>
-        <p class="prologue-question">她的命运，由你决定。</p>
+      <div class="save-selector-footer">
+        <button id="btn-create-save" class="btn btn-primary">＋ 创建新存档</button>
       </div>
-      <div class="prologue-footer">
-        <button id="btn-prologue-start" class="btn btn-primary btn-start">▶ 进入游戏</button>
-        <button id="btn-prologue-skip" class="btn btn-ghost" style="margin-top:8px;">跳过序章，直接开始</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ 创建新存档弹窗 ═══════════ -->
+  <div id="create-save-overlay" class="overlay">
+    <div class="modal create-save-modal">
+      <h2>🆕 创建新存档</h2>
+      <p class="settings-hint">填写基本设定，AI 将自动生成完整的故事提示词。</p>
+      <div class="create-save-form">
+        <div class="form-row">
+          <label>存档名称 <span class="required">*</span></label>
+          <input id="new-save-name" placeholder="例如：修仙·宗门争锋" maxlength="30">
+        </div>
+        <div class="form-row">
+          <label>世界观背景 <span class="required">*</span></label>
+          <textarea id="new-save-world" placeholder="例如：修真界，正邪对立，灵气复苏时代，宗门林立..." rows="2"></textarea>
+        </div>
+        <div class="form-row">
+          <label>主角设定 <span class="required">*</span></label>
+          <textarea id="new-save-protagonist" placeholder="例如：被诬陷杀害师父的天才弟子，身怀禁忌功法，被逐出师门..." rows="2"></textarea>
+        </div>
+        <div class="form-row">
+          <label>核心冲突</label>
+          <input id="new-save-conflict" placeholder="例如：洗清冤屈 / 堕入魔道 / 复仇" maxlength="80">
+        </div>
+        <div class="form-row">
+          <label>风格倾向</label>
+          <div class="style-chips" id="style-chips">
+            <button class="chip" data-style="冒险战斗">⚔ 冒险战斗</button>
+            <button class="chip" data-style="潜行谍战">🕵 潜行谍战</button>
+            <button class="chip" data-style="社交博弈">🎭 社交博弈</button>
+            <button class="chip" data-style="沉沦堕落">🌑 沉沦堕落</button>
+            <button class="chip" data-style="综合平衡">⚖ 综合平衡</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>额外要求（可选）</label>
+          <textarea id="new-save-extra" placeholder="例如：需要有炼丹系统；加入门派大比；反派可以洗白..." rows="2"></textarea>
+        </div>
+      </div>
+      <div class="create-save-footer">
+        <button id="btn-generate-prompt" class="btn btn-primary">🤖 AI 生成提示词</button>
+        <button id="btn-cancel-create" class="btn btn-ghost">取消</button>
+      </div>
+      <div id="create-save-msg"></div>
+      <div id="generated-preview" class="hidden">
+        <h3>📝 生成预览</h3>
+        <textarea id="generated-prompt-preview" rows="8" readonly></textarea>
+        <div class="create-save-footer">
+          <button id="btn-confirm-save" class="btn btn-primary">✅ 确认创建</button>
+          <button id="btn-regenerate" class="btn btn-secondary">🔄 重新生成</button>
+        </div>
       </div>
     </div>
   </div>
@@ -68,33 +112,79 @@
         <span id="prompt-length">字数: 0</span>
       </div>
       <div class="settings-buttons">
-        <button id="btn-save-prompt" class="btn btn-primary">💾 保存到服务器</button>
+        <button id="btn-save-prompt" class="btn btn-primary">💾 保存提示词</button>
         <button id="btn-reload-prompt" class="btn btn-secondary">🔄 重新加载</button>
         <button id="btn-reset-prompt" class="btn btn-ghost">↺ 恢复默认</button>
         <button id="btn-close-settings" class="btn btn-ghost">关闭</button>
       </div>
       <div id="settings-msg"></div>
+
+      <!-- 模板字段编辑器 -->
+      <div class="field-editor-section" id="field-editor-section">
+        <h3 style="margin:16px 0 8px;color:var(--gold);">🎨 界面风格</h3>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+          <select id="theme-selector" style="flex:1;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;">
+            <option value="dark">🌙 暗色</option>
+            <option value="light">☀ 明亮</option>
+            <option value="xianxia">🏯 修仙古风</option>
+            <option value="cyber">💜 赛博霓虹</option>
+            <option value="ocean">🌊 深海</option>
+            <option value="forest">🌿 森林</option>
+            <option value="sunset">🌅 日落</option>
+            <option value="midnight">🌃 子夜</option>
+            <option value="sakura">🌸 樱花</option>
+            <option value="monochrome">⬜ 黑白</option>
+            <option value="golden">✨ 鎏金</option>
+          </select>
+          <button id="btn-apply-theme" class="btn btn-secondary" style="flex-shrink:0;">应用</button>
+        </div>
+
+        <h3 style="margin:16px 0 8px;color:var(--gold);">🖼 场景图片管理</h3>
+        <p class="settings-hint">点击替换按钮选择本地图片，更换对应场景类型的展示图。</p>
+        <div id="image-manager" class="image-manager">
+          <!-- 动态生成图片替换行 -->
+        </div>
+
+        <h3 style="margin:16px 0 8px;color:var(--gold);">📝 模板字段编辑</h3>
+        <p class="settings-hint">修改字段的标签、图标、格式提示。保存后自动同步到AI输出格式。</p>
+        <div id="field-editor-container"></div>
+        <div class="settings-buttons" style="margin-top:12px;">
+          <button id="btn-save-fields" class="btn btn-primary">💾 保存字段并同步提示词</button>
+          <button id="btn-add-field" class="btn btn-secondary">+ 添加字段</button>
+        </div>
+        <div id="fields-msg"></div>
+      </div>
     </div>
   </div>
 
   <!-- ═══════════ 主游戏界面 ═══════════ -->
   <div id="game-container">
-    <!-- 左侧: 角色图片 -->
-    <aside id="image-panel">
+    <!-- 左侧栏：角色图片 + AI对话 -->
+    <aside id="left-panel">
       <div class="image-frame">
         <img src="日常.png" alt="苏蓉蓉" id="character-image">
         <div class="image-caption">苏蓉蓉 · 圣光铃兰</div>
       </div>
+      <div class="ai-chat-box" id="ai-chat-box">
+        <div class="ai-chat-header">💬 实时调整AI</div>
+        <div class="ai-chat-messages" id="ai-chat-messages">
+          <div class="ai-chat-msg system-msg">输入指令实时调整故事方向、修正错误或修改规则。</div>
+        </div>
+        <div class="ai-chat-input-row">
+          <input id="ai-chat-input" placeholder="输入指令..." maxlength="200">
+          <button id="btn-ai-send" class="btn btn-small">发送</button>
+          <button id="btn-ai-clear" class="btn btn-ghost btn-tiny" title="清除所有指令">清除</button>
+        </div>
+      </div>
     </aside>
 
-    <!-- 右侧: 游戏内容 -->
+    <!-- 右侧：游戏内容 -->
     <main id="content-panel">
-      <!-- 顶部标题栏 -->
       <header id="top-bar">
+        <button id="btn-back-saves" class="btn btn-ghost btn-tiny" title="返回存档选择">📂 存档</button>
         <h1 class="game-title">互动叙事</h1>
         <div class="top-actions">
           <button id="btn-achievements" class="btn btn-small" title="成就记录">🏆 成就</button>
-          <button id="btn-new-game" class="btn btn-small" title="开始新游戏">🔄 新游戏</button>
           <button id="btn-settings" class="btn btn-small" title="编辑提示词">⚙️ 设置</button>
         </div>
       </header>
@@ -108,8 +198,7 @@
       <section id="story-box">
         <div id="story-content">
           <div id="initial-placeholder">
-            <p class="placeholder-text">命运之轮等待转动</p>
-            <button id="btn-start-game" class="btn btn-primary btn-start">▶ 开始游戏</button>
+            <p class="placeholder-text">选择一个存档开始游戏</p>
           </div>
         </div>
       </section>
@@ -152,43 +241,16 @@
         </div>
       </section>
 
-      <!-- 状态栏 -->
+      <!-- 状态栏（动态生成） -->
       <section id="status-panel">
-        <div class="status-grid">
-          <div class="status-item">
-            <span class="status-label">魂力残余</span>
-            <span class="status-value" id="status-soul">—</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">异常状态</span>
-            <span class="status-value" id="status-abnorm">—</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">压力值</span>
-            <span class="status-value" id="status-pressure">—</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">轮次</span>
-            <span class="status-value" id="status-round">—</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">潜伏任务</span>
-            <span class="status-value" id="status-mission">—</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">待办事项</span>
-            <span class="status-value" id="status-todo">—</span>
-          </div>
+        <div class="status-grid" id="status-grid">
+          <span class="status-placeholder">加载模板中...</span>
         </div>
+        <div class="resources-row" id="resources-row"></div>
         <div id="variables-panel" class="variables-panel">
           <div class="vars-toggle" id="vars-toggle">📊 变量追踪 ▼</div>
           <div class="vars-grid" id="vars-grid">
-            <div class="status-item var-item"><span class="status-label">梦红尘好感</span><span class="status-value" id="var-meng">—</span></div>
-            <div class="status-item var-item"><span class="status-label">笑红尘态度</span><span class="status-value" id="var-xiao">—</span></div>
-            <div class="status-item var-item"><span class="status-label">暴露风险</span><span class="status-value" id="var-expose">—</span></div>
-            <div class="status-item var-item"><span class="status-label">把柄积累</span><span class="status-value" id="var-leverage">—</span></div>
-            <div class="status-item var-item"><span class="status-label">情报进展</span><span class="status-value" id="var-intel">—</span></div>
-            <div class="status-item var-item"><span class="status-label">重大事件</span><span class="status-value" id="var-events">—</span></div>
+            <span class="status-placeholder">加载模板中...</span>
           </div>
         </div>
       </section>
@@ -212,5 +274,10 @@
   </div>
 
   <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
 </body>
 </html>

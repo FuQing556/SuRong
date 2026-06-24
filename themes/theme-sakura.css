@@ -1,0 +1,11 @@
+/* 🌸 樱花 — 大圆角、柔和阴影、细腻轻盈 */
+:root{--bg:#1a1018;--bg-panel:#241820;--bg-card:#2d2028;--bg-hover:#382830;--border:#4a3040;--border-focus:#f48fb1;--text:#d8c0d0;--text-dim:#8a6078;--text-bright:#f8e0f0;--gold:#f48fb1;--gold-dim:#8a5068;--purple:#ce93d8;--red:#ef5350;--green:#81c784;--option-1:#ad1457;--option-2:#7b1fa2;--option-3:#c2185b;--option-4:#d8436a;--radius:20px}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:14px}
+.game-title{font-weight:300;letter-spacing:6px;color:var(--gold)}
+.option-btn{border-radius:24px;border:2px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.3);transition:all .3s ease}
+.option-btn:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(244,143,177,.2);border-color:var(--gold)}
+.image-frame{border-radius:24px;box-shadow:0 4px 24px rgba(244,143,177,.1);border:2px solid var(--gold-dim)}
+.status-item{border-radius:16px;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+.overlay-panel{border-radius:24px;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+.settlement-box{border-radius:16px;border-left:4px solid var(--gold);background:rgba(244,143,177,.03)}
+#top-bar{border-bottom:1px solid var(--gold-dim)}

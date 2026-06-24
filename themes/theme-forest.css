@@ -1,0 +1,10 @@
+/* 🌿 森林 — 有机圆角、衬线体、自然呼吸感 */
+:root{--bg:#0d140d;--bg-panel:#111a11;--bg-card:#182418;--bg-hover:#1e3020;--border:#263826;--border-focus:#4caf50;--text:#c0d0c0;--text-dim:#5a7a5a;--text-bright:#e0f0e0;--gold:#8bc34a;--gold-dim:#4a7030;--purple:#7cb342;--red:#e57373;--green:#66bb6a;--option-1:#558b2f;--option-2:#33691e;--option-3:#1b5e20;--option-4:#bf5a3a;--radius:10px}
+body{font-family:Georgia,'Times New Roman',serif}
+.game-title{font-family:Georgia,serif;font-style:italic;letter-spacing:4px;color:var(--gold)}
+.option-btn{border-radius:20px 8px 20px 8px;border-left:4px solid var(--gold);transition:all .3s}
+.option-btn:hover{border-left-width:8px;background:var(--bg-hover)}
+.image-frame{border-radius:50% 50% 10px 10px;border:3px solid var(--gold-dim)}
+.status-item{border-radius:20px 8px 20px 8px;border-left:2px solid var(--gold-dim)}
+.overlay-panel{border-radius:20px 8px 20px 8px}
+.settlement-box{border-left:4px solid var(--gold)}

@@ -1,0 +1,8 @@
+/* ☀ 明亮 — 清爽干净、细边、高对比 */
+:root{--bg:#f5f4f0;--bg-panel:#fff;--bg-card:#faf9f6;--bg-hover:#f0eee8;--border:#d5d3cc;--border-focus:#b8a06e;--text:#333;--text-dim:#999;--text-bright:#111;--gold:#8b6914;--gold-dim:#c9a050;--purple:#6c3cb4;--red:#c0392b;--green:#277a3e;--option-1:#5b4cc4;--option-2:#1a73e8;--option-3:#0d8c63;--option-4:#cc5533;--radius:8px}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:14px}
+.option-btn{box-shadow:0 1px 3px rgba(0,0,0,.08);transition:all .2s}
+.option-btn:hover{box-shadow:0 4px 12px rgba(0,0,0,.12);transform:translateY(-1px)}
+.image-frame{box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid var(--border)}
+.status-item{box-shadow:0 1px 2px rgba(0,0,0,.04)}
+#top-bar{box-shadow:0 1px 4px rgba(0,0,0,.04)}

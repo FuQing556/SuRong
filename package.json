@@ -1,15 +1,78 @@
 {
   "name": "xixi-interactive-narrative",
   "version": "1.0.0",
-  "description": "互动叙事游戏 - 苏蓉蓉",
-  "main": "server.js",
+  "description": "互动叙事游戏 · 苏蓉蓉 — 基于DeepSeek API的斗罗大陆世界观互动叙事",
+  "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "electron": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder --win --mac --linux",
+    "postinstall": "node scripts/patch-app-builder.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.xixi.interactive-narrative",
+    "productName": "苏蓉蓉互动叙事",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "public/**/*",
+      "api/**/*",
+      "templates/**/*",
+      "themes/**/*",
+      "server.js",
+      "prompt.txt",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "sign": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icon-512.png",
+      "category": "public.app-category.games"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icon-512.png"
+    },
+    "executableName": "XixiGame",
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    }
   }
 }

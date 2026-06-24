@@ -4,6 +4,10 @@
 
 基于斗罗大陆世界观、DeepSeek API 驱动的互动叙事网页游戏。玩家扮演史莱克学院卧底苏蓉蓉，在日月帝国皇家魂导学院中挣扎求生。
 
+支持两种运行模式：
+- **浏览器模式**：`npm start` → `http://localhost:3000`
+- **桌面应用模式**：`npm run electron` → Electron 窗口（可打包为 .exe）
+
 ```
 前端: HTML/CSS/JS 单页应用
 后端: Node.js Express (本地) / Vercel Serverless (线上)
@@ -15,15 +19,19 @@ AI:   DeepSeek Chat API (deepseek-chat 模型)
 ```
 xixi/
 ├── server.js              # Express 后端：静态文件 + DeepSeek API 代理
-├── prompt.txt             # 游戏提示词（557行，核心资产）
-├── package.json           # Node 依赖
+├── prompt.txt             # 游戏提示词（约630行，核心资产）
+├── package.json           # Node 依赖 + Electron 打包配置
 ├── .env                   # DeepSeek API Key（不上传 GitHub）
 ├── .env.example           # Key 模板
 ├── vercel.json            # Vercel 部署配置
-├── 启动游戏.bat            # 双击启动（Windows）
+├── 启动游戏.bat            # 双击启动浏览器模式（Windows）
+├── 启动Electron.bat        # 双击启动 Electron 桌面模式（Windows）
 ├── 首次安装.bat            # 首次运行装依赖
 ├── 游戏提示词.txt          # 原始提示词备份
 ├── CLAUDE.md              # 本文件
+├── electron/              # Electron 桌面应用
+│   ├── main.js            #   主进程：启动Express + BrowserWindow
+│   └── preload.js         #   预加载脚本（预留IPC）
 ├── api/                   # Vercel Serverless 函数
 │   ├── chat.js            #   对话接口（内置提示词打包）
 │   ├── summarize.js       #   摘要接口
@@ -40,10 +48,36 @@ xixi/
 ## 启动方式
 
 ```bash
-# 本地
+# 浏览器模式（开发/本地）
 npm install
 npm start                  # → http://localhost:3000
 # 或双击 启动游戏.bat
+
+# Electron 桌面模式（开发）
+npm install
+npm run electron           # → Electron 窗口
+# 或双击 启动Electron.bat
+
+# 打包为独立程序
+npm run build:win          # → release/ 目录生成 .exe 安装包 + 便携版
+npm run build:mac          # → release/ 目录生成 .dmg
+npm run build:linux        # → release/ 目录生成 .AppImage
+```
+
+### 打包后分发
+
+打包后的程序在 `release/` 目录：
+- `苏蓉蓉互动叙事 Setup 1.0.0.exe`（安装包，123MB，需安装）
+- `苏蓉蓉互动叙事-1.0.0-win.zip`（便携版，152MB，解压即用）
+- `.env` 文件（含 `DEEPSEEK_API_KEY`），放在 `.exe` 同目录下
+
+对方首次启动后在设置页填入 API Key 即可游玩。无需安装 Node.js 或任何其他依赖。
+
+### 已知问题与解决
+
+**Windows 构建失败（winCodeSign symlink 错误）**：当前 Windows 环境无符号链接权限，electron-builder 解压 winCodeSign 会失败。已通过 `scripts/patch-app-builder.js` 修补 `app-builder.exe`（`-snld` → `-snl-`）。`npm install` 后自动执行。如果构建仍失败，手动运行 `node scripts/patch-app-builder.js`。
+
+**rcedit 不支持中文文件名**：Windows 资源编辑器 rcedit 无法处理含中文的 exe 文件名。已设置 `executableName: 'XixiGame'`（ASCII）。显示名称（ProductName）仍可中文。
 
 # Vercel（需要设置环境变量 DEEPSEEK_API_KEY）
 # 关联 GitHub 仓库后自动部署

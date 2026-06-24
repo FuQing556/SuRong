@@ -1,0 +1,11 @@
+/* ⬜ 黑白 — 极细线条、无圆角、报纸感 */
+:root{--bg:#0a0a0a;--bg-panel:#0f0f0f;--bg-card:#161616;--bg-hover:#1e1e1e;--border:#2a2a2a;--border-focus:#888;--text:#aaa;--text-dim:#555;--text-bright:#ddd;--gold:#ccc;--gold-dim:#555;--purple:#888;--red:#c55;--green:#5a5;--option-1:#666;--option-2:#555;--option-3:#777;--option-4:#955;--radius:0px}
+body{font-family:'Courier New',monospace;font-size:13px;line-height:1.6}
+.game-title{font-weight:700;letter-spacing:3px;text-transform:uppercase;border-bottom:2px solid var(--text-dim);display:inline-block;padding-bottom:4px}
+.option-btn{border:1px solid var(--border);font-family:'Courier New',monospace;transition:all .15s}
+.option-btn:hover{border-color:var(--text);background:var(--bg-hover)}
+.image-frame{border:1px solid var(--border)}
+.status-item{border:1px solid var(--border);padding:4px 8px}
+.overlay-panel{border:1px solid var(--text-dim)}
+.settlement-box{border-left:1px solid var(--text-dim);font-style:italic}
+#top-bar{border-bottom:1px solid var(--text-dim)}
