@@ -322,75 +322,95 @@ app.post('/api/generate-prompt', async (req, res) => {
 7. protagonist — 主角详细介绍（200-400字，3-4段\\n\\n分隔）
 8. conflict — 核心冲突介绍（200-400字，多段\\n\\n分隔，必须列出四层结局的简述）
 
-【输出格式】严格输出以下JSON结构，worldSetting/protagonist/conflict必须使用\\n\\n分隔段落：
-{"name":"${name}","description":"20字内简介","outputSections":{...},"promptBody":"正文","achievements":{...},"sceneTypes":[...],"sceneImages":{...},"theme":"dark","worldSetting":"段1\\n\\n段2\\n\\n段3","protagonist":"段1\\n\\n段2\\n\\n段3","conflict":"段1\\n\\n段2\\n\\n段3"}`;
+【输出格式】严格按以下三段输出，不要输出任何其他文字：
 
-  try {
-    const apiKey = getApiKey(req.body);
+第一段：纯JSON（不含promptBody/worldSetting/protagonist/conflict这些长文本）
+{"name":"${name}","description":"20字内简介","outputSections":{...},"achievements":{...},"sceneTypes":[...],"sceneImages":{...},"theme":"dark","styles":[...]}
+
+第二段：紧跟===PROMPT_BODY===后输出完整提示词正文
+===PROMPT_BODY===
+【你的身份】...
+
+第三段：紧跟===STORY_CARD===后输出三节背景故事
+===STORY_CARD===
+---WORLD---
+世界观详细介绍（200-400字，\\n\\n分段）
+---PROTAG---
+主角详细介绍（200-400字，\\n\\n分段）
+---CONFLICT---
+核心冲突介绍（200-400字，\\n\\n分段，包含四层结局简述）`;
+    // ── 新格式解析：JSON + PROMPT_BODY + STORY_CARD 三段式 ──
+    try {
+      const apiKey = getApiKey(req.body);
     const content = await callDeepSeek([
-      { role: 'system', content: '你是游戏设计AI。只输出一行完整JSON，不要markdown代码块，不要解释。所有字符串内的双引号必须用反斜杠转义。' },
-      { role: 'user', content: metaPrompt },
-    ], apiKey, 0.5, 8192);  // 适中温度+大token
+        { role: 'system', content: '你是游戏设计AI。严格按格式输出，不要markdown代码块。' },
+        { role: 'user', content: metaPrompt },
+      ], apiKey, 0.5, 8192);
 
-    // 提取并修复JSON
-    let jsonStr = content;
-    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) jsonStr = jsonMatch[1];
-    else {
-      const braceStart = content.indexOf('{');
-      const braceEnd = content.lastIndexOf('}');
-      if (braceStart >= 0 && braceEnd > braceStart) jsonStr = content.substring(braceStart, braceEnd + 1);
-    }
+      // 1. 提取第一段JSON（从开头到 ===PROMPT_BODY===）
+      const jsonEnd = content.indexOf('===PROMPT_BODY===');
+      let jsonStr = jsonEnd > 0 ? content.substring(0, jsonEnd).trim() : content;
+      // 清理：提取花括号内容
+      const braceStart = jsonStr.indexOf('{');
+      const braceEnd = jsonStr.lastIndexOf('}');
+      if (braceStart >= 0 && braceEnd > braceStart) jsonStr = jsonStr.substring(braceStart, braceEnd + 1);
+      // 修复常见JSON错误
+      jsonStr = jsonStr.replace(/“|”/g, '"').replace(/‘|’/g, "'").replace(/,(\s*[}\]])/g, '$1');
+      const template = JSON.parse(jsonStr);
 
-    // 多轮JSON修复
-    jsonStr = jsonStr
-      .replace(/“|”/g, '"')      // 中文双引号 → 英文
-      .replace(/‘|’/g, "'")      // 中文单引号 → 英文
-      .replace(/[‘’]/g, "'")
-      .replace(/[“”]/g, '"')
-      .replace(/,(\s*[}\]])/g, '$1')  // 去尾逗号
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ''); // 去控制字符
+      // 2. 提取 promptBody（===PROMPT_BODY=== 到 ===STORY_CARD===）
+      const bodyStart = content.indexOf('===PROMPT_BODY===');
+      const cardStart = content.indexOf('===STORY_CARD===');
+      if (bodyStart > 0) {
+        const bodyEnd = cardStart > bodyStart ? cardStart : content.length;
+        template.promptBody = content.substring(bodyStart + 18, bodyEnd).trim();
+      }
+      if (!template.promptBody) template.promptBody = '';
 
-    // 尝试修复未转义的换行（在字符串值内）
-    try { JSON.parse(jsonStr); } catch(e) {
-      // 如果解析失败，尝试更激进的修复：将裸换行替换为 \n
-      const repaired = jsonStr.replace(/(?<=: ".*?)\n(?=.*?")/gs, '\\n');
-      if (repaired !== jsonStr) jsonStr = repaired;
-    }
+      // 3. 提取背景故事卡（===STORY_CARD=== 之后的三个小节）
+      if (cardStart > 0) {
+        const cardText = content.substring(cardStart + 18);
+        const wMatch = cardText.match(/---WORLD---\s*([\s\S]*?)(?=---PROTAG---|$)/);
+        const pMatch = cardText.match(/---PROTAG---\s*([\s\S]*?)(?=---CONFLICT---|$)/);
+        const cMatch = cardText.match(/---CONFLICT---\s*([\s\S]*?)$/);
+        template.worldSetting = (wMatch ? wMatch[1].trim() : '') || world;
+        template.protagonist = (pMatch ? pMatch[1].trim() : '') || protagonist;
+        template.conflict = (cMatch ? cMatch[1].trim() : '') || conflict || '';
+      } else {
+        template.worldSetting = template.worldSetting || world;
+        template.protagonist = template.protagonist || protagonist;
+        template.conflict = template.conflict || conflict || '';
+      }
 
-    const template = JSON.parse(jsonStr);
-    template.id = 'custom_' + Date.now();
-    template.author = 'AI生成';
-    template.version = '1.0.0';
-    template.defaultSceneImage = '日常.png';
-    template.openingMessages = ['开始游戏。'];
-    // 保留背景故事卡字段（优先AI生成的详细版，回退到表单原始输入）
-    template.worldSetting = template.worldSetting || world;
-    template.protagonist = template.protagonist || protagonist;
-    template.conflict = template.conflict || conflict || '';
-    template.styles = template.styles && template.styles.length > 0 ? template.styles : (styles || []);
-    template.extra = template.extra || extra || '';
-    // 修复 outputSections：确保每个 section 都有 fields 数组
-    if (template.outputSections) {
-      for (const key of Object.keys(template.outputSections)) {
-        const sec = template.outputSections[key];
-        if (!sec || typeof sec !== 'object') {
-          template.outputSections[key] = { label: key, fields: [] };
-        } else if (!Array.isArray(sec.fields)) {
-          sec.fields = [];
+      template.id = 'custom_' + Date.now();
+      template.author = 'AI生成';
+      template.version = '1.0.0';
+      template.defaultSceneImage = '日常.png';
+      template.openingMessages = ['开始游戏。'];
+      template.styles = template.styles && template.styles.length > 0 ? template.styles : (styles || []);
+      template.extra = template.extra || extra || '';
+
+      // 修复 outputSections
+      if (template.outputSections) {
+        for (const key of Object.keys(template.outputSections)) {
+          const sec = template.outputSections[key];
+          if (!sec || typeof sec !== 'object') {
+            template.outputSections[key] = { label: key, fields: [] };
+          } else if (!Array.isArray(sec.fields)) {
+            sec.fields = [];
+          }
         }
       }
-    }
-    // 强制所有场景图片为日常.png（用户可在设置里替换）
-    template.sceneImages = {};
-    if (template.sceneTypes) template.sceneTypes.forEach(t => { template.sceneImages[t] = '日常.png'; });
-    template.sceneImages['日常'] = '日常.png';
+      // 场景图片
+      template.sceneImages = {};
+      if (template.sceneTypes) template.sceneTypes.forEach(t => { template.sceneImages[t] = '日常.png'; });
+      template.sceneImages['日常'] = '日常.png';
 
-    res.json({ template });
-  } catch (err) {
-    console.error('生成提示词失败:', err.message);
-    res.status(500).json({ error: 'AI生成失败: ' + err.message });
-  }
+      res.json({ template });
+    } catch (err) {
+      console.error('生成提示词失败:', err.message);
+      res.status(500).json({ error: 'AI生成失败: ' + err.message });
+    }
 });
 
 // ── API: 对话摘要 ──
