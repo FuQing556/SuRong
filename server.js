@@ -182,10 +182,18 @@ function getApiKey(reqBody) {
   return process.env.DEEPSEEK_API_KEY || '';
 }
 
-async function callDeepSeek(messages, apiKey, temperature = 0.8, maxTokens = 1024) {
+async function callDeepSeek(messages, apiKey, temperature = 0.8, maxTokens = 1024, jsonMode = false) {
   if (!apiKey) {
     throw new Error('未配置 DeepSeek API Key。请在设置页输入 Key，或在 .env / 环境变量中配置 DEEPSEEK_API_KEY');
   }
+
+  const body = {
+    model: 'deepseek-chat',
+    messages,
+    temperature,
+    max_tokens: maxTokens,
+  };
+  if (jsonMode) body.response_format = { type: 'json_object' };
 
   const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
@@ -193,12 +201,7 @@ async function callDeepSeek(messages, apiKey, temperature = 0.8, maxTokens = 102
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!resp.ok) {
@@ -322,75 +325,30 @@ app.post('/api/generate-prompt', async (req, res) => {
 7. protagonist — 主角详细介绍（200-400字，3-4段\\n\\n分隔）
 8. conflict — 核心冲突介绍（200-400字，多段\\n\\n分隔，必须列出四层结局的简述）
 
-【输出格式】严格按以下三段输出，不要输出任何其他文字：
+【输出格式】输出一个完整JSON对象，promptBody/worldSetting/protagonist/conflict中的换行用\\n，引号用\\"。不要markdown：
+{"name":"${name}","description":"20字简介","outputSections":{...},"promptBody":"正文","achievements":{...},"sceneTypes":[...],"sceneImages":{...},"theme":"dark","styles":[...],"worldSetting":"世界观","protagonist":"主角","conflict":"冲突"}`;
 
-第一段：纯JSON（不含promptBody/worldSetting/protagonist/conflict这些长文本）
-{"name":"${name}","description":"20字内简介","outputSections":{...},"achievements":{...},"sceneTypes":[...],"sceneImages":{...},"theme":"dark","styles":[...]}
-
-第二段：紧跟===PROMPT_BODY===后输出完整提示词正文
-===PROMPT_BODY===
-【你的身份】...
-
-第三段：紧跟===STORY_CARD===后输出三节背景故事
-===STORY_CARD===
----WORLD---
-世界观详细介绍（200-400字，\\n\\n分段）
----PROTAG---
-主角详细介绍（200-400字，\\n\\n分段）
----CONFLICT---
-核心冲突介绍（200-400字，\\n\\n分段，包含四层结局简述）`;
-    // ── 新格式解析：JSON + PROMPT_BODY + STORY_CARD 三段式 ──
     try {
       const apiKey = getApiKey(req.body);
-    const content = await callDeepSeek([
-        { role: 'system', content: '你是游戏设计AI。严格按格式输出，不要markdown代码块。' },
+      const content = await callDeepSeek([
+        { role: 'system', content: '你是游戏设计AI，输出必须是合法JSON对象，不要任何额外文字。' },
         { role: 'user', content: metaPrompt },
-      ], apiKey, 0.5, 8192);
+      ], apiKey, 0.5, 8192, true); // jsonMode=true
 
-      // 1. 提取第一段JSON（从开头到 ===PROMPT_BODY===）
-      const jsonEnd = content.indexOf('===PROMPT_BODY===');
-      let jsonStr = jsonEnd > 0 ? content.substring(0, jsonEnd).trim() : content;
-      // 清理：提取花括号内容
-      const braceStart = jsonStr.indexOf('{');
-      const braceEnd = jsonStr.lastIndexOf('}');
-      if (braceStart >= 0 && braceEnd > braceStart) jsonStr = jsonStr.substring(braceStart, braceEnd + 1);
-      // 修复常见JSON错误
-      jsonStr = jsonStr.replace(/“|”/g, '"').replace(/‘|’/g, "'").replace(/,(\s*[}\]])/g, '$1');
-      const template = JSON.parse(jsonStr);
-
-      // 2. 提取 promptBody（===PROMPT_BODY=== 到 ===STORY_CARD===）
-      const bodyStart = content.indexOf('===PROMPT_BODY===');
-      const cardStart = content.indexOf('===STORY_CARD===');
-      if (bodyStart > 0) {
-        const bodyEnd = cardStart > bodyStart ? cardStart : content.length;
-        template.promptBody = content.substring(bodyStart + 18, bodyEnd).trim();
-      }
-      if (!template.promptBody) template.promptBody = '';
-
-      // 3. 提取背景故事卡（===STORY_CARD=== 之后的三个小节）
-      if (cardStart > 0) {
-        const cardText = content.substring(cardStart + 18);
-        const wMatch = cardText.match(/---WORLD---\s*([\s\S]*?)(?=---PROTAG---|$)/);
-        const pMatch = cardText.match(/---PROTAG---\s*([\s\S]*?)(?=---CONFLICT---|$)/);
-        const cMatch = cardText.match(/---CONFLICT---\s*([\s\S]*?)$/);
-        template.worldSetting = (wMatch ? wMatch[1].trim() : '') || world;
-        template.protagonist = (pMatch ? pMatch[1].trim() : '') || protagonist;
-        template.conflict = (cMatch ? cMatch[1].trim() : '') || conflict || '';
-      } else {
-        template.worldSetting = template.worldSetting || world;
-        template.protagonist = template.protagonist || protagonist;
-        template.conflict = template.conflict || conflict || '';
-      }
+      const template = JSON.parse(content);
 
       template.id = 'custom_' + Date.now();
       template.author = 'AI生成';
       template.version = '1.0.0';
       template.defaultSceneImage = '日常.png';
       template.openingMessages = ['开始游戏。'];
+      template.promptBody = template.promptBody || '';
+      template.worldSetting = template.worldSetting || world;
+      template.protagonist = template.protagonist || protagonist;
+      template.conflict = template.conflict || conflict || '';
       template.styles = template.styles && template.styles.length > 0 ? template.styles : (styles || []);
       template.extra = template.extra || extra || '';
 
-      // 修复 outputSections
       if (template.outputSections) {
         for (const key of Object.keys(template.outputSections)) {
           const sec = template.outputSections[key];
@@ -401,14 +359,13 @@ app.post('/api/generate-prompt', async (req, res) => {
           }
         }
       }
-      // 场景图片
       template.sceneImages = {};
       if (template.sceneTypes) template.sceneTypes.forEach(t => { template.sceneImages[t] = '日常.png'; });
       template.sceneImages['日常'] = '日常.png';
 
       res.json({ template });
     } catch (err) {
-      console.error('生成提示词失败:', err.message);
+      console.error('生成失败:', err.message, content?.substring(0, 100));
       res.status(500).json({ error: 'AI生成失败: ' + err.message });
     }
 });
