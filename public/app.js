@@ -512,6 +512,8 @@ function bindEvents() {
 
 // ── 开始新游戏 ──
 async function startNewGame() {
+  try {
+  console.log('startNewGame: begin');
   // 彻底重置状态
   gameState.fullHistory = [];
   gameState.summary = '';
@@ -522,13 +524,15 @@ async function startNewGame() {
   // 重置旧存档引用
   localStorage.removeItem(getSaveKey(gameState.activeSaveId || 'default'));
 
+  if (!dom.storyContent) { console.error('storyContent missing'); return; }
   dom.storyContent.innerHTML = '<div id="initial-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 0;gap:20px;"><p class="placeholder-text">命运之轮重新转动...</p></div>';
   dom.initialPlaceholder = document.querySelector('#initial-placeholder');
   if (dom.errorBox) dom.errorBox.classList.add('hidden');
-  dom.settlementContent.textContent = '—';
-  dom.settlementBox.style.display = 'none';
+  if (dom.settlementContent) dom.settlementContent.textContent = '—';
+  if (dom.settlementBox) dom.settlementBox.style.display = 'none';
 
   const tpl = getActiveTemplate();
+  console.log('startNewGame: template', tpl?.name, 'openingMessages:', tpl?.openingMessages?.length || 0);
   renderStatusContainers(tpl);
   updateAllDynamicFields({}, tpl);
   updateOptionButtons([]);
@@ -539,7 +543,15 @@ async function startNewGame() {
 
   const openings = tpl.openingMessages || ['开始游戏。【开局编号：1】'];
   const openingMsg = openings[Math.floor(Math.random() * openings.length)];
+  console.log('startNewGame: sending', openingMsg.substring(0, 30));
+  showLoading(true);
   await sendMessage(openingMsg);
+  } catch(e) {
+    console.error('startNewGame error:', e);
+    showError('启动失败: ' + (e.message || '未知错误'));
+    gameState.isLoading = false;
+    showLoading(false);
+  }
 }
 
 // ── 发送消息 ──
