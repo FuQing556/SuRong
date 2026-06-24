@@ -4,205 +4,131 @@
 
 基于 DeepSeek API 驱动的多模板互动叙事引擎。默认模板「苏蓉蓉·潜伏」为斗罗大陆世界观卧底叙事，支持 AI 辅助创建任意世界观的自定义存档。每个存档使用独立的提示词、UI 字段、场景图片和主题。
 
-**在线版**：部署在 Railway，手机电脑浏览器打开即玩，无需安装任何东西。
-**本地版**：`npm start` → `http://localhost:3000`
+**在线版**：部署在 Railway → `xixi-tavern.up.railway.app`
+手机电脑浏览器打开即玩，无需安装任何东西。
 
 ## 文件结构
 
 ```
 xixi/
-├── server.js              # Express 后端：静态文件 + DeepSeek API 代理 + 模板API
-├── prompt.txt             # 默认提示词（约630行，仅用于后备）
-├── package.json           # Node 依赖 + Electron 打包配置
+├── server.js              # Express 后端 + API 代理 + 模板API + 酒馆API
+├── prompt.txt             # 默认提示词（后备）
+├── package.json           # 3个依赖：cors/dotenv/express
 ├── render.yaml            # Railway 部署配置
-├── .env                   # DeepSeek API Key（本地用，不上传 GitHub）
-├── .env.example           # Key 模板
 ├── CLAUDE.md              # 本文件
-├── electron/              # Electron 桌面应用（可选）
-│   ├── main.js            #   主进程
-│   └── preload.js         #   预加载脚本
 ├── templates/             # 模板存储
-│   ├── surongrong.json    #   默认模板：苏蓉蓉·潜伏（含完整 promptBody + outputSections + achievements）
-│   └── custom_*.json      #   AI 生成的用户自创模板
-├── themes/                # CSS 主题（11套）
-│   ├── theme-light.css    #   明亮
-│   ├── theme-xianxia.css  #   修仙古风
-│   ├── theme-cyber.css    #   赛博霓虹
-│   ├── theme-ocean.css    #   深海
-│   ├── theme-forest.css   #   森林
-│   ├── theme-sunset.css   #   日落
-│   ├── theme-midnight.css #   子夜
-│   ├── theme-sakura.css   #   樱花
-│   ├── theme-monochrome.css # 黑白
-│   └── theme-golden.css   #   鎏金
-├── scripts/               # 工具脚本
-│   ├── patch-app-builder.js    # 修补 electron-builder 的 Windows symlink 问题
-│   └── patch-switchscene.js    # switchSceneImage null 安全补丁
-├── api/                   # Vercel Serverless 函数（备选部署方案）
-│   ├── chat.js
-│   ├── summarize.js
-│   └── prompt.js
+│   ├── surongrong.json    #   默认模板：苏蓉蓉·潜伏（手工模板，不改）
+│   ├── custom_*.json      #   AI 生成的用户自创模板
+│   └── shared/            #   酒馆分享数据（运行时创建，git不追踪）
+├── themes/                # CSS 主题（10套）
 ├── public/                # 前端静态文件
-│   ├── index.html         #   主页面：弹窗 + 游戏界面 + 设置 + 字段编辑器
+│   ├── index.html         #   主页面：警告 + 序章 + 存档选择(我的/酒馆) + 游戏界面 + 设置
+│   ├── app.js             #   模板驱动前端逻辑
 │   ├── style.css          #   基础暗色主题样式
-│   ├── app.js             #   模板驱动前端逻辑（约1400行）
-│   ├── sw.js              #   Service Worker（PWA 离线缓存）
+│   ├── sw.js              #   Service Worker（网络优先，v3）
 │   ├── manifest.json      #   PWA 清单
-│   └── *.png              #   场景图片（对峙/调查/潜伏/社交/战斗/研究/交易/日常/崩溃）
-└── src/
-    └── 日常.png           #   原始图片
+│   └── *.png              #   场景图片
+└── 启动游戏.bat           # 本地开发启动（双击即跑）
 ```
 
 ## 启动方式
 
 ```bash
 # 本地开发
-npm install
 npm start                  # → http://localhost:3000
-
-# Electron 桌面模式（可选）
-npm run electron           # → Electron 窗口
-
-# 打包为 .exe（需先修补 app-builder）
-node scripts/patch-app-builder.js
-npm run build:win          # → release/ 目录
 ```
 
-### 在线部署（Railway）
+## ⚠️ 部署前必做：备份酒馆
 
-已部署在 Railway。推送代码后自动重新部署：
+Railway 每次 `git push` 部署会清空文件系统，酒馆共享数据（`templates/shared/`）会丢失。
+**推代码前**必须执行：
+
+1. 打开 `https://xixi-tavern.up.railway.app` → 酒馆标签 → 🔑 管理员登录（密码 `admin123`）
+2. 确认酒馆内容需要保留
+3. 告诉我备份酒馆，我会下载 `templates/shared/` 的所有 JSON 文件
+4. 推完代码部署完成后，把备份文件上传回酒馆
+
 ```bash
-git add -A && git commit -m "更新" && git push origin master
+# 部署
+git add -A && git commit -m "描述" && git push origin master
+# Railway 自动部署，等待 1-2 分钟
 ```
 
-## 架构
+## 核心功能
 
-### 核心创新：模板自描述系统
+### 序章背景故事卡
+模板 JSON 包含 `worldSetting` / `protagonist` / `conflict` / `styles` 四个结构化字段。
+新建存档或开始新游戏时弹出序章弹窗，展示世界观、主角设定、核心冲突。`\n\n` 分段自动渲染为段落。
 
-模板 JSON 同时驱动 **AI 输出格式** 和 **前端解析渲染**：
+### 酒馆分享系统
+- `GET /api/shared` — 列出所有分享模板
+- `POST /api/shared` — 上传分享
+- `GET /api/shared/:id` — 下载模板（计数+1）
+- `DELETE /api/shared/:id` — 管理员删除（前端密码 `admin123`）
+- 数据存储：`templates/shared/` 目录（JSON 文件）
 
-```
-模板.json
-├── outputSections   ──→  ① 自动生成 AI 输出格式（状态栏/资源/变量字段）
-│                    ──→  ② 驱动前端动态解析（按字段 label 匹配提取值）
-│                    ──→  ③ 驱动前端动态渲染（生成状态栏/变量面板 HTML）
-├── promptBody       ──→  ④ 系统提示词正文（世界观/角色/规则）
-├── achievements     ──→  ⑤ 成就列表（按模板隔离存储）
-├── sceneTypes/images ──→  ⑥ 场景类型 → 图片映射
-├── theme            ──→  ⑦ 默认主题
-└── openingMessages  ──→  ⑧ 开局场景池
-```
+### 存档管理
+- 双标签页面：「我的存档」/「酒馆」
+- 每张卡片显示：名字 + 主角 + 故事目标
+- 自定义存档可「分享到酒馆」、可删除（确认弹窗 + 彻底清理）
+- 酒馆面板：浏览他人分享、导入并游玩、管理员可删除
 
-用户编辑字段 → `generateOutputFormat()` 重新生成 AI 格式 → `refreshSystemPrompt()` → 下次请求自动同步。一处修改，前后端同步。
+### AI 生成模板
+- 创建表单：名称、世界观、主角、冲突、风格、**游戏长度**（短篇/标准/长篇/沉浸）
+- 长度决定四层结局的回合门槛
+- 使用 `response_format: json_object`（jsonMode）强制合法 JSON
+- 服务端规范化：自动补齐成就的 `icon`/`desc`、字段的 `id`/`label`/`icon`/`formatHint`
 
-### 数据流
-```
-玩家点击选项 → app.js handleChoice()
-→ sendMessage() 构建消息（系统提示词 + 历史摘要 + AI指令 + 最近对话）
-→ fetch /api/chat（附带 apiKey 和 template）
-→ server.js getApiKey()（请求体 > 环境变量） → callDeepSeek()
-→ 返回格式化响应
-→ app.js parseAIResponse() 模板驱动解析 → renderGameState() 动态渲染
-→ saveGameState() 自动存档
-```
+### 四层结局系统（AI 生成时注入）
+- 早期结局（低门槛，有代价，可选不结束）
+- 中期结局（标准条件，主要结局）
+- 后期结局（高门槛，完美结局）
+- 大后期结局（传奇结局，多条件）
+- 铁律：AI 永远不能替玩家结束，触发结局时必须保留「继续」选项
 
-### AI 输出格式（自动生成）
-```
-【强制输出格式】
-[场景类型：类型名] [事件大小：大/小]
-上回合： [结算]
-现状： [新场景]
-可选行动：
-1. [动作] — [代价] 【风险等级】
-...
-状态栏 / 资源 / 变量追踪 / 成就  ← 动态生成
-【资源校验铁律】 ← 硬编码
-```
-
-### 前端状态管理
-- `gameState.fullHistory[]` — 完整对话历史
-- `gameState.summary` — 旧对话摘要（超8回合触发）
-- `gameState.activeTemplate` — 当前活动模板（含 outputSections/sceneImages/achievements）
-- `gameState.activeSystemPrompt` — 由模板自动生成的完整系统提示词
-- `gameState.activeSaveId` — 当前存档ID（用于存档/读档/主题隔离）
-- `gameState._currentTheme` — 当前主题（每次 applyTheme 追踪）
-- `gameState.currentOptions[]` — 当前4选项
-
-### 关键功能
-
-**存档系统**
-- 自动存档：每回合 AI 响应后 `saveGameState()` 写入 localStorage
-- 继续游戏：`continueGame()` 恢复完整对话历史、状态、主题
-- 新游戏：`selectSave()` 清除旧存档，开新局
-- 成就隔离：`xixi_achievements_{模板ID}` 按存档独立存储
-- 主题隔离：`xixi_theme_{存档ID}` 每个存档记住自己的主题
-
-**模板系统**
-- 默认模板：苏蓉蓉·潜伏（templates/surongrong.json）
-- AI 辅助创建：填表单 → `/api/generate-prompt` → DeepSeek 生成完整提示词 → 预览 → 保存
-- 表单自动保存：输入时实时存 localStorage，退出不丢失
-- 模板字段编辑器：设置页可编辑所有字段的 label/icon/formatHint
-
-**10 套视觉主题**
-按存档隔离存储。每套有独特视觉特征（圆角/字体/边框/阴影/动画），不是简单换色。
-
-**AI 实时指令**
-指令注入到用户消息末尾，AI 无法忽略。下回合直接体现。
-
-**场景图片替换**
-设置页文件选择器，选本地图片替换任意场景类型，存 base64 到 localStorage。
-
-**资源校验铁律**
-自动生成的输出格式含硬编码资源校验规则：选项代价需检查资源、资源不足标警告、强选触发负面后果、数值如实更新。
-
-**提示词热编辑**
-设置页在线修改，下回合生效。大幅修改建议开新游戏。
-
-**6 种随机开局**
-拍卖会 / 浴室失窃 / 走廊围堵 / 学妹扣押 / 深夜侵入 / 多方会诊
-
-**API Key 自助输入**
-设置页顶部输入 DeepSeek Key，存 localStorage。每次请求附带，无需配环境变量。
-
-## 技术要点
-
-- **API Key 三层获取**：请求体 `apiKey` → 环境变量 `DEEPSEEK_API_KEY` → 报错
-- **模板自描述**：outputSections 同时驱动 AI 输出格式和前端解析渲染
-- **成就隔离**：`xixi_achievements_{模板ID}`，切换存档自动切换成就集
+### 其他
+- **Service Worker**：网络优先策略（v3），`activate` 时自动清旧缓存
 - **主题隔离**：`xixi_theme_{存档ID}`，每个存档独立主题
-- **存档持久化**：`xixi_gamesave_{存档ID}` 存完整游戏状态，刷新/重启可继续
-- **表单自动保存**：创建存档表单实时存 localStorage
-- **PWA 支持**：manifest.json + service worker，手机可添加到桌面全屏运行
-- **Railway 部署**：render.yaml，git push 自动重新部署
+- **成就隔离**：`xixi_achievements_{模板ID}`
+- **表单自动保存**：创建存档表单实时存 localStorage，退出不丢失
+- **API Key**：请求体 `apiKey` → 环境变量 `DEEPSEEK_API_KEY`
+- **生成超时**：chat 60秒，generate-prompt 120秒
 
-## 添加新模板
-
-在 `templates/` 目录创建 JSON 文件，或通过游戏内「＋ 创建新存档」让 AI 生成：
+## 模板 JSON 结构
 
 ```json
 {
   "id": "my-world",
-  "name": "我的世界",
-  "description": "简介",
+  "name": "名称",
+  "description": "20字简介",
+  "worldSetting": "世界观详细介绍（\\n\\n分段）",
+  "protagonist": "主角详细介绍（\\n\\n分段）",
+  "conflict": "核心冲突（\\n\\n分段，含四层结局）",
+  "styles": ["风格标签"],
   "theme": "dark",
   "outputSections": {
-    "statusTop": { "label": "状态", "fields": [...] },
-    "taskLine": { "label": null, "fields": [...] },
-    "resources": { "label": "资源", "fields": [...] },
-    "variables": { "label": "变量追踪", "fields": [...] }
+    "statusTop": {"label":"状态栏","display":"inline","fields":[...]},
+    "taskLine": {"label":null,"display":"inline","fields":[...]},
+    "resources": {"label":"资源","display":"inline","fields":[...]},
+    "variables": {"label":"变量追踪","display":"grid","fields":[...]}
   },
-  "promptBody": "完整的系统提示词正文...",
-  "achievements": { "成就名": { "icon": "🏆", "desc": "描述" } },
+  "promptBody": "系统提示词正文（3000-6000字）",
+  "achievements": {"成就名":{"icon":"🏆","desc":"描述"}},
   "sceneTypes": ["场景1","场景2"],
-  "sceneImages": { "场景1": "日常.png" },
+  "sceneImages": {"场景1":"日常.png"},
   "openingMessages": ["开始游戏。"]
 }
 ```
 
+## 添加新模板
+
+通过游戏内「＋ 创建新存档」让 AI 生成。选择游戏长度后 AI 自动适配四层结局门槛。
+也可在 `templates/` 目录手动创建 JSON 文件。
+
 ## 维护说明
 
-- 修改默认提示词需同步更新 `prompt.txt`（后备）和 `templates/surongrong.json`（模板系统）
-- 新增场景类型时需同步：模板 sceneTypes + sceneImages + public/ 对应图片
+- 默认模板 `surongrong.json` 为手工模板，保持原样不改
+- 新增场景类型时同步更新：模板 sceneTypes + sceneImages + public/ 对应图片
 - 新增主题：创建 `themes/theme-xxx.css` + 在 `index.html` 主题选择器中添加选项
-- 修改 outputSections 字段时：编辑模板 JSON 或在设置页字段编辑器中操作
-- Windows 构建前需运行 `node scripts/patch-app-builder.js`（symlink 权限问题）
+- 修改 outputSections 字段：在设置页字段编辑器中操作
+- **推代码前备份酒馆数据**（见上方部署章节）
