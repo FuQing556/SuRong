@@ -822,7 +822,9 @@ function updateAllDynamicFields(fieldValues, template) {
   const sections = template?.outputSections || FALLBACK_TEMPLATE.outputSections;
   const allFields = [];
   for (const [sectionKey, section] of Object.entries(sections)) {
-    for (const f of section.fields) {
+    const fields = section.fields;
+    if (!fields || !Array.isArray(fields)) continue;
+    for (const f of fields) {
       allFields.push(f);
     }
   }

@@ -327,6 +327,17 @@ app.post('/api/generate-prompt', async (req, res) => {
     template.conflict = template.conflict || conflict || '';
     template.styles = template.styles && template.styles.length > 0 ? template.styles : (styles || []);
     template.extra = template.extra || extra || '';
+    // 修复 outputSections：确保每个 section 都有 fields 数组
+    if (template.outputSections) {
+      for (const key of Object.keys(template.outputSections)) {
+        const sec = template.outputSections[key];
+        if (!sec || typeof sec !== 'object') {
+          template.outputSections[key] = { label: key, fields: [] };
+        } else if (!Array.isArray(sec.fields)) {
+          sec.fields = [];
+        }
+      }
+    }
     // 强制所有场景图片为日常.png（用户可在设置里替换）
     template.sceneImages = {};
     if (template.sceneTypes) template.sceneTypes.forEach(t => { template.sceneImages[t] = '日常.png'; });
