@@ -109,6 +109,7 @@ function generateOutputFormat(sections) {
   }
 
   lines.push('');
+  lines.push('【铁律】你必须在每次回复的末尾完整输出以上所有状态字段，不得省略任何一行。即使数值无变化也必须照常输出。');
   lines.push('注意：第一回合没有"上回合"，写"上回合：游戏开始。"即可。后续每回合必须在"上回合"中结算玩家上一轮的选择后果。');
   return lines.join('\n');
 }
