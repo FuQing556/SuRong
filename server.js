@@ -349,15 +349,37 @@ app.post('/api/generate-prompt', async (req, res) => {
       template.styles = template.styles && template.styles.length > 0 ? template.styles : (styles || []);
       template.extra = template.extra || extra || '';
 
+      // 规范化 outputSections
       if (template.outputSections) {
         for (const key of Object.keys(template.outputSections)) {
           const sec = template.outputSections[key];
           if (!sec || typeof sec !== 'object') {
             template.outputSections[key] = { label: key, fields: [] };
-          } else if (!Array.isArray(sec.fields)) {
-            sec.fields = [];
+          } else {
+            if (!Array.isArray(sec.fields)) sec.fields = [];
+            // 补齐每个字段的缺失属性
+            sec.fields = sec.fields.filter(f => f && typeof f === 'object').map(f => ({
+              id: f.id || ('field_' + Math.random().toString(36).slice(2,8)),
+              label: f.label || f.id || '未命名字段',
+              icon: f.icon || '📌',
+              formatHint: f.formatHint || '[状态]',
+              type: f.type || 'text',
+            }));
           }
         }
+      }
+      // 规范化 achievements
+      if (template.achievements && typeof template.achievements === 'object') {
+        for (const [name, ach] of Object.entries(template.achievements)) {
+          if (!ach || typeof ach !== 'object') {
+            template.achievements[name] = { icon: '🏆', desc: name };
+          } else {
+            ach.icon = ach.icon || '🏆';
+            ach.desc = ach.desc || ach.description || name;
+          }
+        }
+      } else {
+        template.achievements = {};
       }
       template.sceneImages = {};
       if (template.sceneTypes) template.sceneTypes.forEach(t => { template.sceneImages[t] = '日常.png'; });
