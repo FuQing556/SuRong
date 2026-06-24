@@ -301,7 +301,7 @@ app.post('/api/generate-prompt', async (req, res) => {
 游戏长度：${length}（预期回合：早期${lengthGuide.early} | 中期${lengthGuide.mid} | 后期${lengthGuide.late} | 大后期${lengthGuide.epic}）
 
 【生成内容】
-1. outputSections — 状态栏/资源/变量字段定义。resources字段至少包含2个可消耗资源（金钱/能量/物品等），每个字段格式：{"id":"英文","label":"中文","icon":"emoji","formatHint":"[数值/状态]","type":"text"}
+1. outputSections — 必须包含四个固定key：statusTop(5-6字段)、taskLine(label为null,含round字段)、resources(3-4字段,至少2个可消耗资源)、variables(4-5字段)。每个字段是完整对象：{"id":"englishId","label":"中文标签","icon":"emoji","formatHint":"[状态]","type":"text"}。不要省略任何属性。
 2. promptBody — 核心提示词正文(3000-6000字)，必须包含以下章节（用【】标记）：
    【你的身份】AI的行为准则
    【主角设定】外貌/能力/身世/处境
@@ -318,7 +318,7 @@ app.post('/api/generate-prompt', async (req, res) => {
    【选项设计】每回合4选项，必须有代价
    【资源管理】★关键★ 列出可消耗资源及其获取/消耗方式。资源必须是选项代价的核心要素——大部分选项都应有资源代价或收益。资源不足时选项必须标注【资源不足】并触发负面后果。玩家需要管理资源来推进游戏。
    【开局系统】游戏开始时的初始场景
-3. achievements — 6-8个成就，必须包含与资源管理相关的成就
+3. achievements — 6-8个成就对象，每个必须是：{"成就名":{"icon":"emoji","desc":"描述"}}。icon和desc缺一不可。
 4. sceneTypes — 5-7个中文场景类型
 5. description — 20字简介
 6. worldSetting — 世界观详细介绍（200-400字，3-4段\\n\\n分隔）
@@ -326,7 +326,7 @@ app.post('/api/generate-prompt', async (req, res) => {
 8. conflict — 核心冲突介绍（200-400字，多段\\n\\n分隔，必须列出四层结局的简述）
 
 【输出格式】输出一个完整JSON对象，promptBody/worldSetting/protagonist/conflict中的换行用\\n，引号用\\"。不要markdown：
-{"name":"${name}","description":"20字简介","outputSections":{...},"promptBody":"正文","achievements":{...},"sceneTypes":[...],"sceneImages":{...},"theme":"dark","styles":[...],"worldSetting":"世界观","protagonist":"主角","conflict":"冲突"}`;
+{"name":"${name}","description":"20字简介","outputSections":{"statusTop":{"label":"状态栏","display":"inline","fields":[{完整字段对象}]},"taskLine":{"label":null,"display":"inline","fields":[{含round}]},"resources":{"label":"资源","display":"inline","fields":[{含可消耗资源}]},"variables":{"label":"变量追踪","display":"grid","fields":[{含追踪变量}]}},"promptBody":"正文","achievements":{"成就名":{"icon":"emoji","desc":"描述"}},"sceneTypes":["类型1","类型2"],"sceneImages":{"类型1":"日常.png"},"theme":"dark","styles":["风格1"],"worldSetting":"世界观","protagonist":"主角","conflict":"冲突"}`;
 
     try {
       const apiKey = getApiKey(req.body);

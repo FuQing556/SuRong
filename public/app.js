@@ -108,7 +108,7 @@ function renderAchievementsPanel() {
     const unlocked = all[name];
     return `<div class="ach-item${unlocked ? '' : ' locked'}">
       <span class="ach-icon">${unlocked ? ach.icon : '🔒'}</span>
-      <span class="ach-name">${name} — ${ach.desc}</span>
+      <span class="ach-name">${name} — ${ach.desc || ach.description || '完成相应条件解锁'}</span>
       ${unlocked ? `<span class="ach-date">${unlocked}</span>` : ''}</div>`;
   }).join('');
 }
@@ -1711,8 +1711,8 @@ function renderFieldEditor() {
       <h4>${section.label || sectionKey}</h4>`;
     fields.forEach((f, idx) => {
       html += `<div class="field-editor-row" data-section="${sectionKey}" data-index="${idx}">
-        <input class="field-id" value="${f.id}" placeholder="ID" title="字段ID（英文）">
-        <input class="field-label" value="${f.label}" placeholder="标签" title="显示标签">
+        <input class="field-id" value="${f.id || ''}" placeholder="ID" title="字段ID（英文）">
+        <input class="field-label" value="${f.label || ''}" placeholder="标签" title="显示标签">
         <input class="field-icon" value="${f.icon || ''}" placeholder="图标" title="emoji图标">
         <input class="field-format" value="${f.formatHint || ''}" placeholder="格式提示" title="AI输出格式，如[状态]">
         <button class="btn-remove-field" data-section="${sectionKey}" data-index="${idx}">✕</button>
