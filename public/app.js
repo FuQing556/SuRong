@@ -241,7 +241,8 @@ function buildSystemPrompt(template) {
   if (!template) return gameState.originalPrompt || '';
   const format = generateOutputFormat(template.outputSections);
   const body = template.promptBody || '';
-  return format + '\n' + body;
+  // 格式放最前，铁律放最后——AI读到最后的就是最重要的
+  return format + '\n' + body + '\n\n════════════════════════\n【最终提醒·优先级最高】\n你必须在本次回复的末尾，原样输出以上所有状态字段及其当前数值。\n格式：字段名：值 | 字段名：值\n每个字段都必须有具体数值或状态文本，不得写\"[状态]\"\"[数值]\"等占位符，不得省略任何一行。\n这是你最重要的职责，比剧情描写更优先。\n════════════════════════';
 }
 
 // ── 更新系统提示词（模板变化时调用）──
