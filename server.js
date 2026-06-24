@@ -109,7 +109,8 @@ function generateOutputFormat(sections) {
   }
 
   lines.push('');
-  lines.push('【铁律】你必须在每次回复的末尾完整输出以上所有状态字段，不得省略任何一行。即使数值无变化也必须照常输出。');
+  lines.push('【铁律1】你必须在每次回复的末尾完整输出以上所有状态/资源/变量字段，不得省略任何一行。即使数值无变化也必须照常输出。');
+  lines.push('【铁律2】选项的代价和收益必须与资源字段联动——消耗资源要在状态中扣减，获得资源要在状态中增加。资源不足的选项必须标注【资源不足】。');
   lines.push('注意：第一回合没有"上回合"，写"上回合：游戏开始。"即可。后续每回合必须在"上回合"中结算玩家上一轮的选择后果。');
   return lines.join('\n');
 }
@@ -269,12 +270,22 @@ app.post('/api/preview-format', (req, res) => {
 
 // ── API: AI 生成提示词 ──
 app.post('/api/generate-prompt', async (req, res) => {
-  const { name, world, protagonist, conflict, extra, styles } = req.body;
+  const { name, world, protagonist, conflict, extra, styles, gameLength } = req.body;
   if (!name || !world || !protagonist) {
     return res.status(400).json({ error: '缺少必要字段：name, world, protagonist' });
   }
 
   const styleText = (styles && styles.length > 0) ? styles.join('、') : '综合平衡';
+  const length = gameLength || 'medium';
+
+  // 根据游戏长度生成不同的结局回合门槛
+  const lengthGuide = {
+    short:    { early:'3-5', mid:'6-10', late:'10-15', epic:'15+' },
+    medium:   { early:'5-8', mid:'10-15', late:'15-25', epic:'25+' },
+    long:     { early:'8-12', mid:'15-25', late:'25-40', epic:'40+' },
+    immersive:{ early:'10-15', mid:'20-30', late:'35-50', epic:'50+' },
+  }[length];
+
   const metaPrompt = `根据以下设定生成一个互动叙事游戏的系统提示词。严格输出JSON，不要输出任何其他文字。
 
 【设定】
@@ -283,17 +294,32 @@ app.post('/api/generate-prompt', async (req, res) => {
 主角：${protagonist}
 冲突：${conflict || '自由发挥'}
 风格：${styleText}
-额外要求：${extra || '无'}
+游戏长度：${length}（预期回合：早期${lengthGuide.early} | 中期${lengthGuide.mid} | 后期${lengthGuide.late} | 大后期${lengthGuide.epic}）
 
 【生成内容】
-1. outputSections — 状态栏字段定义。包含statusTop(5-6字段)、taskLine(含round字段)、resources(3-4字段)、variables(4-5字段)。每个字段格式：{"id":"英文","label":"中文","icon":"emoji","formatHint":"[状态]","type":"text"}
-2. promptBody — 核心提示词正文(3000-6000字)，用【】标记章节：【你的身份】【主角设定】【世界观】【结局系统】【核心驱动】【叙事铁律】【场景切换机制】【选项设计】【资源管理】【开局系统】
-3. achievements — 6-8个成就：{"成就名":{"icon":"emoji","desc":"说明"}}
+1. outputSections — 状态栏/资源/变量字段定义。resources字段至少包含2个可消耗资源（金钱/能量/物品等），每个字段格式：{"id":"英文","label":"中文","icon":"emoji","formatHint":"[数值/状态]","type":"text"}
+2. promptBody — 核心提示词正文(3000-6000字)，必须包含以下章节（用【】标记）：
+   【你的身份】AI的行为准则
+   【主角设定】外貌/能力/身世/处境
+   【世界观】势力格局/当前局势
+   【结局系统】★关键★ 必须设计四层结局，每层明确写出触发条件：
+       早期结局(回合${lengthGuide.early})：低门槛达成即可触发，有代价、不完美。触发时AI输出【可结束】标记，但必须保留至少2个继续游戏的选项让玩家选择不结束。
+       中期结局(回合${lengthGuide.mid})：标准胜利条件，主要结局。条件达成时AI主动推送结局选项。
+       后期结局(回合${lengthGuide.late})：高门槛完美结局，需要额外条件（特殊道具/NPC关系/隐藏flag）。
+       大后期结局(回合${lengthGuide.epic})：传奇结局，需要多条件同时满足。玩家已成为世界不可忽视的存在。
+       ★铁律：任何结局触发时，AI绝不能替玩家结束。必须在选项中保留至少1个「继续走下去」的选项。★
+   【核心驱动】故事的核心冲突和推动力
+   【叙事铁律】写作规则
+   【场景切换机制】每回合必须换场景
+   【选项设计】每回合4选项，必须有代价
+   【资源管理】★关键★ 列出可消耗资源及其获取/消耗方式。资源必须是选项代价的核心要素——大部分选项都应有资源代价或收益。资源不足时选项必须标注【资源不足】并触发负面后果。玩家需要管理资源来推进游戏。
+   【开局系统】游戏开始时的初始场景
+3. achievements — 6-8个成就，必须包含与资源管理相关的成就
 4. sceneTypes — 5-7个中文场景类型
 5. description — 20字简介
-6. worldSetting — 世界观详细介绍（200-400字，3-4段\\n\\n分隔。必须包含：势力格局、历史背景、当前局势、隐藏暗流）
-7. protagonist — 主角详细介绍（200-400字，3-4段\\n\\n分隔。必须包含：外貌性格、能力定位、身世背景、当前处境与内心挣扎）
-8. conflict — 核心冲突介绍（200-400字，多段\\n\\n分隔。必须分点列出主要矛盾、各方威胁、可选路线、可能结局）
+6. worldSetting — 世界观详细介绍（200-400字，3-4段\\n\\n分隔）
+7. protagonist — 主角详细介绍（200-400字，3-4段\\n\\n分隔）
+8. conflict — 核心冲突介绍（200-400字，多段\\n\\n分隔，必须列出四层结局的简述）
 
 【输出格式】严格输出以下JSON结构，worldSetting/protagonist/conflict必须使用\\n\\n分隔段落：
 {"name":"${name}","description":"20字内简介","outputSections":{...},"promptBody":"正文","achievements":{...},"sceneTypes":[...],"sceneImages":{...},"theme":"dark","worldSetting":"段1\\n\\n段2\\n\\n段3","protagonist":"段1\\n\\n段2\\n\\n段3","conflict":"段1\\n\\n段2\\n\\n段3"}`;

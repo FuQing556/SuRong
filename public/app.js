@@ -1271,6 +1271,8 @@ function saveFormData() {
     if (el) data[id] = el.value;
   });
   data.styles = [...document.querySelectorAll('#style-chips .chip.selected')].map(c => c.dataset.style);
+  const lenChip = document.querySelector('#length-chips .chip.selected');
+  data.gameLength = lenChip ? lenChip.dataset.length : 'medium';
   localStorage.setItem(FORM_SAVE_KEY, JSON.stringify(data));
 }
 
@@ -1298,6 +1300,11 @@ function openCreateSave() {
       if (saved.styles.includes(c.dataset.style)) c.classList.add('selected');
     });
   }
+  document.querySelectorAll('#length-chips .chip').forEach(c => c.classList.remove('selected'));
+  const savedLen = saved?.gameLength || 'medium';
+  document.querySelectorAll('#length-chips .chip').forEach(c => {
+    if (c.dataset.length === savedLen) c.classList.add('selected');
+  });
   // 恢复已生成的模板（防止退出丢失）
   try {
     const savedTpl = localStorage.getItem('xixi_generated_template');
@@ -1316,7 +1323,7 @@ function openCreateSave() {
   document.querySelectorAll('#create-save-overlay input, #create-save-overlay textarea').forEach(el => {
     el.addEventListener('input', saveFormData);
   });
-  document.querySelectorAll('#style-chips .chip').forEach(chip => {
+  document.querySelectorAll('#style-chips .chip, #length-chips .chip').forEach(chip => {
     chip.addEventListener('click', () => setTimeout(saveFormData, 100));
   });
 }
@@ -1336,6 +1343,8 @@ async function generatePrompt() {
   const conflict = qs('#new-save-conflict')?.value?.trim() || '';
   const extra = qs('#new-save-extra')?.value?.trim() || '';
   const styles = [...document.querySelectorAll('#style-chips .chip.selected')].map(c => c.dataset.style);
+  const lenChip = document.querySelector('#length-chips .chip.selected');
+  const gameLength = lenChip ? lenChip.dataset.length : 'medium';
 
   if (!name || !world || !protagonist) {
     const msgEl = qs('#create-save-msg'); if (msgEl) { msgEl.textContent = '⚠ 请填写存档名称、世界观背景和主角设定'; msgEl.style.color = 'var(--red)'; }
@@ -1354,7 +1363,7 @@ async function generatePrompt() {
       if (attempt > 1 && msgEl) { msgEl.textContent = '⏳ 第' + attempt + '次尝试生成...'; }
       const resp = await fetch('/api/generate-prompt', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, world, protagonist, conflict, extra, styles, apiKey: localStorage.getItem('xixi_apikey') || '' }),
+        body: JSON.stringify({ name, world, protagonist, conflict, extra, styles, gameLength, apiKey: localStorage.getItem('xixi_apikey') || '' }),
         signal: AbortSignal.timeout(120000), // 2分钟超时
       });
       if (!resp.ok) throw new Error((await resp.json()).error || '生成失败');
