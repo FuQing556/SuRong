@@ -585,6 +585,7 @@ async function sendMessage(userContent) {
         template: { id: tpl.id, outputSections: tpl.outputSections, promptBody: tpl.promptBody },
         apiKey: localStorage.getItem('xixi_apikey') || '',
       }),
+      signal: AbortSignal.timeout(60000), // 60秒超时
     });
 
     if (!resp.ok) {
@@ -603,7 +604,11 @@ async function sendMessage(userContent) {
 
   } catch (err) {
     console.error('请求失败:', err);
-    showError(err.message);
+    if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+      showError('请求超时（60秒）。请检查网络连接，或在设置页确认 API Key 有效。');
+    } else {
+      showError(err.message);
+    }
     gameState.fullHistory.pop();
   } finally {
     gameState.isLoading = false;
