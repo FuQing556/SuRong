@@ -1297,11 +1297,19 @@ function openCreateSave() {
       if (saved.styles.includes(c.dataset.style)) c.classList.add('selected');
     });
   }
-  const preview = document.querySelector('#generated-preview');
-  if (preview) preview.classList.add('hidden');
+  // 恢复已生成的模板（防止退出丢失）
+  try {
+    const savedTpl = localStorage.getItem('xixi_generated_template');
+    if (savedTpl) {
+      generatedTemplate = JSON.parse(savedTpl);
+      const previewEl = document.querySelector('#generated-prompt-preview');
+      if (previewEl) previewEl.value = generatedTemplate.promptBody || '';
+      const previewBox = document.querySelector('#generated-preview');
+      if (previewBox) previewBox.classList.remove('hidden');
+    }
+  } catch(e) { generatedTemplate = null; }
   const msgEl = document.querySelector('#create-save-msg');
-  if (msgEl) msgEl.textContent = '';
-  generatedTemplate = null;
+  if (msgEl) msgEl.textContent = generatedTemplate ? '✅ 已恢复上次生成的提示词' : '';
 
   // 绑定自动保存（输入时）
   document.querySelectorAll('#create-save-overlay input, #create-save-overlay textarea').forEach(el => {
@@ -1346,10 +1354,13 @@ async function generatePrompt() {
       const resp = await fetch('/api/generate-prompt', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, world, protagonist, conflict, extra, styles, apiKey: localStorage.getItem('xixi_apikey') || '' }),
+        signal: AbortSignal.timeout(120000), // 2分钟超时
       });
       if (!resp.ok) throw new Error((await resp.json()).error || '生成失败');
       const data = await resp.json();
       generatedTemplate = data.template;
+      // 持久化保存，防止退出丢失
+      localStorage.setItem('xixi_generated_template', JSON.stringify(generatedTemplate));
 
       const previewEl = qs('#generated-prompt-preview');
       if (previewEl) previewEl.value = data.template.promptBody || '';
@@ -1358,8 +1369,9 @@ async function generatePrompt() {
       if (msgEl) { msgEl.textContent = '✅ 提示词生成完成！可预览后确认创建。'; msgEl.style.color = 'var(--green)'; }
       break; // 成功，退出重试
     } catch (err) {
-      if (attempt === 2) {
-        if (msgEl) { msgEl.textContent = '❌ 生成失败（已重试）: ' + err.message; msgEl.style.color = 'var(--red)'; }
+      console.error('生成尝试' + attempt + '失败:', err.message);
+      if (attempt === 3) {
+        if (msgEl) { msgEl.textContent = '❌ 生成失败（已重试3次）: ' + err.message; msgEl.style.color = 'var(--red)'; }
       }
     }
   }
@@ -1367,6 +1379,16 @@ async function generatePrompt() {
 }
 
 async function confirmCreateSave() {
+  // 优先用内存中的，回退到 localStorage（防止退出后丢失）
+  if (!generatedTemplate) {
+    try {
+      const saved = localStorage.getItem('xixi_generated_template');
+      if (saved) {
+        generatedTemplate = JSON.parse(saved);
+        console.log('从本地恢复已生成的模板');
+      }
+    } catch(e) {}
+  }
   if (!generatedTemplate) {
     const msgEl = qs('#create-save-msg'); if (msgEl) { msgEl.textContent = '⚠ 请先生成提示词'; msgEl.style.color = 'var(--red)'; }
     return;

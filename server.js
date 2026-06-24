@@ -302,7 +302,7 @@ app.post('/api/generate-prompt', async (req, res) => {
     const content = await callDeepSeek([
       { role: 'system', content: '你是游戏设计AI。只输出一行完整JSON，不要markdown代码块，不要解释。所有字符串内的双引号必须用反斜杠转义。' },
       { role: 'user', content: metaPrompt },
-    ], apiKey, 0.3, 8192);  // 低温保证JSON稳定，大token防截断
+    ], apiKey, 0.5, 8192);  // 适中温度+大token
 
     // 提取并修复JSON
     let jsonStr = content;
