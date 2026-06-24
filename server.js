@@ -168,10 +168,16 @@ app.post('/api/templates/:id', (req, res) => {
 });
 
 // ── 调用 DeepSeek API ──
-async function callDeepSeek(messages, temperature = 0.8, maxTokens = 1024) {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+function getApiKey(reqBody) {
+  // 优先用请求里的 key，没有就用环境变量
+  const bodyKey = (reqBody && reqBody.apiKey) ? reqBody.apiKey.trim() : '';
+  if (bodyKey && bodyKey.startsWith('sk-')) return bodyKey;
+  return process.env.DEEPSEEK_API_KEY || '';
+}
+
+async function callDeepSeek(messages, apiKey, temperature = 0.8, maxTokens = 1024) {
   if (!apiKey) {
-    throw new Error('未配置 DEEPSEEK_API_KEY，请在 .env 文件中设置');
+    throw new Error('未配置 DeepSeek API Key。请在设置页输入 Key，或在 .env / 环境变量中配置 DEEPSEEK_API_KEY');
   }
 
   const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -239,7 +245,8 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
-    const content = await callDeepSeek(fullMessages);
+    const apiKey = getApiKey(req.body);
+    const content = await callDeepSeek(fullMessages, apiKey);
     res.json({ content });
   } catch (err) {
     console.error('对话请求失败:', err.message);
@@ -284,10 +291,11 @@ app.post('/api/generate-prompt', async (req, res) => {
 {"name":"${name}","description":"简介","outputSections":{...},"promptBody":"正文(双引号改单引号)","achievements":{...},"sceneTypes":[...],"sceneImages":{...},"theme":"dark"}`;
 
   try {
+    const apiKey = getApiKey(req.body);
     const content = await callDeepSeek([
       { role: 'system', content: '你是游戏设计AI。只输出一行完整JSON，不要markdown代码块，不要解释。' },
       { role: 'user', content: metaPrompt },
-    ], 0.7, 4096);
+    ], apiKey, 0.7, 4096);
 
     // 提取JSON
     let jsonStr = content;
@@ -340,7 +348,8 @@ app.post('/api/summarize', async (req, res) => {
   ];
 
   try {
-    const summary = await callDeepSeek(summaryMessages, 0.3, 400);
+    const apiKey = getApiKey(req.body);
+    const summary = await callDeepSeek(summaryMessages, apiKey, 0.3, 400);
     res.json({ summary });
   } catch (err) {
     console.error('摘要生成失败:', err.message);
@@ -351,6 +360,19 @@ app.post('/api/summarize', async (req, res) => {
 // ── 启动（支持 Electron 嵌入）──
 module.exports = app;
 
+// ── 调试端点：检查 API Key 状态 ──
+app.get('/api/debug', (_req, res) => {
+  const key = process.env.DEEPSEEK_API_KEY || '';
+  res.json({
+    hasKey: !!key,
+    keyPrefix: key ? key.substring(0, 8) + '...' : 'NOT SET',
+    keyLength: key.length,
+    nodeEnv: process.env.NODE_ENV || 'not set',
+    envKeys: Object.keys(process.env).filter(k => k.includes('DEEP') || k.includes('KEY')),
+    templates: loadTemplates().length,
+  });
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     const templates = loadTemplates();
@@ -358,6 +380,9 @@ if (require.main === module) {
     console.log(`   地址: http://localhost:${PORT}`);
     console.log(`   提示词: ${gamePrompt ? '✅ 已加载 (' + gamePrompt.length + ' 字符)' : '❌ 未加载'}`);
     console.log(`   模板: ${templates.length} 个已加载`);
-    console.log(`   API Key: ${process.env.DEEPSEEK_API_KEY ? '✅ 已配置' : '⚠ 未配置 (需创建 .env 文件)'}\n`);
+    const keyOk = !!process.env.DEEPSEEK_API_KEY;
+    console.log(`   API Key: ${keyOk ? '✅ 已配置 (' + process.env.DEEPSEEK_API_KEY.substring(0, 5) + '...)' : '❌ 未配置！请在 Railway Variables 中添加 DEEPSEEK_API_KEY 并重新部署'}`);
+    if (!keyOk) console.log(`   当前环境变量: ${Object.keys(process.env).filter(k => k.includes('DEEP') || k.includes('KEY')).join(', ') || '无相关变量'}`);
+    console.log('');
   });
 }

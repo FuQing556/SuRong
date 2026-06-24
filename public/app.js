@@ -15,6 +15,7 @@ const dom = {
   promptEditor: $('#prompt-editor'),
   promptLength: $('#prompt-length'),
   settingsMsg: $('#settings-msg'),
+  apiKeyInput: $('#api-key-input'),
   // 游戏
   settlementContent: $('#settlement-content'),
   settlementBox: $('#settlement-box'),
@@ -411,6 +412,19 @@ function bindEvents() {
     if (e.key === 'Enter') sendAiInstruction();
   });
 
+  // API Key 保存
+  $('#btn-save-apikey').addEventListener('click', () => {
+    const key = dom.apiKeyInput ? dom.apiKeyInput.value.trim() : '';
+    if (key && key.startsWith('sk-')) {
+      localStorage.setItem('xixi_apikey', key);
+      const msgEl = document.querySelector('#settings-msg');
+      if (msgEl) { msgEl.textContent = '✅ API Key 已保存'; msgEl.style.color = 'var(--green)'; }
+    } else {
+      const msgEl = document.querySelector('#settings-msg');
+      if (msgEl) { msgEl.textContent = '⚠ Key 格式不正确，应以 sk- 开头'; msgEl.style.color = 'var(--red)'; }
+    }
+  });
+
   $('#btn-settings').addEventListener('click', openSettings);
   $('#btn-close-settings').addEventListener('click', closeSettings);
   $('#btn-save-prompt').addEventListener('click', savePrompt);
@@ -562,6 +576,7 @@ async function sendMessage(userContent) {
         summary: null,
         systemPrompt: null,
         template: { id: tpl.id, outputSections: tpl.outputSections, promptBody: tpl.promptBody },
+        apiKey: localStorage.getItem('xixi_apikey') || '',
       }),
     });
 
@@ -852,6 +867,10 @@ async function openSettings() {
       }
     }
   }
+  // 显示已保存的 API Key
+  const savedKey = localStorage.getItem('xixi_apikey') || '';
+  if (dom.apiKeyInput) dom.apiKeyInput.value = savedKey;
+
   dom.settingsOverlay.classList.add('active');
 }
 
@@ -1219,7 +1238,7 @@ async function generatePrompt() {
       if (attempt > 1 && msgEl) { msgEl.textContent = '⏳ 第' + attempt + '次尝试生成...'; }
       const resp = await fetch('/api/generate-prompt', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, world, protagonist, conflict, extra, styles }),
+        body: JSON.stringify({ name, world, protagonist, conflict, extra, styles, apiKey: localStorage.getItem('xixi_apikey') || '' }),
       });
       if (!resp.ok) throw new Error((await resp.json()).error || '生成失败');
       const data = await resp.json();

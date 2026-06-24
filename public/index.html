@@ -105,8 +105,17 @@
   <!-- ═══════════ 设置弹窗 ═══════════ -->
   <div id="settings-overlay" class="overlay">
     <div class="modal settings-modal">
-      <h2>⚙️ 提示词设置</h2>
-      <p class="settings-hint">修改后点击保存，下次对话即生效。修改前请备份原版。</p>
+      <h2>⚙️ 设置</h2>
+      <!-- API Key -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px;color:var(--text-dim);">🔑 DeepSeek API Key</label>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <input id="api-key-input" type="password" placeholder="sk-..." style="flex:1;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;">
+          <button id="btn-save-apikey" class="btn btn-secondary" style="flex-shrink:0;">💾 保存</button>
+        </div>
+        <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">在 platform.deepseek.com 获取。Key 仅保存在本地浏览器。</p>
+      </div>
+      <p class="settings-hint">修改提示词后点击保存，下次对话即生效。</p>
       <textarea id="prompt-editor" spellcheck="false"></textarea>
       <div class="settings-info">
         <span id="prompt-length">字数: 0</span>
