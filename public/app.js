@@ -1339,8 +1339,8 @@ async function generatePrompt() {
   const msgEl = qs('#create-save-msg'); if (msgEl) { msgEl.textContent = '⏳ AI 正在生成提示词，可能需要30-60秒...'; msgEl.style.color = 'var(--text-dim)'; }
   const btnEl = qs('#btn-generate-prompt'); if (btnEl) btnEl.disabled = true;
 
-  // 重试最多2次
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  // 重试最多3次
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       if (attempt > 1 && msgEl) { msgEl.textContent = '⏳ 第' + attempt + '次尝试生成...'; }
       const resp = await fetch('/api/generate-prompt', {

@@ -300,20 +300,35 @@ app.post('/api/generate-prompt', async (req, res) => {
   try {
     const apiKey = getApiKey(req.body);
     const content = await callDeepSeek([
-      { role: 'system', content: '你是游戏设计AI。只输出一行完整JSON，不要markdown代码块，不要解释。' },
+      { role: 'system', content: '你是游戏设计AI。只输出一行完整JSON，不要markdown代码块，不要解释。所有字符串内的双引号必须用反斜杠转义。' },
       { role: 'user', content: metaPrompt },
-    ], apiKey, 0.7, 4096);
+    ], apiKey, 0.3, 8192);  // 低温保证JSON稳定，大token防截断
 
-    // 提取JSON
+    // 提取并修复JSON
     let jsonStr = content;
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (jsonMatch) jsonStr = jsonMatch[1];
     else {
       const braceStart = content.indexOf('{');
       const braceEnd = content.lastIndexOf('}');
       if (braceStart >= 0 && braceEnd > braceStart) jsonStr = content.substring(braceStart, braceEnd + 1);
     }
-    jsonStr = jsonStr.replace(/“|”/g, '"').replace(/‘|’/g, "'");
+
+    // 多轮JSON修复
+    jsonStr = jsonStr
+      .replace(/“|”/g, '"')      // 中文双引号 → 英文
+      .replace(/‘|’/g, "'")      // 中文单引号 → 英文
+      .replace(/[‘’]/g, "'")
+      .replace(/[“”]/g, '"')
+      .replace(/,(\s*[}\]])/g, '$1')  // 去尾逗号
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ''); // 去控制字符
+
+    // 尝试修复未转义的换行（在字符串值内）
+    try { JSON.parse(jsonStr); } catch(e) {
+      // 如果解析失败，尝试更激进的修复：将裸换行替换为 \n
+      const repaired = jsonStr.replace(/(?<=: ".*?)\n(?=.*?")/gs, '\\n');
+      if (repaired !== jsonStr) jsonStr = repaired;
+    }
 
     const template = JSON.parse(jsonStr);
     template.id = 'custom_' + Date.now();
