@@ -434,6 +434,12 @@ function bindEvents() {
   $('#btn-add-field').addEventListener('click', addField);
   dom.settingsOverlay.addEventListener('click', (e) => { if (e.target === dom.settingsOverlay) closeSettings(); });
 
+  // 序章弹窗
+  $('#btn-prologue-start').addEventListener('click', () => {
+    closePrologue();
+    startNewGame();
+  });
+
   dom.optionBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.index);
@@ -446,6 +452,7 @@ function bindEvents() {
     if (dom.warningOverlay?.classList.contains("active")) return;
     if (dom.saveSelectorOverlay?.classList.contains("active")) return;
     if (dom.createSaveOverlay?.classList.contains("active")) return;
+    if (document.querySelector('#prologue-overlay')?.classList.contains("active")) return;
     if (gameState.isLoading) return;
     const key = parseInt(e.key);
     if (key >= 1 && key <= 4 && gameState.currentOptions[key - 1]) {
@@ -927,7 +934,15 @@ async function resetPrompt() {
 // ── 存档管理 ──
 function loadSaves() {
   const saves = [
-    { id: 'surongrong', name: '苏蓉蓉·潜伏', desc: '斗罗大陆世界观。扮演史莱克卧底在日月帝国皇家魂导学院挣扎求生。潜行、博弈、情报、生存。', icon: '🌸', type: 'default' },
+    {
+      id: 'surongrong', name: '苏蓉蓉·潜伏',
+      desc: '斗罗大陆世界观。扮演史莱克卧底在日月帝国皇家魂导学院挣扎求生。潜行、博弈、情报、生存。',
+      icon: '🌸', type: 'default',
+      worldSetting: '斗罗大陆。日月帝国皇家魂导师学院，大陆最先进魂导技术中心。多方势力暗中博弈，魂师大赛临近。',
+      protagonist: '苏蓉蓉，18岁女魂师。武魂圣光铃兰（极致之光），64级魂帝。史莱克弃子兼潜伏先发队，在受辱与求存间走钢丝。',
+      conflict: '潜伏获取情报换取撤离。平衡各方势力觊觎。在暴露风险、精神崩溃与人格磨损中求生。',
+      styles: ['潜行谍战', '社交博弈', '沉沦堕落', '冒险战斗'],
+    },
   ];
   // 加载用户创建的存档
   const userSaves = JSON.parse(localStorage.getItem('xixi_saves') || '[]');
@@ -995,6 +1010,23 @@ function saveAchievements(data) { localStorage.setItem(getAchieveKey(), JSON.str
 function showSaveSelector() {
   // 先保存当前游戏状态（含主题），确保不丢失
   if (gameState.gameStarted) saveGameState();
+
+  // 显示弹窗
+  const ov = document.querySelector('#save-selector-overlay');
+  if (ov) ov.classList.add('active');
+  const setOv = document.querySelector('#settings-overlay');
+  if (setOv) setOv.classList.remove('active');
+  const csOv = document.querySelector('#create-save-overlay');
+  if (csOv) csOv.classList.remove('active');
+
+  // 初始化标签切换
+  initSaveTabs();
+
+  // 默认显示我的存档
+  renderMySavesPanel();
+}
+
+function renderMySavesPanel() {
   const saves = loadSaves();
   const grid = document.querySelector('#save-grid');
   if (!grid) return;
@@ -1003,13 +1035,17 @@ function showSaveSelector() {
     const info = getSaveInfo(s.id);
     const hasProgress = info && info.roundNumber > 0;
     const dateStr = info?.lastPlayed ? new Date(info.lastPlayed).toLocaleDateString('zh-CN') : '';
+    // 故事简述：优先用 conflict 首句，回退到 desc
+    const goalLine = s.conflict ? s.conflict.replace(/\n.*/s, '').substring(0, 40) : (s.desc || '').substring(0, 40);
+    const protagLine = s.protagonist ? s.protagonist.replace(/\n.*/s, '').substring(0, 30) : '';
     return `
     <div class="save-card" data-save-id="${s.id}">
       <div class="save-card-header">
         <span class="save-card-icon">${s.icon}</span>
-        <span class="save-card-name">${s.name}</span>
+        <span class="save-card-name">${escapeHtml(s.name)}</span>
       </div>
-      <div class="save-card-desc">${s.desc || ''}</div>
+      ${protagLine ? `<div class="save-card-protag">👤 ${escapeHtml(protagLine)}</div>` : ''}
+      <div class="save-card-goal">🎯 ${escapeHtml(goalLine || '新的冒险即将展开')}</div>
       <div class="save-card-meta">
         <span>${s.type === 'default' ? '📦 默认' : '✏ 自定义'}</span>
         ${hasProgress ? `<span>📝 第${info.roundNumber}回合</span><span>🕐 ${dateStr}</span>` : '<span>🆕 新存档</span>'}
@@ -1018,25 +1054,31 @@ function showSaveSelector() {
         ? `<button class="btn btn-primary save-card-btn save-continue-btn" data-save-id="${s.id}">▶ 继续</button>
            <button class="btn btn-secondary save-card-btn save-new-btn" data-save-id="${s.id}" style="margin-top:4px;">🔄 新游戏</button>`
         : `<button class="btn btn-primary save-card-btn save-new-btn" data-save-id="${s.id}">▶ 开始</button>`}
-      ${s.type !== 'default' ? `<button class="save-card-delete save-del-btn" data-save-id="${s.id}">✕</button>` : ''}
+      ${s.type !== 'default' ? `<button class="save-card-upload tavern-upload-btn" data-save-id="${s.id}">☁ 分享到酒馆</button>
+           <button class="save-card-delete save-del-btn" data-save-id="${s.id}">✕</button>` : ''}
     </div>`;
   }).join('');
 
-  // "继续"按钮
+  // 绑定按钮事件
   grid.querySelectorAll('.save-continue-btn').forEach(btn => {
     btn.addEventListener('click', (e) => { e.stopPropagation(); continueGame(btn.dataset.saveId); });
   });
-  // "新游戏/开始"按钮
   grid.querySelectorAll('.save-new-btn').forEach(btn => {
     btn.addEventListener('click', (e) => { e.stopPropagation(); selectSave(btn.dataset.saveId); });
   });
-  // 删除按钮
   grid.querySelectorAll('.save-del-btn').forEach(btn => {
     btn.addEventListener('click', (e) => { e.stopPropagation(); deleteSave(btn.dataset.saveId); });
   });
+  // 上传按钮
+  grid.querySelectorAll('.tavern-upload-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      uploadToTavern(btn.dataset.saveId);
+    });
+  });
 
-  // 底部按钮
-  const footer = document.querySelector('.save-selector-footer');
+  // 底部按钮（在 #panel-my-saves 内）
+  const footer = document.querySelector('#panel-my-saves .save-selector-footer');
   if (footer) {
     if (gameState.gameStarted) {
       footer.innerHTML = '<button id="btn-return-game" class="btn btn-secondary">↩ 返回游戏</button> <button id="btn-create-save" class="btn btn-primary">＋ 创建新存档</button>';
@@ -1051,13 +1093,51 @@ function showSaveSelector() {
       if (ov) ov.classList.remove('active');
     });
   }
+}
 
-  const ov = document.querySelector('#save-selector-overlay');
-  if (ov) ov.classList.add('active');
-  const setOv = document.querySelector('#settings-overlay');
-  if (setOv) setOv.classList.remove('active');
-  const csOv = document.querySelector('#create-save-overlay');
-  if (csOv) csOv.classList.remove('active');
+function initSaveTabs() {
+  // 重置标签：默认激活"我的存档"
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const myTab = document.querySelector('.tab-btn[data-tab="my-saves"]');
+  if (myTab) myTab.classList.add('active');
+
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const myPanel = document.querySelector('#panel-my-saves');
+  if (myPanel) myPanel.classList.add('active');
+
+  // 绑定标签切换（只绑一次）
+  if (window._tabsBound) return;
+  window._tabsBound = true;
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+      if (tab === 'my-saves') {
+        const panel = document.querySelector('#panel-my-saves');
+        if (panel) panel.classList.add('active');
+      } else if (tab === 'tavern') {
+        const panel = document.querySelector('#panel-tavern');
+        if (panel) panel.classList.add('active');
+        renderTavernPanel();
+      }
+    });
+  });
+
+  // 刷新酒馆按钮
+  const refreshBtn = document.querySelector('#btn-refresh-tavern');
+  if (refreshBtn) refreshBtn.addEventListener('click', renderTavernPanel);
+  // 管理员按钮
+  const adminBtn = document.querySelector('#btn-admin-login');
+  if (adminBtn) {
+    adminBtn.addEventListener('click', () => {
+      if (isTavernAdmin) adminLogout(); else adminLogin();
+    });
+    adminBtn.title = isTavernAdmin ? '退出管理员' : '管理员登录';
+  }
 }
 
 async function selectSave(saveId) {
@@ -1085,7 +1165,8 @@ async function selectSave(saveId) {
       refreshSystemPrompt();
       renderStatusContainers(template);
       localStorage.setItem('xixi_active_template_id', saveId);
-      startNewGame();
+      // 新游戏展示序章，不直接开始
+      showPrologue(template);
     } else {
       console.error('Template not found for save:', saveId);
     }
@@ -1095,10 +1176,17 @@ async function selectSave(saveId) {
 }
 
 function deleteSave(saveId) {
+  if (!confirm('确定要删除这个存档吗？此操作不可恢复。')) return;
   const saves = loadSaves();
   saveUserSaves(saves.filter(s => s.id !== saveId));
-  try { localStorage.removeItem('xixi_template_' + saveId); } catch(e) {}
-  showSaveSelector();
+  // 清理所有相关存储
+  try {
+    localStorage.removeItem('xixi_template_' + saveId);
+    localStorage.removeItem(getSaveKey(saveId));
+    localStorage.removeItem('xixi_achievements_' + saveId);
+    localStorage.removeItem('xixi_theme_' + saveId);
+  } catch(e) {}
+  renderMySavesPanel();
 }
 
 async function continueGame(saveId) {
@@ -1271,6 +1359,10 @@ async function confirmCreateSave() {
     name: generatedTemplate.name || (qs('#new-save-name')?.value?.trim() || ''),
     desc: generatedTemplate.description || (qs('#new-save-world')?.value?.trim()?.substring(0, 80) || ''),
     icon: '🎮', type: 'custom', template: generatedTemplate,
+    worldSetting: qs('#new-save-world')?.value?.trim() || generatedTemplate.worldSetting || '',
+    protagonist: qs('#new-save-protagonist')?.value?.trim() || generatedTemplate.protagonist || '',
+    conflict: qs('#new-save-conflict')?.value?.trim() || generatedTemplate.conflict || '',
+    styles: generatedTemplate.styles || [],
   });
   saveUserSaves(saves);
 
@@ -1279,6 +1371,164 @@ async function confirmCreateSave() {
   const csOv = document.querySelector('#create-save-overlay');
   if (csOv) csOv.classList.remove('active');
   selectSave(newId);
+}
+
+// ── 酒馆分享 ──
+let isTavernAdmin = false;
+
+function adminLogin() {
+  const pwd = prompt('请输入管理员密码：');
+  if (pwd === 'admin123') {
+    isTavernAdmin = true;
+    const status = document.querySelector('#admin-status');
+    if (status) { status.textContent = '✅ 管理员'; status.style.color = 'var(--green)'; }
+    renderTavernPanel();
+  } else if (pwd !== null) {
+    alert('密码错误');
+  }
+}
+
+function adminLogout() {
+  isTavernAdmin = false;
+  const status = document.querySelector('#admin-status');
+  if (status) { status.textContent = ''; }
+  renderTavernPanel();
+}
+
+async function deleteFromTavern(sharedId) {
+  if (!confirm('确定要从酒馆中删除这个分享吗？')) return;
+  try {
+    const resp = await fetch(`/api/shared/${sharedId}`, { method: 'DELETE' });
+    if (!resp.ok) throw new Error('删除失败');
+    renderTavernPanel();
+  } catch (err) {
+    alert('❌ 删除失败: ' + err.message);
+  }
+}
+
+async function uploadToTavern(saveId) {
+  const saves = loadSaves();
+  const save = saves.find(s => s.id === saveId);
+  if (!save || !save.template) {
+    alert('存档数据不完整，无法上传');
+    return;
+  }
+  if (!confirm(`确定要将「${save.name}」分享到酒馆吗？\n\n分享后其他玩家可以下载你的故事设定。`)) return;
+
+  try {
+    const resp = await fetch('/api/shared', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template: save.template }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.error || '上传失败');
+    }
+    alert(`✅ 「${save.name}」已成功分享到酒馆！`);
+  } catch (err) {
+    alert('❌ 上传失败: ' + err.message);
+  }
+}
+
+async function loadTavernList() {
+  try {
+    const resp = await fetch('/api/shared');
+    const data = await resp.json();
+    return data.shared || [];
+  } catch (e) {
+    console.error('加载酒馆失败:', e);
+    return [];
+  }
+}
+
+async function renderTavernPanel() {
+  const grid = $('#tavern-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div class="tavern-loading">⏳ 正在加载酒馆...</div>';
+
+  const shared = await loadTavernList();
+  if (shared.length === 0) {
+    grid.innerHTML = '<div class="tavern-empty">🍺 酒馆空空如也<br><span style="font-size:12px;color:var(--text-dim);">暂时没有人分享故事设定，来做第一个吧！</span></div>';
+  } else {
+    grid.innerHTML = shared.map(s => {
+      const goalLine = s.conflict ? s.conflict.replace(/\n.*/s, '').substring(0, 40) : (s.description || '').substring(0, 40);
+      const protagLine = s.protagonist ? s.protagonist.replace(/\n.*/s, '').substring(0, 30) : '';
+      return `
+      <div class="save-card" data-shared-id="${s.id}">
+        <div class="save-card-header">
+          <span class="save-card-icon">📖</span>
+          <span class="save-card-name">${escapeHtml(s.name)}</span>
+        </div>
+        ${protagLine ? `<div class="save-card-protag">👤 ${escapeHtml(protagLine)}</div>` : ''}
+        <div class="save-card-goal">🎯 ${escapeHtml(goalLine || '新的冒险即将展开')}</div>
+        <div class="save-card-meta">
+          <span class="tavern-card-uploaded">👤 ${escapeHtml(s.author || '未知')}</span>
+          <span class="tavern-card-uploaded">🕐 ${s.uploadedAt ? new Date(s.uploadedAt).toLocaleDateString('zh-CN') : '未知'}</span>
+          <span class="tavern-card-downloads">⬇ ${s.downloads || 0}</span>
+        </div>
+        <button class="btn btn-primary save-card-btn tavern-import-btn" data-shared-id="${s.id}">📥 导入并游玩</button>
+        ${isTavernAdmin ? `<button class="save-card-delete tavern-del-btn" data-shared-id="${s.id}" style="position:absolute;top:6px;right:6px;">✕</button>` : ''}
+      </div>
+    `}).join('');
+
+    grid.querySelectorAll('.tavern-import-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        importFromTavern(btn.dataset.sharedId);
+      });
+    });
+    // 管理员删除按钮
+    grid.querySelectorAll('.tavern-del-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteFromTavern(btn.dataset.sharedId);
+      });
+    });
+  }
+
+  const infoEl = $('#tavern-info');
+  if (infoEl) infoEl.textContent = `共 ${shared.length} 个分享`;
+}
+
+async function importFromTavern(sharedId) {
+  try {
+    const resp = await fetch(`/api/shared/${sharedId}`);
+    const data = await resp.json();
+    const template = data.template;
+
+    if (!template) throw new Error('模板数据为空');
+
+    const saves = loadSaves();
+    const existing = saves.find(s => s.id === sharedId);
+    if (existing) {
+      if (!confirm(`本地已有存档「${template.name}」，是否覆盖？`)) return;
+      saveUserSaves(saves.filter(s => s.id !== sharedId));
+    }
+
+    const updatedSaves = loadSaves();
+    updatedSaves.push({
+      id: sharedId,
+      name: template.name || '导入存档',
+      desc: template.description || '',
+      icon: '📥',
+      type: 'custom',
+      template: template,
+      worldSetting: template.worldSetting || '',
+      protagonist: template.protagonist || '',
+      conflict: template.conflict || '',
+      styles: template.styles || [],
+    });
+    saveUserSaves(updatedSaves);
+
+    alert(`✅ 已导入「${template.name}」！切换到"我的存档"即可开始游戏。`);
+
+    // 刷新我的存档面板
+    renderMySavesPanel();
+
+  } catch (err) {
+    alert('❌ 导入失败: ' + err.message);
+  }
 }
 
 // ── AI 实时指令 ──
@@ -1326,6 +1576,73 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// ── 工具函数 ──
+function truncate(str, max) {
+  if (!str) return '';
+  return str.length > max ? str.substring(0, max) + '...' : str;
+}
+
+// ── 序章弹窗（背景故事卡）──
+function showPrologue(template) {
+  const icon = $('#prologue-icon');
+  const title = $('#prologue-title');
+  const body = $('#prologue-body');
+
+  // 提取背景信息（优先结构字段，回退到 description）
+  const world = template.worldSetting || '';
+  const protag = template.protagonist || '';
+  const conflict = template.conflict || '';
+  const styleList = template.styles || [];
+  const desc = template.description || '';
+
+  // 辅助：将多段落文本渲染为 HTML（\n\n→段落，\n→换行）
+  function renderText(text) {
+    if (!text) return '';
+    const escaped = escapeHtml(text);
+    const paragraphs = escaped.split('\n\n').filter(p => p.trim());
+    return paragraphs.map(p =>
+      `<p class="prologue-section-content">${p.replace(/\n/g, '<br>')}</p>`
+    ).join('');
+  }
+
+  // 若没有任何结构化背景，直接用 description 做简化展示
+  if (!world && !protag && !conflict) {
+    body.innerHTML = `<p class="prologue-section-content">${escapeHtml(desc || '一段未知的冒险即将展开。')}</p>`;
+  } else {
+    let html = '';
+    if (world) {
+      html += `<div class="prologue-section-title">🌍 世界观</div>`;
+      html += renderText(world);
+    }
+    if (protag) {
+      html += `<div class="prologue-section-title">👤 主角设定</div>`;
+      html += renderText(protag);
+    }
+    if (conflict) {
+      html += `<div class="prologue-section-title">⚔ 核心冲突</div>`;
+      html += renderText(conflict);
+    }
+    if (styleList.length > 0) {
+      html += `<div class="prologue-styles-bar">`;
+      html += styleList.map(s => `<span class="prologue-style-tag">${escapeHtml(s)}</span>`).join('');
+      html += `</div>`;
+    }
+    body.innerHTML = html;
+  }
+
+  icon.textContent = '📖';
+  title.textContent = template.name || '序章';
+
+  // 显示弹窗
+  const overlay = $('#prologue-overlay');
+  if (overlay) overlay.classList.add('active');
+}
+
+function closePrologue() {
+  const overlay = $('#prologue-overlay');
+  if (overlay) overlay.classList.remove('active');
 }
 
 // ── 启动 ──

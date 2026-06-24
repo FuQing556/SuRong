@@ -1,5 +1,5 @@
-// Service Worker — 离线缓存
-const CACHE = 'xixi-v2';
+// Service Worker — 离线缓存（网络优先，回退缓存）
+const CACHE = 'xixi-v3';
 const FILES = [
   '/', '/index.html', '/style.css', '/app.js',
   '/manifest.json', '/icon-192.png', '/icon-512.png',
@@ -8,11 +8,28 @@ const FILES = [
 ];
 
 self.addEventListener('install', e => {
+  // 跳过等待，立即激活
+  self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
 });
 
+self.addEventListener('activate', e => {
+  // 清理旧版本缓存
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+    ))
+  );
+});
+
 self.addEventListener('fetch', e => {
+  // 网络优先：先请求网络，失败时用缓存
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    fetch(e.request).then(response => {
+      // 更新缓存
+      const clone = response.clone();
+      caches.open(CACHE).then(c => c.put(e.request, clone));
+      return response;
+    }).catch(() => caches.match(e.request))
   );
 });

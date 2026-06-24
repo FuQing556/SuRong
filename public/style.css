@@ -89,7 +89,9 @@ html, body {
 
 /* ── 序章弹窗 ── */
 .prologue-modal {
-  max-width: 620px;
+  max-width: 680px;
+  max-height: 88vh;
+  overflow-y: auto;
   text-align: left;
   padding: 28px 32px;
 }
@@ -131,6 +133,35 @@ html, body {
 }
 .prologue-footer {
   text-align: center;
+}
+
+/* ── 序章弹窗补充样式 ── */
+.prologue-styles-bar {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-top: 12px; justify-content: center;
+}
+.prologue-style-tag {
+  background: rgba(201,169,110,.15);
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  border-radius: 20px;
+  padding: 2px 14px;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.prologue-section-title {
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  letter-spacing: 2px;
+}
+.prologue-section-content {
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--text);
+  text-indent: 2em;
 }
 
 /* ── 设置弹窗 ── */
@@ -614,35 +645,106 @@ html, body {
 
 /* ── 存档选择器 ── */
 .save-selector-modal {
-  max-width: 700px;
+  max-width: 760px;
   max-height: 85vh;
   overflow-y: auto;
+  padding: 24px 28px;
 }
 .save-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
   margin: 16px 0;
 }
 .save-card {
+  position: relative;
   background: var(--bg-card);
   border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 16px 16px 12px;
   cursor: pointer;
   transition: all .2s;
+  min-width: 0;
+  overflow: hidden;
 }
 .save-card:hover { border-color: var(--gold); background: var(--bg-hover); }
 .save-card.active { border-color: var(--gold); box-shadow: 0 0 12px rgba(201,169,110,.15); }
-.save-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.save-card-icon { font-size: 24px; }
-.save-card-name { font-size: 15px; font-weight: 600; color: var(--text-bright); }
-.save-card-desc { font-size: 12px; color: var(--text-dim); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.save-card-meta { font-size: 11px; color: var(--text-dim); margin-top: 8px; display: flex; gap: 12px; }
-.save-card-btn { margin-top: 10px; width: 100%; }
+.save-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.save-card-icon { font-size: 24px; flex-shrink: 0; }
+.save-card-name { font-size: 15px; font-weight: 600; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.save-card-desc { font-size: 12px; color: var(--text-dim); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 2px; }
+.save-card-protag {
+  font-size: 12px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-bottom: 2px;
+}
+.save-card-goal {
+  font-size: 11px; color: var(--gold-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.save-card-meta { font-size: 11px; color: var(--text-dim); margin-top: 8px; display: flex; gap: 12px; flex-wrap: wrap; }
+.save-card-btn { margin-top: 8px; width: 100%; }
 .save-selector-footer { text-align: center; margin-top: 16px; }
-.save-card-delete { position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; opacity: .5; }
+.save-card-delete { position: absolute; top: 6px; right: 6px; background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; opacity: .5; z-index: 1; }
 .save-card-delete:hover { opacity: 1; color: var(--red); }
+.save-card-upload {
+  display: block; width: 100%; margin-top: 6px;
+  background: rgba(201,169,110,.1); border: 1px dashed var(--gold-dim);
+  color: var(--gold); font-size: 11px; padding: 5px 8px;
+  border-radius: 6px; cursor: pointer; text-align: center;
+  transition: all .2s; font-family: inherit;
+}
+.save-card-upload:hover { background: rgba(201,169,110,.2); border-color: var(--gold); }
+.save-card-brief {
+  margin-top: 6px; font-size: 11px; color: var(--text-dim);
+  line-height: 1.5; display: flex; flex-direction: column; gap: 2px;
+}
+.brief-line {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── 标签栏 ── */
+.tab-bar {
+  display: flex; gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 12px;
+}
+.tab-btn {
+  background: none; border: none;
+  color: var(--text-dim); font-size: 14px;
+  padding: 8px 20px; cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all .2s;
+  font-family: inherit;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+.tab-panel { display: none; width: 100%; }
+.tab-panel.active { display: block; width: 100%; }
+
+/* ── 酒馆面板 ── */
+.tavern-card-uploaded {
+  font-size: 10px; color: var(--text-dim);
+  display: flex; align-items: center; gap: 4px;
+}
+.tavern-card-downloads {
+  font-size: 10px; color: var(--green);
+}
+.tavern-loading {
+  text-align: center; padding: 40px;
+  color: var(--text-dim); font-size: 14px;
+}
+.tavern-info {
+  font-size: 11px; color: var(--text-dim);
+}
+.tavern-empty {
+  text-align: center; padding: 32px;
+  color: var(--text-dim); font-size: 14px;
+}
 
 /* ── 创建存档表单 ── */
 .create-save-modal { max-width: 580px; max-height: 85vh; overflow-y: auto; }

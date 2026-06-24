@@ -57,6 +57,10 @@ function loadTemplates() {
           version: t.version || '1.0.0',
           sceneTypes: t.sceneTypes || [],
           hasFields: !!(t.outputSections),
+          worldSetting: t.worldSetting || '',
+          protagonist: t.protagonist || '',
+          conflict: t.conflict || '',
+          styles: t.styles || [],
         });
       } catch (e) { console.error(`模板 ${file} 解析失败:`, e.message); }
     }
@@ -286,9 +290,12 @@ app.post('/api/generate-prompt', async (req, res) => {
 3. achievements — 6-8个成就：{"成就名":{"icon":"emoji","desc":"说明"}}
 4. sceneTypes — 5-7个中文场景类型
 5. description — 20字简介
+6. worldSetting — 世界观详细介绍（200-400字，3-4段\\n\\n分隔。必须包含：势力格局、历史背景、当前局势、隐藏暗流）
+7. protagonist — 主角详细介绍（200-400字，3-4段\\n\\n分隔。必须包含：外貌性格、能力定位、身世背景、当前处境与内心挣扎）
+8. conflict — 核心冲突介绍（200-400字，多段\\n\\n分隔。必须分点列出主要矛盾、各方威胁、可选路线、可能结局）
 
-【输出格式】只输出一行JSON：
-{"name":"${name}","description":"简介","outputSections":{...},"promptBody":"正文(双引号改单引号)","achievements":{...},"sceneTypes":[...],"sceneImages":{...},"theme":"dark"}`;
+【输出格式】严格输出以下JSON结构，worldSetting/protagonist/conflict必须使用\\n\\n分隔段落：
+{"name":"${name}","description":"20字内简介","outputSections":{...},"promptBody":"正文","achievements":{...},"sceneTypes":[...],"sceneImages":{...},"theme":"dark","worldSetting":"段1\\n\\n段2\\n\\n段3","protagonist":"段1\\n\\n段2\\n\\n段3","conflict":"段1\\n\\n段2\\n\\n段3"}`;
 
   try {
     const apiKey = getApiKey(req.body);
@@ -314,6 +321,12 @@ app.post('/api/generate-prompt', async (req, res) => {
     template.version = '1.0.0';
     template.defaultSceneImage = '日常.png';
     template.openingMessages = ['开始游戏。'];
+    // 保留背景故事卡字段（优先AI生成的详细版，回退到表单原始输入）
+    template.worldSetting = template.worldSetting || world;
+    template.protagonist = template.protagonist || protagonist;
+    template.conflict = template.conflict || conflict || '';
+    template.styles = template.styles && template.styles.length > 0 ? template.styles : (styles || []);
+    template.extra = template.extra || extra || '';
     // 强制所有场景图片为日常.png（用户可在设置里替换）
     template.sceneImages = {};
     if (template.sceneTypes) template.sceneTypes.forEach(t => { template.sceneImages[t] = '日常.png'; });
@@ -354,6 +367,101 @@ app.post('/api/summarize', async (req, res) => {
   } catch (err) {
     console.error('摘要生成失败:', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ── 酒馆分享系统 ──
+const SHARED_DIR = path.join(__dirname, 'templates', 'shared');
+
+function ensureSharedDir() {
+  if (!fs.existsSync(SHARED_DIR)) fs.mkdirSync(SHARED_DIR, { recursive: true });
+}
+
+// API: 列出所有分享模板
+app.get('/api/shared', (_req, res) => {
+  ensureSharedDir();
+  const shared = [];
+  try {
+    const files = fs.readdirSync(SHARED_DIR).filter(f => f.endsWith('.json'));
+    for (const file of files) {
+      try {
+        const raw = fs.readFileSync(path.join(SHARED_DIR, file), 'utf-8');
+        const t = JSON.parse(raw);
+        shared.push({
+          id: t.id,
+          name: t.name || file,
+          description: t.description || '',
+          worldSetting: t.worldSetting || '',
+          protagonist: t.protagonist || '',
+          conflict: t.conflict || '',
+          styles: t.styles || [],
+          author: t.author || '未知作者',
+          uploadedAt: t.uploadedAt || '',
+          downloads: t.downloads || 0,
+          theme: t.theme || 'dark',
+        });
+      } catch (e) { console.error('解析分享模板失败:', file, e.message); }
+    }
+  } catch (e) { console.error('读取分享目录失败:', e.message); }
+  shared.sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''));
+  res.json({ shared });
+});
+
+// API: 上传分享模板
+app.post('/api/shared', (req, res) => {
+  const { template } = req.body;
+  if (!template || !template.id || !template.name) {
+    return res.status(400).json({ error: '无效的模板数据' });
+  }
+  try {
+    ensureSharedDir();
+    const shared = { ...template };
+    shared.uploadedAt = shared.uploadedAt || new Date().toISOString();
+    shared.downloads = shared.downloads || 0;
+    shared.worldSetting = shared.worldSetting || '';
+    shared.protagonist = shared.protagonist || '';
+    shared.conflict = shared.conflict || '';
+    shared.styles = shared.styles || [];
+    delete shared.apiKey;
+
+    const fileName = `${template.id}.json`;
+    fs.writeFileSync(path.join(SHARED_DIR, fileName), JSON.stringify(shared, null, 2), 'utf-8');
+    res.json({ success: true, id: template.id });
+  } catch (err) {
+    res.status(500).json({ error: '上传分享失败: ' + err.message });
+  }
+});
+
+// API: 下载单个分享模板
+app.get('/api/shared/:id', (req, res) => {
+  ensureSharedDir();
+  const filePath = path.join(SHARED_DIR, `${req.params.id}.json`);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: '分享模板未找到' });
+  }
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const template = JSON.parse(raw);
+    template.downloads = (template.downloads || 0) + 1;
+    fs.writeFileSync(filePath, JSON.stringify(template, null, 2), 'utf-8');
+    res.json({ template });
+  } catch (err) {
+    res.status(500).json({ error: '读取分享模板失败: ' + err.message });
+  }
+});
+
+// API: 删除分享模板
+app.delete('/api/shared/:id', (req, res) => {
+  ensureSharedDir();
+  const filePath = path.join(SHARED_DIR, `${req.params.id}.json`);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: '分享模板未找到' });
+  }
+  try {
+    fs.unlinkSync(filePath);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: '删除分享失败: ' + err.message });
   }
 });
 

@@ -35,16 +35,55 @@
     </div>
   </div>
 
+  <!-- ═══════════ 序章弹窗（背景故事卡）═══════════ -->
+  <div id="prologue-overlay" class="overlay">
+    <div class="modal prologue-modal">
+      <div class="prologue-header">
+        <span class="prologue-icon" id="prologue-icon">📖</span>
+        <h2 id="prologue-title">序章</h2>
+      </div>
+      <div class="prologue-body" id="prologue-body">
+        <!-- 动态填充 -->
+      </div>
+      <div class="prologue-question">命运之轮即将转动，你准备好了吗？</div>
+      <div class="prologue-footer">
+        <button id="btn-prologue-start" class="btn btn-primary">▶ 进入故事</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════ 存档选择页 ═══════════ -->
   <div id="save-selector-overlay" class="overlay">
     <div class="modal save-selector-modal">
-      <h2>📂 选择存档</h2>
-      <p class="settings-hint">每个存档对应一个独立的故事世界，使用不同的提示词和设定。</p>
-      <div class="save-grid" id="save-grid">
-        <!-- 动态生成存档卡片 -->
+      <!-- 标签切换栏 -->
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="my-saves">📂 我的存档</button>
+        <button class="tab-btn" data-tab="tavern">🍻 酒馆</button>
       </div>
-      <div class="save-selector-footer">
-        <button id="btn-create-save" class="btn btn-primary">＋ 创建新存档</button>
+
+      <!-- 我的存档面板 -->
+      <div class="tab-panel active" id="panel-my-saves">
+        <p class="settings-hint">每个存档对应一个独立的故事世界，使用不同的提示词和设定。</p>
+        <div class="save-grid" id="save-grid">
+          <!-- 动态生成存档卡片 -->
+        </div>
+        <div class="save-selector-footer">
+          <button id="btn-create-save" class="btn btn-primary">＋ 创建新存档</button>
+        </div>
+      </div>
+
+      <!-- 酒馆面板 -->
+      <div class="tab-panel" id="panel-tavern">
+        <p class="settings-hint">🍻 浏览其他玩家分享的故事设定，下载导入即可游玩。</p>
+        <div class="save-grid" id="tavern-grid">
+          <div class="tavern-loading">加载中...</div>
+        </div>
+        <div class="save-selector-footer">
+          <span class="tavern-info" id="tavern-info"></span>
+          <button id="btn-refresh-tavern" class="btn btn-secondary">🔄 刷新酒馆</button>
+          <button id="btn-admin-login" class="btn btn-ghost btn-tiny" style="margin-left:8px;" title="管理员登录">🔑</button>
+          <span id="admin-status" style="font-size:10px;color:var(--text-dim);margin-left:4px;"></span>
+        </div>
       </div>
     </div>
   </div>
