@@ -1,41 +1,42 @@
-/* 🌅 日落 — 深紫灰基底 + 暖琥珀点缀 + 地平线光 + 半圆画框 */
+/* 🌅 日落 — 深紫暮光基底 + 琥珀×青金撞色 + 地平线暖光 + 半圆画框 */
 :root {
-  --bg:#120c10;--bg-panel:#1a1218;--bg-card:#221820;--bg-hover:#2a1e26;
-  --border:#34242e;--border-focus:#d47830;
-  --text:#d4c8c4;--text-dim:#8a7068;--text-bright:#f0e0d8;
-  --gold:#d47830;--gold-dim:#8a4818;--purple:#b8706c;--purple-hover:#c8807c;
-  --red:#e06050;--green:#7ab850;--red-dim:#281418;
-  --option-1:#c86830;--option-2:#b05838;--option-3:#d08028;--option-4:#a05840;
-  --radius:10px;--shadow:0 4px 24px rgba(0,0,0,.4);
+  --bg:#100a12;--bg-panel:#1a101c;--bg-card:#241824;--bg-hover:#2e202c;
+  --border:#3a2838;--border-focus:#e8a040;
+  --text:#d8ccd4;--text-dim:#907880;--text-bright:#f0e0d8;
+  --gold:#e8a040;--gold-dim:#986020;--purple:#40b8c8;--purple-hover:#50c8d8;
+  --red:#e05848;--green:#58c870;--red-dim:#241018;
+  --option-1:#e8a040;--option-2:#40b8c8;--option-3:#78c858;--option-4:#d87088;
+  --radius:10px;--shadow:0 4px 28px rgba(0,0,0,.5);
 }
 body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:15px;font-weight:350}
 
 /* 地平线暖光 */
-#top-bar{background:linear-gradient(180deg,rgba(212,120,48,.08),transparent);border-bottom:2px solid var(--gold-dim);position:relative}
-#top-bar::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:horizonGlow 4s ease-in-out infinite}
-@keyframes horizonGlow{0%,100%{opacity:.3}50%{opacity:.8}}
+#top-bar{background:linear-gradient(180deg,rgba(232,160,64,.1),transparent);border-bottom:2px solid var(--gold-dim);position:relative}
+#top-bar::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),var(--purple),var(--gold),transparent);animation:horizonGlow 4s ease-in-out infinite}
+@keyframes horizonGlow{0%,100%{opacity:.4}50%{opacity:1}}
 
-/* 故事框 — 暮光 */
-#story-box{border:1px solid var(--border);border-radius:10px;box-shadow:inset 0 -50px 70px rgba(212,120,48,.03);border-left:3px solid var(--gold)}
+/* 故事框 — 暮光 + 琥珀左边线 */
+#story-box{border:1px solid var(--border);border-radius:10px;box-shadow:inset 0 -60px 80px rgba(232,160,64,.04);border-left:3px solid var(--gold)}
 #story-box::before{color:var(--gold);content:'🌅 现状';font-size:11px}
 .story-fade-in{animation:sunsetSlide .5s cubic-bezier(.25,.46,.45,.94)}
 @keyframes sunsetSlide{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
 
 /* 图片框 — 半圆落日 */
-.image-frame{border:2px solid var(--gold-dim);border-radius:50% 50% 10px 10px;overflow:hidden;box-shadow:0 0 30px rgba(212,120,48,.1)}
-.image-frame img{filter:brightness(.95) saturate(1.15)}
+.image-frame{border:2px solid var(--gold-dim);border-radius:50% 50% 10px 10px;overflow:hidden;box-shadow:0 0 30px rgba(232,160,64,.12)}
+.image-frame img{filter:brightness(.92) saturate(1.15)}
 
-.game-title{color:var(--gold);text-shadow:0 0 20px rgba(212,120,48,.3);letter-spacing:8px;font-size:20px;font-weight:400}
-.option-btn{border:2px solid var(--border);transition:all .3s;border-radius:10px}
-.option-btn:hover{box-shadow:0 0 22px rgba(212,120,48,.2);border-color:var(--gold);transform:translateY(-2px);background:rgba(212,120,48,.04)}
-.option-btn .option-num{border-radius:50%;color:#fff}
+.game-title{color:var(--gold);text-shadow:0 0 20px rgba(232,160,64,.35);letter-spacing:8px;font-size:20px;font-weight:400}
+.option-btn{border:2px solid var(--border);transition:all .3s;border-radius:10px;background:var(--bg-card)}
+.option-btn:hover{box-shadow:0 0 24px rgba(232,160,64,.22);border-color:var(--gold);transform:translateY(-2px);background:rgba(232,160,64,.05)}
+.option-btn .option-num{border-radius:50%;color:#fff;font-weight:700;font-size:12px;width:24px;height:24px;line-height:24px}
 .option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
 .option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
 
-.modal,.save-card{border:1px solid var(--border);border-radius:10px}.save-card:hover{border-color:var(--gold)}
-.settlement-box{border-left:3px solid var(--gold);border-radius:10px}
+.modal,.save-card{border:1px solid var(--border);border-radius:10px;background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
+.settlement-box{border-left:3px solid var(--gold);border-radius:10px;background:var(--bg-card)}
 input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:8px!important}
-.chip.selected{background:var(--gold);color:#120c10;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#120c10}.btn-primary:hover{background:#e08840}
-.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(212,120,48,.1);color:var(--gold)}
-.save-card-upload{background:rgba(212,120,48,.1);border-color:var(--gold-dim);color:var(--gold)}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 8px rgba(232,160,64,.2)}
+.chip.selected{background:var(--gold);color:#100a12;font-weight:700}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#100a12;font-weight:700;border-radius:8px}.btn-primary:hover{background:#f0b050}
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(232,160,64,.12);color:var(--gold);border-radius:6px}
+.save-card-upload{background:rgba(232,160,64,.1);border-color:var(--gold-dim);color:var(--gold)}

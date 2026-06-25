@@ -1,57 +1,54 @@
-/* 🌿 森林 — 苔藓绿基底 + 暖木卡片 + 翠绿高亮 + 落叶 + 木质边框 */
+/* 🌿 森林 — 深绿基底 + 琥珀暖金撞色 + 落叶粒子 + 木质画框 */
 :root {
-  --bg:#0f1a0f;--bg-panel:#162216;--bg-card:#1e2e18;--bg-hover:#263820;
-  --border:#2a4020;--border-focus:#5cb85c;
-  --text:#d8e8d0;--text-dim:#80a070;--text-bright:#f0fce8;
-  --gold:#6abf6a;--gold-dim:#3a7030;--purple:#5cb85c;--purple-hover:#6cc86c;
-  --red:#e07060;--green:#5cb85c;--red-dim:#2a1814;
-  --option-1:#5a9a4a;--option-2:#4a8a6a;--option-3:#6a9a3a;--option-4:#9a7a4a;
-  --radius:14px;--shadow:0 4px 24px rgba(0,20,0,.5);
+  --bg:#0a1610;--bg-panel:#0f1f17;--bg-card:#16281d;--bg-hover:#1e3427;
+  --border:#2a4a33;--border-focus:#e8a840;
+  --text:#d8e8d8;--text-dim:#789878;--text-bright:#f0fce8;
+  --gold:#e8a840;--gold-dim:#a07028;--purple:#d07850;--purple-hover:#e88860;
+  --red:#e05848;--green:#50b860;--red-dim:#201410;
+  --option-1:#e8a840;--option-2:#50a8d0;--option-3:#c870d0;--option-4:#e05848;
+  --radius:14px;--shadow:0 4px 28px rgba(0,16,8,.55);
 }
 body{font-family:Georgia,'Noto Serif SC','Times New Roman','Microsoft YaHei',serif;font-size:15px;font-weight:400}
 
-/* 落叶粒子 */
+/* 落叶粒子 — 暖金色调 */
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
-    radial-gradient(2px 4px at 10% 20%,rgba(106,191,106,.4),transparent),
-    radial-gradient(3px 5px at 30% 50%,rgba(90,170,90,.32),transparent),
-    radial-gradient(2px 3px at 50% 30%,rgba(110,180,100,.3),transparent),
-    radial-gradient(2px 4px at 70% 60%,rgba(100,175,105,.35),transparent),
-    radial-gradient(3px 5px at 85% 40%,rgba(115,185,110,.3),transparent),
-    radial-gradient(2px 3px at 15% 70%,rgba(105,180,108,.38),transparent),
-    radial-gradient(3px 6px at 60% 15%,rgba(95,170,100,.33),transparent);
-  background-size:200px 300px,250px 350px,220px 280px,240px 320px,260px 340px,230px 310px,250px 330px;
+    radial-gradient(2px 4px at 10% 20%,rgba(232,168,64,.35),transparent),
+    radial-gradient(3px 5px at 30% 50%,rgba(200,140,50,.28),transparent),
+    radial-gradient(2px 3px at 50% 30%,rgba(220,150,55,.3),transparent),
+    radial-gradient(2px 4px at 70% 60%,rgba(210,145,48,.32),transparent),
+    radial-gradient(3px 5px at 85% 40%,rgba(230,160,58,.28),transparent),
+    radial-gradient(2px 3px at 15% 70%,rgba(215,148,52,.34),transparent);
+  background-size:200px 300px,250px 350px,220px 280px,240px 320px,260px 340px,230px 310px;
   animation:leafFall 12s linear infinite}
-@keyframes leafFall{0%{background-position:0 0,0 -50px,0 -100px,0 -150px,0 -200px,0 -80px,0 -120px}100%{background-position:100px 300px,60px 300px,-40px 280px,80px 320px,-60px 340px,40px 310px,-30px 330px}}
+@keyframes leafFall{0%{background-position:0 0,0 -50px,0 -100px,0 -150px,0 -200px,0 -80px}100%{background-position:100px 300px,60px 300px,-40px 280px,80px 320px,-60px 340px,40px 310px}}
 
-/* 故事框 — 苔藓质感 */
-#story-box{border:2px solid var(--border-focus);border-radius:16px;background:linear-gradient(180deg,rgba(106,191,106,.03),transparent 60%);border-left:4px solid var(--gold);box-shadow:inset 0 0 60px rgba(30,60,20,.3)}
+/* 故事框 — 苔藓质感 + 暖金左边线 */
+#story-box{border:2px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(232,168,64,.03),transparent 60%);border-left:4px solid var(--gold);box-shadow:inset 0 0 60px rgba(16,40,20,.4)}
 #story-box::before{color:var(--gold);content:'🌿 现状';font-family:Georgia,serif;font-size:11px}
-
-/* 文字 — 从土里长出 */
 .story-fade-in{animation:growUp .6s cubic-bezier(.34,1.56,.64,1)}
 @keyframes growUp{from{opacity:0;transform:translateY(20px) scale(.96);filter:blur(2px)}to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
 
-/* 图片框 — 树皮边框 */
-.image-frame{border:4px solid transparent;border-image:linear-gradient(180deg,var(--gold-dim),var(--border),var(--gold-dim)) 1;border-radius:16px 16px 50% 50%;overflow:hidden;box-shadow:0 4px 20px rgba(0,30,0,.4)}
-.image-frame img{filter:brightness(.9) saturate(1.1)}
+/* 图片框 — 树皮纹理 */
+.image-frame{border:4px solid transparent;border-image:linear-gradient(180deg,var(--gold-dim),var(--border),var(--gold-dim)) 1;border-radius:16px 16px 50% 50%;overflow:hidden;box-shadow:0 4px 24px rgba(0,24,4,.45)}
+.image-frame img{filter:brightness(.88) saturate(1.1)}
 
-.game-title{font-family:Georgia,serif;letter-spacing:4px;color:var(--gold);text-shadow:0 0 16px rgba(106,191,106,.25);font-size:22px}
-.option-btn{border-radius:20px 8px 20px 8px;border-left:4px solid var(--gold-dim);border-width:2px;transition:all .3s}
-.option-btn:hover{border-left-width:14px;border-left-color:var(--gold);background:var(--bg-hover);box-shadow:0 0 24px rgba(106,191,106,.18);transform:translateX(4px)}
-.option-btn .option-num{border-radius:8px 20px 8px 20px;color:#fff}
+.game-title{font-family:Georgia,serif;letter-spacing:4px;color:var(--gold);text-shadow:0 0 18px rgba(232,168,64,.3);font-size:22px}
+.option-btn{border-radius:20px 8px 20px 8px;border-left:4px solid var(--border);border-width:2px;transition:all .3s;background:var(--bg-card)}
+.option-btn:hover{border-left-width:14px;border-left-color:var(--gold);background:var(--bg-hover);box-shadow:0 0 24px rgba(232,168,64,.2);transform:translateX(4px)}
+.option-btn .option-num{border-radius:8px 20px 8px 20px;color:#fff;font-weight:700;font-size:12px;width:24px;height:24px;line-height:24px}
 .option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
 .option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
 
-.modal,.save-card{border-radius:18px;border:1px solid var(--border-focus)}.save-card:hover{border-color:var(--gold)}
-.settlement-box{border-left:4px solid var(--gold);border-radius:12px}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important}
-input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 8px rgba(106,191,106,.15)}
-.story-round-badge{background:rgba(106,191,106,.12);color:var(--gold)}
-.status-label{color:var(--gold-dim)}.status-value{color:var(--text-bright)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#0f1a0f;font-weight:600}.btn-primary:hover{background:#7ad07a}
-.chip.selected{background:var(--gold);color:#0f1a0f;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.modal,.save-card{border-radius:18px;border:1px solid var(--border);background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
+.settlement-box{border-left:4px solid var(--gold);border-radius:12px;background:var(--bg-card)}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:10px!important}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 8px rgba(232,168,64,.2)}
+.story-round-badge{background:rgba(232,168,64,.14);color:var(--gold);border-radius:6px}
+.status-label{color:var(--text-dim)}.status-value{color:var(--text-bright)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#0a1610;font-weight:700}.btn-primary:hover{background:#f0b850}
+.chip.selected{background:var(--gold);color:#0a1610;font-weight:700}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
 .ach-item:not(.locked){border-left-color:var(--gold)}.ach-progress-fill{background:var(--gold)}
-.save-card-upload{background:rgba(106,191,106,.1);border-color:var(--gold-dim);color:var(--gold)}
+.save-card-upload{background:rgba(232,168,64,.12);border-color:var(--gold-dim);color:var(--gold)}
+#top-bar{border-bottom:1px solid var(--border)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-#top-bar{border-bottom:1px solid var(--border-focus)}

@@ -1,50 +1,51 @@
-/* 🌊 深海 — 深海军蓝基底 + 亮青点缀 + 气泡 + 波浪画框 */
+/* 🌊 深海 — 深蓝基底 + 珊瑚暖金撞色 + 气泡粒子 + 波浪画框 */
 :root {
-  --bg:#040e1a;--bg-panel:#081828;--bg-card:#0c1e30;--bg-hover:#102438;
-  --border:#162e44;--border-focus:#00c8d8;
-  --text:#c0d4e0;--text-dim:#508098;--text-bright:#e0f4fc;
-  --gold:#00c8d8;--gold-dim:#007888;--purple:#6098e0;--purple-hover:#78b0f0;
-  --red:#e05858;--green:#3cb878;--red-dim:#181820;
-  --option-1:#00a0b0;--option-2:#1a80c8;--option-3:#009080;--option-4:#d85050;
-  --radius:18px;--shadow:0 4px 24px rgba(0,0,0,.4);
+  --bg:#030d18;--bg-panel:#081a2c;--bg-card:#0d2238;--bg-hover:#132c46;
+  --border:#183850;--border-focus:#f0a060;
+  --text:#c8dce8;--text-dim:#5088a8;--text-bright:#e8f4fc;
+  --gold:#f0a060;--gold-dim:#b06830;--purple:#60a0e0;--purple-hover:#78b8f8;
+  --red:#f05850;--green:#40c880;--red-dim:#1a1018;
+  --option-1:#f0a060;--option-2:#40a8e0;--option-3:#50d090;--option-4:#e058a0;
+  --radius:18px;--shadow:0 4px 28px rgba(0,0,0,.5);
 }
 body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:14px;font-weight:350;letter-spacing:.3px}
 
-/* 气泡粒子 */
+/* 气泡粒子 — 暖色点缀 */
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
-    radial-gradient(circle at 15% 80%,rgba(0,200,216,.15),transparent 30px),
-    radial-gradient(circle at 35% 70%,rgba(0,200,216,.1),transparent 22px),
-    radial-gradient(circle at 52% 85%,rgba(0,190,210,.12),transparent 26px),
-    radial-gradient(circle at 68% 75%,rgba(0,200,216,.11),transparent 24px),
-    radial-gradient(circle at 82% 82%,rgba(0,210,220,.14),transparent 28px);
+    radial-gradient(circle at 15% 80%,rgba(240,160,96,.14),transparent 30px),
+    radial-gradient(circle at 35% 70%,rgba(200,140,80,.1),transparent 22px),
+    radial-gradient(circle at 52% 85%,rgba(220,150,90,.12),transparent 26px),
+    radial-gradient(circle at 68% 75%,rgba(240,160,96,.1),transparent 24px),
+    radial-gradient(circle at 82% 82%,rgba(210,145,85,.13),transparent 28px);
   background-size:300px 400px,250px 350px,280px 380px,260px 360px,290px 390px;
   animation:bubbles 8s ease-in-out infinite}
 @keyframes bubbles{0%,100%{background-position:0 0,0 0,0 0,0 0,0 0}50%{background-position:20px -30px,-15px -20px,10px -25px,-20px -15px,5px -35px}}
 
-/* 故事框 — 深海舷窗 */
-#story-box{border:2px solid var(--border-focus);border-radius:18px;box-shadow:inset 0 0 60px rgba(0,200,216,.06);border-left:4px solid var(--gold)}
+/* 故事框 — 舷窗 + 珊瑚左边线 */
+#story-box{border:2px solid var(--border);border-radius:18px;box-shadow:inset 0 0 60px rgba(240,160,96,.04);border-left:4px solid var(--gold)}
 #story-box::before{color:var(--gold);content:'🌊 现状';font-size:11px}
 .story-fade-in{animation:deepRise .7s cubic-bezier(.25,.46,.45,.94)}
 @keyframes deepRise{from{opacity:0;transform:translateY(24px);filter:blur(3px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
 
-/* 图片框 — 波浪底边 */
-.image-frame{border:2px solid var(--gold-dim);border-radius:18px 18px 40% 40%;overflow:hidden;box-shadow:0 0 30px rgba(0,200,216,.1)}
-.image-frame img{filter:brightness(.9) saturate(1.2)}
+/* 图片框 — 波浪底边 + 珊瑚边框 */
+.image-frame{border:2px solid var(--gold-dim);border-radius:18px 18px 40% 40%;overflow:hidden;box-shadow:0 0 30px rgba(240,160,96,.12)}
+.image-frame img{filter:brightness(.88) saturate(1.2)}
 
-.game-title{color:var(--gold);letter-spacing:9px;text-shadow:0 0 20px rgba(0,200,216,.3);font-size:20px;font-weight:300}
-.option-btn{border-radius:22px;border:2px solid var(--border);transition:all .3s ease}
-.option-btn:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,200,216,.2);border-color:var(--gold);background:rgba(0,200,216,.05)}
-.option-btn .option-num{border-radius:50%;color:#fff}
+.game-title{color:var(--gold);letter-spacing:9px;text-shadow:0 0 20px rgba(240,160,96,.3);font-size:20px;font-weight:300}
+.option-btn{border-radius:22px;border:2px solid var(--border);transition:all .3s ease;background:var(--bg-card)}
+.option-btn:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(240,160,96,.18);border-color:var(--gold);background:rgba(240,160,96,.06)}
+.option-btn .option-num{border-radius:50%;color:#fff;font-weight:700;font-size:12px;width:24px;height:24px;line-height:24px}
 .option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
 .option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
 
-#top-bar{border-bottom:2px solid var(--gold-dim);background:linear-gradient(180deg,rgba(0,200,216,.05),transparent)}
-.modal,.save-card{border-radius:20px;border:1px solid var(--border-focus)}.save-card:hover{border-color:var(--gold)}
-.settlement-box{border-left:3px solid var(--gold);border-radius:14px}
-.overlay .modal{border:1px solid var(--border-focus);border-radius:20px}
+#top-bar{border-bottom:2px solid var(--gold-dim);background:linear-gradient(180deg,rgba(240,160,96,.04),transparent)}
+.modal,.save-card{border-radius:20px;border:1px solid var(--border);background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
+.settlement-box{border-left:3px solid var(--gold);border-radius:14px;background:var(--bg-card)}
+.overlay .modal{border:1px solid var(--border);border-radius:20px}
 input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:12px!important}
-.chip.selected{background:var(--gold);color:#040e1a;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#040e1a;border-radius:22px;font-weight:600}.btn-primary:hover{background:#00dcec}
-.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(0,200,216,.12);color:var(--gold);border-radius:12px}
-.save-card-upload{background:rgba(0,200,216,.1);border-color:var(--gold-dim);color:var(--gold)}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 8px rgba(240,160,96,.2)}
+.chip.selected{background:var(--gold);color:#030d18;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#030d18;border-radius:22px;font-weight:700}.btn-primary:hover{background:#f8b068}
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(240,160,96,.14);color:var(--gold);border-radius:12px}
+.save-card-upload{background:rgba(240,160,96,.1);border-color:var(--gold-dim);color:var(--gold)}

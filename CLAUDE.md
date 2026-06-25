@@ -75,7 +75,7 @@ state → utils → dialogs → saves → ui → achievements
 Railway 每次 `git push` 部署会清空文件系统，酒馆共享数据（`templates/shared/`）会丢失。
 **推代码前**必须提醒用户备份酒馆：
 
-1. 打开 `https://xixi-tavern.up.railway.app` → 酒馆标签 → 🔑 管理员登录（密码见代码 `admin123`）
+1. 打开 `https://xixi-tavern.up.railway.app` → 酒馆标签 → 🔑 管理员登录（密码在 tavern.js 中，不公开）
 2. 📥 备份下载 `tavern_backup.json`
 3. git push 部署
 4. 部署完成后 → 📤 恢复上传备份

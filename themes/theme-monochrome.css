@@ -1,38 +1,44 @@
-/* ⬜ 黑白 — 纯灰阶、左线白→灰区分、负片画框、零动画 */
+/* ⬜ 黑白 — 高对比编辑风 + 深绯红点缀 + 打字机字体 + 粗线分割 */
 :root {
-  --bg:#0a0a0a;--bg-panel:#121212;--bg-card:#1a1a1a;--bg-hover:#222;
-  --border:#2a2a2a;--border-focus:#808080;
-  --text:#c8c8c8;--text-dim:#666;--text-bright:#f0f0f0;
-  --gold:#999;--gold-dim:#555;--purple:#777;--purple-hover:#888;
-  --red:#d06060;--green:#60b060;--red-dim:#1a1a1a;
-  --option-1:#888;--option-2:#777;--option-3:#999;--option-4:#aaa;
-  --radius:4px;--shadow:0 2px 12px rgba(0,0,0,.6);
+  --bg:#e8e4dc;--bg-panel:#f4f0ea;--bg-card:#faf8f4;--bg-hover:#ece8e0;
+  --border:#181410;--border-focus:#b82030;
+  --text:#181410;--text-dim:#787068;--text-bright:#000;
+  --gold:#b82030;--gold-dim:#801820;--purple:#181410;--purple-hover:#383430;
+  --red:#b82030;--green:#285830;--red-dim:#f0e8e4;
+  --option-1:#b82030;--option-2:#184868;--option-3:#286838;--option-4:#582860;
+  --radius:1px;--shadow:0 0 0 1px rgba(0,0,0,.08);
 }
-body{font-family:'Segoe UI','Helvetica Neue','Microsoft YaHei',sans-serif;letter-spacing:.5px;font-size:14px;font-weight:350}
+body{font-family:'Courier New','Source Code Pro','Noto Sans SC','Microsoft YaHei',monospace;font-size:14px;background:var(--bg);color:var(--text);font-weight:400;letter-spacing:-.2px}
 
-/* 故事框 — 极简 */
-#story-box{border:1px solid var(--border);border-radius:2px}
-#story-box::before{color:var(--text-dim);content:'STATUS';letter-spacing:6px;font-size:10px;font-weight:300}
-.story-fade-in{animation:monoAppear .1s ease-out}
-@keyframes monoAppear{from{opacity:.4}to{opacity:1}}
+/* 故事框 — 粗线纸卡 */
+#story-box{border:2px solid var(--text);border-radius:1px;background:var(--bg-card);box-shadow:none;border-left:6px solid var(--gold)}
+#story-box::before{content:'STORY';color:var(--gold);font-family:'Courier New',monospace;font-size:10px;letter-spacing:8px;font-weight:700;text-transform:uppercase}
+.story-fade-in{animation:typeIn .15s steps(8)}
+@keyframes typeIn{from{opacity:.6}to{opacity:1}}
 
-/* 图片框 — 负片感 */
-.image-frame{border:1px solid var(--border);border-radius:2px}
+/* 图片框 — 硬边留白 */
+.image-frame{border:2px solid var(--text);border-radius:1px;box-shadow:none;filter:grayscale(.3)}
+.image-frame img{filter:grayscale(.25) contrast(1.1)}
 
-.game-title{color:var(--text-bright);letter-spacing:12px;font-weight:200;text-transform:uppercase;font-size:17px}
-.option-btn{border-radius:2px;border:1px solid var(--border);transition:all .1s}
-.option-btn:hover{border-color:var(--text);background:var(--bg-hover);transform:none;box-shadow:none}
-.option-btn:nth-child(1){border-left:3px solid #f0f0f0}.option-btn:nth-child(2){border-left:3px solid #c8c8c8}
-.option-btn:nth-child(3){border-left:3px solid #a0a0a0}.option-btn:nth-child(4){border-left:3px solid #787878}
-.option-btn .option-num{border-radius:1px;font-size:10px;font-weight:400}
-.option-btn:nth-child(1) .option-num{background:#f0f0f0;color:#0a0a0a}.option-btn:nth-child(2) .option-num{background:#c8c8c8;color:#0a0a0a}
-.option-btn:nth-child(3) .option-num{background:#a0a0a0;color:#0a0a0a}.option-btn:nth-child(4) .option-num{background:#787878;color:#0a0a0a}
+.game-title{color:var(--text);letter-spacing:14px;font-weight:700;text-transform:uppercase;font-size:18px;font-family:'Courier New',monospace;border-bottom:3px double var(--gold);padding-bottom:6px;display:inline-block}
+.option-btn{border-radius:1px;border:2px solid var(--text);background:var(--bg-card);transition:all .12s;position:relative}
+.option-btn:hover{border-color:var(--gold);background:var(--bg-hover);transform:translateX(4px);box-shadow:-4px 0 0 var(--gold)}
+.option-btn .option-num{border-radius:1px;color:#fff;font-weight:700;font-family:'Courier New',monospace;font-size:11px;width:22px;height:22px;line-height:22px}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
 
-.modal,.save-card{border:1px solid var(--border);border-radius:2px}.save-card:hover{border-color:var(--text)}
-.settlement-box{border-left:3px solid var(--text-dim);border-radius:2px}
-.overlay .modal{border:1px solid var(--border);border-radius:2px}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:2px!important}
-.chip.selected{background:var(--text-dim);color:var(--bg);font-weight:600}.tab-btn.active{color:var(--text-bright);border-bottom-color:var(--text)}
-.btn-primary{background:var(--text-dim);border-color:var(--text-dim);color:var(--bg);border-radius:2px}
-.ach-progress-fill{background:var(--text-dim)}.story-round-badge{background:rgba(255,255,255,.04);color:var(--text-dim);border-radius:1px}
-.save-card-upload{background:rgba(255,255,255,.03);border-color:var(--text-dim);color:var(--text-dim)}
+.modal,.save-card{border:2px solid var(--text);border-radius:1px;background:var(--bg-panel)}.save-card:hover{border-color:var(--gold);transform:translateY(-2px)}
+.settlement-box{border-left:6px solid var(--text);border-radius:1px;background:var(--bg-card)}
+.overlay{background:rgba(0,0,0,.4)}.overlay .modal{border:2px solid var(--text);border-radius:1px}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border:2px solid var(--text)!important;border-radius:1px!important;font-family:inherit}
+input:focus,textarea:focus{border-color:var(--gold)!important;outline:none}
+.chip.selected{background:var(--text);color:var(--bg);font-weight:700;border-radius:1px}.tab-btn.active{color:var(--text);border-bottom:3px solid var(--gold);font-weight:700}
+.btn-primary{background:var(--text);border:2px solid var(--text);color:var(--bg);font-weight:700;border-radius:1px;text-transform:uppercase;letter-spacing:2px;font-size:12px}.btn-primary:hover{background:var(--gold);border-color:var(--gold);color:#fff}
+#btn-retry{background:var(--bg-card);border:2px solid var(--text);color:var(--text)}#btn-retry:hover{border-color:var(--gold);color:var(--gold)}
+.ach-item:not(.locked){border-left:4px solid var(--text)}.ach-progress-bar{background:var(--border)}.ach-progress-fill{background:var(--gold)}.ach-progress-text{color:var(--text-dim)}
+.story-round-badge{background:var(--text);color:var(--bg);border-radius:1px;font-family:'Courier New',monospace;font-weight:700;font-size:10px}
+.status-label{color:var(--text-dim);font-family:'Courier New',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.status-value{color:var(--text);font-weight:700}
+.save-card-upload{background:var(--bg-card);border:2px solid var(--text-dim);color:var(--text-dim)}
+::-webkit-scrollbar-thumb{background:var(--text-dim);border-radius:1px}
+#top-bar{border-bottom:3px double var(--text)}

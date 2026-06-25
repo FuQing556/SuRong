@@ -1,16 +1,16 @@
-/* 🌸 樱花 — 象牙白基底 + 粉樱点缀 + 花瓣飘落 + 柔圆画框 */
+/* 🌸 樱花 — 象牙白暖底 + 深黛青撞色 + 花瓣飘落 + 柔圆画框 */
 :root {
-  --bg:#faf4f0;--bg-panel:#fffaf8;--bg-card:#fff8f4;--bg-hover:#fef0e8;
-  --border:#e8d4d0;--border-focus:#e8a0b0;
-  --text:#483838;--text-dim:#988080;--text-bright:#281818;
-  --gold:#d87890;--gold-dim:#a05868;--purple:#b87090;--purple-hover:#c880a0;
-  --red:#d05060;--green:#70a870;--red-dim:#fce8ec;
-  --option-1:#d87890;--option-2:#b86898;--option-3:#c88088;--option-4:#d06878;
-  --radius:24px;--shadow:0 4px 20px rgba(0,0,0,.06);
+  --bg:#f8f0ec;--bg-panel:#fef8f4;--bg-card:#fef6f0;--bg-hover:#fdf0e4;
+  --border:#e0d0c8;--border-focus:#688090;
+  --text:#3a2828;--text-dim:#908080;--text-bright:#180808;
+  --gold:#c87078;--gold-dim:#885058;--purple:#487080;--purple-hover:#588898;
+  --red:#d04850;--green:#589868;--red-dim:#fce4e8;
+  --option-1:#c87078;--option-2:#487080;--option-3:#589868;--option-4:#a06888;
+  --radius:24px;--shadow:0 4px 20px rgba(0,0,0,.05);
 }
-body{font-family:'Georgia','Noto Serif SC','Times New Roman','Microsoft YaHei',serif;font-size:15px;font-weight:300;background:var(--bg);color:var(--text)}
+body{font-family:Georgia,'Noto Serif SC','Times New Roman','Microsoft YaHei',serif;font-size:15px;font-weight:300;background:var(--bg);color:var(--text)}
 
-/* 花瓣飘落 — 白底上更明显 */
+/* 花瓣飘落 */
 body::before{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-size:22px;animation:petal1 9s linear infinite;left:10%;top:-50px;opacity:.5}
 body::after{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-size:17px;animation:petal2 11s linear infinite;left:30%;top:-70px;opacity:.4}
 #game-container{position:relative}
@@ -21,29 +21,30 @@ body::after{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-siz
 @keyframes petal3{0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:.45}60%{transform:translateY(60vh) translateX(60px) rotate(220deg);opacity:.28}100%{transform:translateY(105vh) translateX(-50px) rotate(420deg);opacity:0}}
 @keyframes petal4{0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:.35}30%{transform:translateY(30vh) translateX(-40px) rotate(-100deg);opacity:.2}100%{transform:translateY(105vh) translateX(30px) rotate(-350deg);opacity:0}}
 
-/* 故事框 — 粉白柔焦 */
-#story-box{border:2px solid var(--border);border-radius:28px;background:var(--bg-panel);box-shadow:inset 0 0 50px rgba(216,120,144,.04);border-left:3px solid var(--gold)}
+/* 故事框 — 粉白柔焦 + 黛青左边线 */
+#story-box{border:2px solid var(--border);border-radius:28px;background:var(--bg-panel);box-shadow:inset 0 0 50px rgba(200,112,120,.03);border-left:3px solid var(--purple)}
 #story-box::before{color:var(--gold);content:'🌸 现状';font-family:Georgia,serif}
 .story-fade-in{animation:sakuraFloat .7s cubic-bezier(.25,.46,.45,.94)}
 @keyframes sakuraFloat{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 
 /* 图片框 — 柔圆镜框 */
-.image-frame{border:3px solid var(--border);border-radius:50%;overflow:hidden;box-shadow:0 0 30px rgba(216,120,144,.15);aspect-ratio:1;max-width:280px;margin:0 auto}
-.image-frame img{border-radius:50%;filter:brightness(1.05) saturate(.9)}
+.image-frame{border:3px solid var(--border);border-radius:50%;overflow:hidden;box-shadow:0 0 30px rgba(200,112,120,.15);aspect-ratio:1;max-width:280px;margin:0 auto}
+.image-frame img{border-radius:50%;filter:brightness(1.05) saturate(.88)}
 
 .game-title{font-family:Georgia,serif;font-weight:300;letter-spacing:10px;color:var(--gold);font-size:21px;font-style:italic}
-.option-btn{border-radius:30px;border:2px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.04);transition:all .3s ease;background:var(--bg-card)}
-.option-btn:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(216,120,144,.2);border-color:var(--gold)}
-.option-btn .option-num{border-radius:50%;color:#fff}
+.option-btn{border-radius:30px;border:2px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.03);transition:all .3s ease;background:var(--bg-card)}
+.option-btn:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(200,112,120,.18);border-color:var(--gold)}
+.option-btn .option-num{border-radius:50%;color:#fff;font-weight:700;font-size:12px;width:24px;height:24px;line-height:24px}
 .option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
 .option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
 
 .modal,.save-card{border-radius:28px;border:1px solid var(--border);background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
 .settlement-box{border-radius:18px;border-left:4px solid var(--gold);background:var(--bg-card)}
-.overlay{background:rgba(0,0,0,.15)}.overlay .modal{background:var(--bg-panel);border:1px solid var(--border)}
+.overlay{background:rgba(0,0,0,.12)}.overlay .modal{background:var(--bg-panel);border:1px solid var(--border)}
 input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:18px!important}
-.chip.selected{background:var(--gold);color:#fff;font-weight:600;border-radius:24px}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#fff;border-radius:24px}.btn-primary:hover{background:#e890a0}
-.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(216,120,144,.1);color:var(--gold);border-radius:16px}
-.status-label{color:var(--gold-dim)}.status-value{color:var(--text)}
-.save-card-upload{background:rgba(216,120,144,.08);border-color:var(--gold-dim);color:var(--gold);border-radius:20px}
+input:focus,textarea:focus{border-color:var(--purple)!important;box-shadow:0 0 8px rgba(72,112,128,.15)}
+.chip.selected{background:var(--gold);color:#fff;font-weight:600;border-radius:24px}.tab-btn.active{color:var(--purple);border-bottom-color:var(--purple)}
+.btn-primary{background:var(--purple);border-color:var(--purple);color:#fff;border-radius:24px;font-weight:600}.btn-primary:hover{background:var(--purple-hover)}
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(200,112,120,.1);color:var(--gold);border-radius:16px}
+.status-label{color:var(--text-dim)}.status-value{color:var(--text)}
+.save-card-upload{background:rgba(200,112,120,.08);border-color:var(--gold-dim);color:var(--gold);border-radius:20px}
