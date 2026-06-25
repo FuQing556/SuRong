@@ -7,8 +7,13 @@
 function bindEvents() {
   // 首次访问提示
   const btnEnter = $('#btn-enter');
+  let _entering = false;  // 防连点/网卡重复触发
   if (btnEnter) {
     btnEnter.addEventListener('click', () => {
+      if (_entering) return;
+      _entering = true;
+      btnEnter.textContent = '正在进入...';
+      btnEnter.disabled = true;
       localStorage.setItem('xixi_age_verified', 'true');
       if (dom.warningOverlay) dom.warningOverlay.classList.remove('active');
       showSaveSelector();
@@ -100,9 +105,10 @@ function bindEvents() {
   // 音效开关
   const audioBtn = $('#btn-audio');
   if (audioBtn) {
+    audioBtn.textContent = '🔊 音效';
     audioBtn.addEventListener('click', () => {
       const on = typeof toggleAudio === 'function' ? toggleAudio() : true;
-      audioBtn.textContent = on ? '🔊' : '🔇';
+      audioBtn.textContent = on ? '🔊 音效' : '🔇 静音';
     });
   }
 

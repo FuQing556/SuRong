@@ -252,7 +252,11 @@ async function sendMessage(userContent) {
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {
               fullContent += delta;
-              liveEl.textContent = fullContent;
+              // 只显示叙事部分（场景+上回合+现状），隐藏格式化的选项和字段
+              let displayText = fullContent;
+              const optIdx = displayText.search(/可选行动[：:]/);
+              if (optIdx >= 0) displayText = displayText.substring(0, optIdx) + '\n\n▌ 正在生成选项...';
+              liveEl.textContent = displayText;
               $('#story-box').scrollTop = $('#story-box').scrollHeight;
             }
           } catch (e) { /* 跳过非JSON行(如[DONE]) */ }
