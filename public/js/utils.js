@@ -31,47 +31,44 @@ function extractField(text, fieldName) {
   return lastMatch ? lastMatch[1].trim() : '—';
 }
 
-// ── 从 outputSections 生成系统提示词格式段 ──
+// ── 从 outputSections 生成输出格式模板 ──
 function generateOutputFormat(sections, sceneTypes) {
   if (!sections || Object.keys(sections).length === 0) return '';
   const lines = [];
-  lines.push('【强制输出格式】');
-  lines.push('你每次回复，必须严格使用以下模板，不得添加、不得遗漏、不得发挥：');
   const sceneTypeList = (sceneTypes || []).join('、');
-  lines.push('[场景类型：' + sceneTypeList + ' — 只能从以上' + (sceneTypes?.length || 0) + '个类型中选择] [事件大小：大/小]');
-  lines.push('上回合： [1-2句话，结算玩家上一回合选择的直接后果。做了什么、结果如何。这是因果结算，不写感受。]');
-  lines.push('现状： [1-3句话，纯陈述。这是全新的场景。新的时间、新的地点、新的事件。不承接上回合的场景。]');
+  lines.push('[场景类型：' + sceneTypeList + ' — 只选其一] [事件大小：大/小]');
+  lines.push('上回合： [结算玩家选择的直接后果，1-2句，不写感受]');
+  lines.push('现状： [全新场景，新时间新地点新事件，1-3句纯陈述]');
   lines.push('可选行动：');
-  lines.push('1. [动作] — [代价] 【风险等级】');
-  lines.push('2. [动作] — [代价] 【风险等级】');
-  lines.push('3. [动作] — [代价] 【风险等级】');
-  lines.push('4. [动作] — [代价] 【风险等级】');
-  lines.push('请选择你的行动（回复数字1-4）。');
+  lines.push('1. [动作] — [代价] 【低/中/高/孤注】');
+  lines.push('2. [动作] — [代价] 【低/中/高/孤注】');
+  lines.push('3. [动作] — [代价] 【低/中/高/孤注】');
+  lines.push('4. [动作] — [代价] 【低/中/高/孤注】');
   for (const [sectionKey, section] of Object.entries(sections)) {
     const fields = section.fields || [];
     if (fields.length === 0) continue;
     if (section.label) lines.push(section.label);
-    const fieldParts = fields.map(f => `${f.label}：${f.formatHint || '[状态]'}`);
-    lines.push(fieldParts.join(' | '));
+    lines.push(fields.map(f => `${f.label}：${f.formatHint || '[值]'}`).join(' | '));
   }
-  lines.push('');
-  lines.push('【资源校验铁律】');
-  lines.push('· 生成选项时，如果选项代价涉及消耗资源（如金钱、魂力、灵石等），必须先检查状态栏当前数值，确保玩家拥有足够资源。');
-  lines.push('· 若玩家资源不足，该选项仍可显示，但必须在代价中明确标注"【资源不足】"，且选择后必然触发负面后果。');
-  lines.push('· 若玩家强行选择资源不足的选项，下一回合必须在现状中体现失败后果（被追债、被打、失去信任、被迫签订不利契约等），不得让选项正常成功。');
-  lines.push('· 每回合结算时，必须在状态栏中如实更新资源数值变动。消耗资源的选项必须扣减，获得资源的选项必须增加。');
-  lines.push('');
-  lines.push('【铁律】你必须在每次回复的末尾完整输出以上所有状态字段，不得省略任何一行。即使数值无变化也必须照常输出。');
-  lines.push('注意：第一回合没有"上回合"，写"上回合：游戏开始。"即可。后续每回合必须在"上回合"中结算玩家上一轮的选择后果。');
   return lines.join('\n');
 }
 
-// ── 构建完整系统提示词 ──
+// ── 构建完整系统提示词（格式 + 叙事指南 + 正文）──
 function buildSystemPrompt(template) {
   if (!template) return gameState.originalPrompt || '';
   const format = generateOutputFormat(template.outputSections, template.sceneTypes);
   const body = template.promptBody || '';
-  return format + '\n' + body + '\n\n════════════════════════\n【最终提醒·优先级最高】\n你必须在本次回复的末尾，原样输出以上所有状态字段及其当前数值。\n格式：字段名：值 | 字段名：值\n每个字段都必须有具体数值或状态文本，不得写"[状态]""[数值]"等占位符，不得省略任何一行。\n这是你最重要的职责，比剧情描写更优先。\n════════════════════════';
+
+  const narrativeGuide = `【叙事法则】
+· 每个选项必须推动剧情——不能让玩家选择后原地踏步。至少3个选项带玩家离开当前场景。
+· 代价必须真实：标注【资源不足】的选项被选后，现状中必须体现失败后果，不得让选项正常成功。
+· 结算时如实更新所有字段数值。消耗扣减，获得增加。数值变化要合理——不要凭空增减。
+· 选项之间要有路线分歧：提供至少2条不同的策略方向（如战斗vs谈判、信任vs怀疑、冒险vs保守）。
+· 结局推送：当关键数值达到极端（≥90或≤10）或轮次≥15时，积极考虑触发结局。触发时输出【游戏结束·结局名】。`;
+
+  const outputRule = `【回复格式】\n每次回复严格按以下顺序，末尾完整输出所有状态字段（数值无变化也照写，不得省略）。第一回合上回合写"游戏开始。"`;
+
+  return outputRule + '\n\n' + format + '\n\n' + narrativeGuide + '\n\n' + body;
 }
 
 // ── 更新系统提示词（模板变化时调用）──

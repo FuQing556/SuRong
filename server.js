@@ -81,49 +81,45 @@ function loadTemplate(id) {
   } catch (e) { return null; }
 }
 
-// ── 从 outputSections 生成 AI 输出格式模板 ──
+// ── 从 outputSections 生成输出格式模板（与客户端一致）──
 function generateOutputFormat(sections, sceneTypes) {
   if (!sections || Object.keys(sections).length === 0) return '';
-
   const lines = [];
   const sceneTypeList = (sceneTypes || []).join('、');
-  lines.push('【强制输出格式】');
-  lines.push('你每次回复，必须严格使用以下模板，不得添加、不得遗漏、不得发挥：');
-  lines.push(`[场景类型：${sceneTypeList || '类型名'} — 只能从以上${sceneTypes?.length || 0}个类型中选择] [事件大小：大/小]`);
-  lines.push('上回合： [1-2句话，结算玩家上一回合选择的直接后果。做了什么、结果如何。这是因果结算，不写感受。]');
-  lines.push('现状： [1-3句话，纯陈述。这是全新的场景。新的时间、新的地点、新的事件。不承接上回合的场景。]');
+  lines.push('[场景类型：' + sceneTypeList + ' — 只选其一] [事件大小：大/小]');
+  lines.push('上回合： [结算玩家选择的直接后果，1-2句，不写感受]');
+  lines.push('现状： [全新场景，新时间新地点新事件，1-3句纯陈述]');
   lines.push('可选行动：');
-  lines.push('1. [动作] — [代价] 【风险等级】');
-  lines.push('2. [动作] — [代价] 【风险等级】');
-  lines.push('3. [动作] — [代价] 【风险等级】');
-  lines.push('4. [动作] — [代价] 【风险等级】');
-  lines.push('请选择你的行动（回复数字1-4）。');
-
+  lines.push('1. [动作] — [代价] 【低/中/高/孤注】');
+  lines.push('2. [动作] — [代价] 【低/中/高/孤注】');
+  lines.push('3. [动作] — [代价] 【低/中/高/孤注】');
+  lines.push('4. [动作] — [代价] 【低/中/高/孤注】');
   for (const [sectionKey, section] of Object.entries(sections)) {
     const fields = section.fields || [];
     if (fields.length === 0) continue;
-
     if (section.label) lines.push(section.label);
-
-    const fieldParts = fields.map(f => `${f.label}：${f.formatHint || '[状态]'}`);
-    lines.push(fieldParts.join(' | '));
+    lines.push(fields.map(f => `${f.label}：${f.formatHint || '[值]'}`).join(' | '));
   }
-
-  lines.push('');
-  lines.push('【铁律1】你必须在每次回复的末尾完整输出以上所有状态/资源/变量字段，不得省略任何一行。即使数值无变化也必须照常输出。');
-  lines.push('【铁律2】选项的代价和收益必须与资源字段联动——消耗资源要在状态中扣减，获得资源要在状态中增加。资源不足的选项必须标注【资源不足】。');
-  lines.push('注意：第一回合没有"上回合"，写"上回合：游戏开始。"即可。后续每回合必须在"上回合"中结算玩家上一轮的选择后果。');
   return lines.join('\n');
 }
 
-// ── 构建完整系统提示词 ──
+// ── 构建完整系统提示词（与客户端 utils.js 保持一致）──
 function buildSystemPrompt(template) {
   if (!template) return gamePrompt || '';
 
   const format = generateOutputFormat(template.outputSections, template.sceneTypes);
   const body = template.promptBody || '';
-  // 格式放最前，铁律放最后——AI读到最后的就是最重要的
-  return format + '\n' + body + '\n\n════════════════════════\n【最终提醒·优先级最高】\n你必须在本次回复的末尾，原样输出以上所有状态字段及其当前数值。\n格式：字段名：值 | 字段名：值\n每个字段都必须有具体数值或状态文本，不得写"[状态]""[数值]"等占位符，不得省略任何一行。\n这是你最重要的职责，比剧情描写更优先。\n════════════════════════';
+
+  const outputRule = `【回复格式】\n每次回复严格按以下顺序，末尾完整输出所有状态字段（数值无变化也照写，不得省略）。第一回合上回合写"游戏开始。"`;
+
+  const narrativeGuide = `【叙事法则】
+· 每个选项必须推动剧情——不能让玩家选择后原地踏步。至少3个选项带玩家离开当前场景。
+· 代价必须真实：标注【资源不足】的选项被选后，现状中必须体现失败后果，不得让选项正常成功。
+· 结算时如实更新所有字段数值。消耗扣减，获得增加。数值变化要合理——不要凭空增减。
+· 选项之间要有路线分歧：提供至少2条不同的策略方向（如战斗vs谈判、信任vs怀疑、冒险vs保守）。
+· 结局推送：当关键数值达到极端（≥90或≤10）或轮次≥15时，积极考虑触发结局。触发时输出【游戏结束·结局名】。`;
+
+  return outputRule + '\n\n' + format + '\n\n' + narrativeGuide + '\n\n' + body;
 }
 
 // ── API: 获取提示词 ──
@@ -291,135 +287,51 @@ app.post('/api/generate-prompt', async (req, res) => {
     immersive:{ early:'10-15', mid:'20-30', late:'35-50', epic:'50+' },
   }[length];
 
-  const metaPrompt = `你是一个互动叙事游戏的设计AI。根据以下设定生成完整的游戏模板JSON。严格输出合法JSON对象，不要markdown包裹，不要任何额外文字。
+  const metaPrompt = `你是互动叙事游戏设计AI。输出纯JSON，不要markdown包裹。
 
-【玩家设定】
-名称：${name}
-世界观：${world}
-主角：${protagonist}
-核心冲突：${conflict || '自由发挥'}
-风格倾向：${styleText}
-游戏长度：${length}
-结局回合门槛：早期${lengthGuide.early}回合 | 中期${lengthGuide.mid}回合 | 后期${lengthGuide.late}回合 | 大后期${lengthGuide.epic}回合
-${extra ? '玩家额外要求（★ 必须体现在提示词设计中）：' + extra : ''}
+【玩家需求】
+名称：${name} | 世界观：${world} | 主角：${protagonist}
+核心冲突：${conflict || '自由发挥'} | 风格：${styleText} | 长度：${length}
+结局门槛：早${lengthGuide.early}回/中${lengthGuide.mid}回/后${lengthGuide.late}回/大后${lengthGuide.epic}回
+${extra ? '★ 额外要求：' + extra : ''}
 
-══════════════════════════════════
-【第一部分：outputSections — 字段架构】
-══════════════════════════════════
+【字段架构 outputSections】
+固定4段key：statusTop(状态栏,inline,3字段)/taskLine(null,inline,2字段)/resources(资源,inline,2字段)/variables(关系,grid,2字段)
+statusTop: 生命线 — 2个数字(0-100)+1个文本状态
+taskLine: 必须含 round(轮次,number) + 主线进度(0-5数字)
+resources: 2个可消耗数字资源，每个必须在选项代价/收益中体现
+variables: 2个关系值(-100~100)，每个必须被至少1个结局引用
+字段格式: {"id":"camelCase","label":"2-4字中文","icon":"emoji","formatHint":"[范围]","type":"number或text"}
 
-字段是游戏唯一的数值系统。以下规则是强制性的：
+【提示词正文 promptBody — 3000-5000字，用【】分章节】
+你是这个世界的AI主持人。每次回复 = 结算上轮后果 + 全新场景 + 4选项 + 状态字段。
 
-§1 四段式固定结构（key名称不可变）：
-{
-  "statusTop":  { "label":"状态栏", "display":"inline", "fields":[...] },
-  "taskLine":   { "label":null,       "display":"inline", "fields":[...] },
-  "resources":  { "label":"资源",     "display":"inline", "fields":[...] },
-  "variables":  { "label":"关系",     "display":"grid",   "fields":[...] }
-}
+必含章节（顺序）：
+【你的身份】AI行为准则。因果结算+选项生成。不替玩家选择，不评价对错。
+【叙事风格】这个世界独有的叙事语调。是冷峻、荒诞、温情还是史诗？用2-3句定义。每回合保持一致的叙事声音。
+【场景跳跃】★ 每回合强制切换：时间+地点+事件至少换其二。禁止连续同场景。关键轮次(10/20/30)可延续2回合。给正确+错误示例。
+【主角设定】外貌/能力/身世/处境。150-250字。只写能影响选项设计的。
+【世界观】势力/NPC/规则。200-350字。每个NPC/势力必须能在选项中使用。
+【结局系统】★ 4层结局，每层引用具体字段+数值。格式示例：
+  早期(${lengthGuide.early}回): 条件(字段名=数值/范围) — 结局名 — 触发【游戏结束·结局名】
+  中期(${lengthGuide.mid}回): 条件 — 结局名
+  后期(${lengthGuide.late}回): 条件 — 结局名
+  大后期(${lengthGuide.epic}回): 多条件 — 结局名
+★ 条件必须引用具体字段标签和数值。"轮次≥15后积极推结局。结局触发后保留继续选项。
+【资源系统】2个资源各列3种获取+3种消耗方式。资源不足→标的【资源不足】→下回合体现失败后果。
+【选项设计】每回合4选项 = 动作+代价+风险(低/中/高/孤注)。≥3个带玩家离开当前场景。≥2条不同策略路线。禁止无代价、禁止"等待/观察"。选项之间形成真正的两难——没有明显最优解。
+【开局系统】3个开局(编号1-3)，不同场景+初始数值。openingMessages:["开始游戏。【开局编号：1】",...]
 
-§2 字段数量硬性限制：
-  statusTop：恰好3个 —— 主角的"生命线"。建议：压力/理智/体力值(0-100数字) + 威胁/暴露/危险值(0-100数字) + 一个定性状态(文本，如"健康/受伤/濒死")
-  taskLine：恰好2个 —— 必须包含"round"(轮次,type:"number") + 主线进度(0-5数字，如潜伏进度/复仇进度/修为等级)
-  resources：恰好2个 —— 可消耗资源(数字)。每个资源必须在选项代价/收益中被使用。如：金钱+弹药、灵石+丹药、情报+把柄
-  variables：恰好2个 —— 关键NPC或阵营的关系值(数字，范围-100~100)。每个变量必须在至少一个结局条件中被引用
+【成就 achievements — 6-8个】
+命名创意化，禁止"{字段}大师"等公式。用世界观特有名词。每个含字段+阈值。必含3通用成就(命名创意化): 轮次≥30未结局/触发结局/孤注一掷成功。格式:{"名":{"icon":"emoji","desc":"含检测条件"}}
 
-§3 每个字段对象5属性：
-  {"id":"englishCamelCase","label":"中文标签(2-4字)","icon":"单个emoji","formatHint":"[范围如0-100]","type":"number或text"}
+【隐藏成就 hiddenAchievements — 3-5个】
+每个含trigger。类型: choice(pattern+count)/gambit(count)/rounds_under(round)/field_zero(fieldLabel)/field_max_under(fieldLabel+threshold)/response_match(pattern+count)
 
-§4 铁律：每个字段必须在选项代价或结局条件中被使用。不满足则删除。
+【其他】
+sceneTypes:5-7中文。description:≤20字。worldSetting/protagonist/conflict:各200-400字,\n\n分段。theme:"dark"。styles:标签数组。
 
-══════════════════════════════════
-【第二部分：promptBody — 系统提示词正文】
-══════════════════════════════════
-
-AI主持游戏时收到的系统提示词。必须紧凑可执行。字数2000-4000字。用【】标记章节。
-
-必须包含的章节（顺序固定）：
-
-【你的身份】
-AI行为准则。核心：你是因果结算机+选项生成器。每次回复 = 结算上轮后果 → 呈现全新场景 → 4个选项 → 输出状态字段。永远不替玩家做选择。
-
-【场景跳跃铁律】★最高优先级★
-每一回合必须是全新事件。强制切换时间+地点+事件类型(三者至少切换其二)。禁止连续两回合在同一场景。只有轮次10/20/30的关键事件允许延续2回合。给出1个正确示例和1个错误示例。
-
-【主角设定】
-外貌/能力/身世/当前处境。100-200字，只写对选项设计有影响的信息。
-
-【世界观】
-势力格局/关键NPC。150-300字。每个NPC或势力必须在选项设计中被使用。
-
-【结局系统】★最关键★
-设计4层结局，每层引用§1中的字段和具体数值：
-  早期结局(约${lengthGuide.early}回合)：低门槛，有代价。触发条件示例：压力=100 / 暴露=100 / 某资源归零。触发时AI输出【游戏结束·结局名】，但保留至少1个"继续"选项。
-  中期结局(约${lengthGuide.mid}回合)：标准胜利。触发条件示例：主线进度≥4 且 风险≤50 且 轮次≥${lengthGuide.early}。
-  后期结局(约${lengthGuide.late}回合)：完美结局。触发条件示例：主线进度≥5 且 关系≥70 且 资源≥3。
-  大后期结局(约${lengthGuide.epic}回合)：传奇结局。多条件全部满足。
-★铁律：每个结局条件必须引用具体的字段标签和数值。禁止"足够多""很高"等模糊词。轮次≥20时大幅增加结局推送。结局触发时保留"继续"选项。
-
-【资源管理】
-列出2个可消耗资源的获取/消耗方式。至少3种获取+3种消耗。选项代价与资源联动。资源不足标注【资源不足】并触发负面后果。
-
-【选项设计】
-每回合4个选项 = 动作 + 代价 + 风险等级【低风险/中风险/高风险/孤注一掷】。至少3个选项带玩家离开当前场景。禁止无代价选项。禁止"等待/观察"等停留型选项。提供至少2条不同路线。
-
-【开局系统】
-设计3个开局场景（编号1-3），每个有不同初始场景和略微不同的初始数值，增加重玩性。每个开局的初始变量值不同。第一回合写"上回合：游戏开始。"
-同时在JSON中输出openingMessages数组：["开始游戏。【开局编号：1】","开始游戏。【开局编号：2】","开始游戏。【开局编号：3】"]
-
-══════════════════════════════════
-【第三部分：achievements — 可见成就】
-══════════════════════════════════
-
-6-8个可见成就。命名必须根据世界观创意，禁止公式化命名（如"{字段}大师""{字段}达人"）。好例子：修仙→"元婴大成""渡劫成功"；谍战→"影子之王""双重间谍"。
-
-每个成就必须能被字段数值检测：§1中的数字字段+阈值。如：压力曾≥90→"淬火成钢"；主线≥5→"真相大白"。
-
-必须包含3个通用成就（名字创意化）：
-  1. 轮次≥30且未结局 —— 如"长路漫漫""不死鸟"
-  2. 触发任一结局 —— 如"尘埃落定""命运之轮"
-  3. 孤注一掷成功 —— 如"赌徒""天选之人"
-
-格式：{"创意成就名":{"icon":"单个emoji","desc":"简述(含检测条件)"}}
-
-══════════════════════════════════
-【第四部分：hiddenAchievements — 隐藏成就】
-══════════════════════════════════
-
-3-5个隐藏成就。解锁前不可见。每个必须包含trigger。
-
-trigger类型：
-  {"type":"choice","pattern":"匹配文本","count":N} —— 累计选N次匹配选项
-  {"type":"gambit","count":N} —— 孤注一掷成功N次
-  {"type":"rounds_under","round":N} —— N回合内触发结局
-  {"type":"field_zero","fieldLabel":"字段标签"} —— 某字段归零
-  {"type":"field_max_under","fieldLabel":"字段标签","threshold":N} —— 某字段全程未超阈值且通关
-  {"type":"response_match","pattern":"匹配文本","count":N} —— AI回复N次匹配
-
-格式：{"创意隐藏成就名":{"icon":"emoji","desc":"隐藏描述","trigger":{触发规则}}}
-
-示例：
-"近朱者赤":{"icon":"🌸","desc":"三度主动靠近危险的庇护者","trigger":{"type":"choice","pattern":"梦红尘|梦学姐|去找她","count":3}}
-"赌徒":{"icon":"🎰","desc":"孤注一掷成功3次","trigger":{"type":"gambit","count":3}}
-"速战速决":{"icon":"⚡","desc":"8回合内结束游戏","trigger":{"type":"rounds_under","round":8}}
-
-══════════════════════════════════
-【第五部分：其他】
-══════════════════════════════════
-
-sceneTypes：5-7个中文场景类型
-description：20字以内简介
-worldSetting：200-400字，\\n\\n分段
-protagonist：200-400字，\\n\\n分段
-conflict：200-400字，\\n\\n分段，简述四层结局
-theme："dark"
-styles：风格标签数组
-
-══════════════════════════════════
-【最终JSON模板】
-══════════════════════════════════
-换行用\\n，引号用\\"。输出纯JSON：
-
-{"name":"${name}","description":"简介","outputSections":{"statusTop":{"label":"状态栏","display":"inline","fields":[{"id":"...","label":"...","icon":"...","formatHint":"...","type":"number"}]},"taskLine":{"label":null,"display":"inline","fields":[{"id":"round","label":"轮次","icon":"🔄","formatHint":"[数字]","type":"number"},{}]},"resources":{"label":"资源","display":"inline","fields":[{},{}]},"variables":{"label":"关系","display":"grid","fields":[{},{}]}},"promptBody":"正文","achievements":{"成就名":{"icon":"emoji","desc":"描述"}},"hiddenAchievements":{"成就名":{"icon":"emoji","desc":"描述","trigger":{}}},"sceneTypes":["类型"],"sceneImages":{"类型":"日常.png"},"theme":"dark","styles":[],"openingMessages":["开始游戏。【开局编号：1】","开始游戏。【开局编号：2】","开始游戏。【开局编号：3】"],"worldSetting":"世界观","protagonist":"主角","conflict":"冲突"}`;
+输出纯JSON:`;
 
     try {
       const apiKey = getApiKey(req.body);
