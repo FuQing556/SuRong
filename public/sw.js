@@ -1,5 +1,5 @@
 // Service Worker — 离线缓存（网络优先，回退缓存）
-const CACHE = 'xixi-v4';
+const CACHE = 'xixi-v5';
 const FILES = [
   '/', '/index.html', '/style.css',
   '/js/state.js', '/js/utils.js', '/js/dialogs.js', '/js/saves.js',
