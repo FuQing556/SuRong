@@ -1,24 +1,52 @@
-/* 🏯 修仙 — 古书卷纹理、双线边框、楷体 */
+/* 🏯 修仙 — 竹纸底色 + 墨字 + 赤金双线 + 卷轴画框 + 墨点 */
 :root {
-  --bg:#1a1410;--bg-panel:#241e18;--bg-card:#2d251c;--bg-hover:#383024;
-  --border:#4a3f30;--border-focus:#8b6914;
-  --text:#d4c8b8;--text-dim:#8c7b65;--text-bright:#f0e8d8;
-  --gold:#c9a050;--gold-dim:#7a5e30;--purple:#8b5cf6;
-  --red:#c0392b;--green:#4a8c3f;
-  --option-1:#8b5a2b;--option-2:#5c4033;--option-3:#2d5c3a;--option-4:#7a3a2a;
-  --radius:2px;--shadow:0 4px 24px rgba(0,0,0,.6);
+  --bg:#f2ead8;--bg-panel:#f8f2e4;--bg-card:#fffbf0;--bg-hover:#f0e8d4;
+  --border:#d4c8a8;--border-focus:#b8943a;
+  --text:#3a3028;--text-dim:#8a7a60;--text-bright:#1a1008;
+  --gold:#a07828;--gold-dim:#705020;--purple:#8b5068;--purple-hover:#a06078;
+  --red:#b03828;--green:#488030;--red-dim:#f8e8e0;
+  --option-1:#8a5020;--option-2:#684030;--option-3:#487838;--option-4:#883838;
+  --radius:3px;--shadow:0 4px 20px rgba(0,0,0,.15);
 }
-body{font-family:'KaiTi','SimSun','STSong','Microsoft YaHei',serif;font-size:15px;
-  background-image:repeating-linear-gradient(0deg,transparent,transparent 4px,rgba(201,160,80,.02) 4px,rgba(201,160,80,.02) 8px)}
-.game-title{font-family:'KaiTi','SimSun',serif;letter-spacing:12px;font-size:22px;color:var(--gold)}
-.option-btn{border:2px solid var(--border);border-radius:2px}
-.option-btn:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(201,160,80,.15),inset 0 0 30px rgba(201,160,80,.03)}
-.image-frame{border:3px double var(--gold-dim);padding:6px;background:var(--bg)}
-.settlement-box{border-left:4px double var(--gold);font-family:'KaiTi',serif}
+body{font-family:'KaiTi','STKaiti','SimSun','Noto Serif SC','Microsoft YaHei',serif;font-size:16px;background:var(--bg);color:var(--text)}
+
+/* 墨点漂浮 */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(2px 3px at 12% 25%,rgba(80,60,30,.12),transparent),
+    radial-gradient(3px 4px at 35% 55%,rgba(60,40,20,.09),transparent),
+    radial-gradient(1px 2px at 58% 18%,rgba(90,70,40,.1),transparent),
+    radial-gradient(2px 3px at 75% 65%,rgba(70,50,30,.08),transparent),
+    radial-gradient(1px 3px at 22% 72%,rgba(80,60,35,.11),transparent);
+  background-size:200px 280px,240px 220px,220px 300px,260px 240px,230px 280px;
+  animation:inkDrift 18s ease-in-out infinite}
+@keyframes inkDrift{0%,100%{background-position:0 0,0 0,0 0,0 0,0 0}25%{background-position:30px 20px,-20px 15px,15px -10px,-25px 10px,10px 25px}50%{background-position:15px 40px,10px -5px,-10px 20px,20px -15px,-15px 10px}75%{background-position:-20px 15px,25px 10px,30px 5px,-10px 20px,20px -10px}}
+
+/* 故事框 — 宣纸质感 */
+#story-box{border:3px double var(--gold-dim);border-radius:2px;background:var(--bg-card);box-shadow:inset 0 0 60px rgba(160,120,40,.04)}
+#story-box::before{color:var(--gold-dim);content:'◆ 卷';font-family:'KaiTi',serif;font-size:11px}
+.story-fade-in{animation:inkReveal .8s ease-out}
+@keyframes inkReveal{from{opacity:0;transform:translateY(12px);text-shadow:0 0 6px var(--gold-dim)}to{opacity:1;transform:translateY(0);text-shadow:none}}
+
+/* 图片框 — 卷轴画 */
+.image-frame{border:8px solid transparent;border-image:repeating-linear-gradient(45deg,var(--gold-dim),var(--gold-dim) 2px,var(--border) 2px,var(--border) 4px) 8;padding:4px;background:var(--bg-card);box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.image-frame img{filter:sepia(.15) brightness(.95)}
+
+.game-title{font-family:'KaiTi','STKaiti',serif;letter-spacing:16px;font-size:24px;color:var(--gold);text-shadow:0 2px 4px rgba(0,0,0,.1)}
+.option-btn{border:2px solid var(--border);border-radius:2px;background:var(--bg-card);transition:all .3s}
+.option-btn:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(160,120,40,.15),inset 0 0 30px rgba(160,120,40,.03)}
+.option-btn .option-num{border-radius:2px;color:#fff}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+
 #top-bar{border-bottom:2px solid var(--gold-dim)}
-.overlay .modal{border:2px solid var(--gold-dim)}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important}
-.chip.selected{background:var(--gold);color:#1a1410;font-weight:600}
-.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#1a1410}
-.ach-progress-fill{background:var(--gold)}
+.modal,.save-card{border:2px solid var(--border);border-radius:2px;background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
+.settlement-box{border-left:4px double var(--gold);border-radius:2px}
+.overlay{background:rgba(0,0,0,.3)}.overlay .modal{background:var(--bg-panel);border:2px solid var(--gold-dim)}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:2px!important}
+input:focus,textarea:focus{border-color:var(--gold)!important}
+.chip.selected{background:var(--gold);color:#fff;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#fff;border-radius:2px;font-weight:600}.btn-primary:hover{background:#b88830}
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(160,120,40,.08);color:var(--gold-dim);border-radius:2px}
+.status-label{color:var(--gold-dim)}.status-value{color:var(--text)}
+.save-card-upload{background:rgba(160,120,40,.08);border-color:var(--gold-dim);color:var(--gold)}

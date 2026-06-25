@@ -1,22 +1,42 @@
-/* ☀ 明亮 — 清爽白底、柔和阴影、高对比 */
+/* ☀ 明亮 — 暖白基底 + 深色文字 + 纸卡阴影 + 简洁画框 */
 :root {
-  --bg:#f5f4f0;--bg-panel:#fff;--bg-card:#faf9f6;--bg-hover:#f0eee8;
-  --border:#ddd8cc;--border-focus:#b8a06e;
-  --text:#3a3830;--text-dim:#999;--text-bright:#1a1810;
-  --gold:#8b6914;--gold-dim:#c9a050;--purple:#6c3cb4;
-  --red:#c0392b;--green:#277a3e;
-  --option-1:#5b4cc4;--option-2:#1a73e8;--option-3:#0d8c63;--option-4:#cc5533;
-  --radius:8px;--shadow:0 2px 16px rgba(0,0,0,.06);
+  --bg:#f0ede6;--bg-panel:#faf8f4;--bg-card:#f5f2ec;--bg-hover:#ede8e0;
+  --border:#ddd6c8;--border-focus:#b8a06e;
+  --text:#383428;--text-dim:#8c8470;--text-bright:#18140c;
+  --gold:#8b6914;--gold-dim:#b89840;--purple:#6c3cb4;--purple-hover:#7c4cc4;
+  --red:#c0392b;--green:#277a3e;--red-dim:#f8e4e0;
+  --option-1:#6c5cc4;--option-2:#1a73e8;--option-3:#0d8c63;--option-4:#cc5533;
+  --radius:8px;--shadow:0 2px 12px rgba(0,0,0,.05);
 }
-body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg)}
-.game-title{color:var(--gold);font-weight:700;letter-spacing:4px}
-.option-btn{box-shadow:0 1px 4px rgba(0,0,0,.04)}.option-btn:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);transform:translateY(-1px)}
-.settlement-box,.save-card{border-left-color:var(--gold)}
-.overlay{background:rgba(0,0,0,.3)}.overlay .modal{box-shadow:0 8px 40px rgba(0,0,0,.08)}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);font-size:15px;font-weight:400}
+
+/* 故事框 — 纸卡 */
+#story-box{background:var(--bg-panel);border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.04);border-left:3px solid var(--gold)}
+#story-box::before{color:var(--gold-dim);background:var(--bg-panel);font-size:11px}
+.story-fade-in{animation:lightIn .2s ease-out}
+@keyframes lightIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* 图片框 — 简洁白框 */
+.image-frame{border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.05);border-radius:8px}
+.image-frame img{filter:brightness(1.02)}
+
+.game-title{color:var(--gold);font-weight:700;letter-spacing:5px;font-size:20px}
+.option-btn{box-shadow:0 1px 3px rgba(0,0,0,.04);background:var(--bg-card);border:1px solid var(--border)}
+.option-btn:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);transform:translateY(-1px);border-color:var(--border-focus);background:var(--bg-hover)}
+.option-btn:disabled{opacity:.3;background:var(--bg-card)}
+.option-btn .option-num{border-radius:50%;color:#fff}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+
+.modal,.save-card{box-shadow:0 4px 20px rgba(0,0,0,.06);border:1px solid var(--border);background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
+.settlement-box{border-left-color:var(--gold);background:var(--bg-card);border-radius:8px}
+.overlay{background:rgba(0,0,0,.15)}.overlay .modal{background:var(--bg-panel);box-shadow:0 8px 40px rgba(0,0,0,.08)}
 input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important}
 input:focus,textarea:focus{border-color:var(--gold)!important}
-#story-box::before,.settlement-box::before{color:var(--gold-dim);background:var(--bg-panel)}
-.story-round-badge{background:rgba(184,148,62,.1);color:var(--gold-dim)}
-.btn-primary{background:var(--purple);color:#fff}.btn-primary:hover{opacity:.9}
+.story-round-badge{background:rgba(139,105,20,.05);color:var(--gold-dim)}
+.btn-primary{background:var(--purple);color:#fff;border-color:var(--purple)}.btn-primary:hover{opacity:.9}
 .chip.selected{background:var(--gold);color:#fff;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.ach-progress-fill{background:var(--gold)}
+.ach-progress-fill{background:var(--gold)}.status-label{color:var(--gold-dim)}.status-value{color:var(--text)}
+#error-box{background:var(--red-dim);color:var(--red)}
+.save-card-upload{background:rgba(139,105,20,.05);border-color:var(--gold-dim);color:var(--gold)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}

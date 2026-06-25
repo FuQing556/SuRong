@@ -1,24 +1,50 @@
-/* 🌊 深海 — 圆角、渐变、舒缓蓝调 */
+/* 🌊 深海 — 深海军蓝基底 + 亮青点缀 + 气泡 + 波浪画框 */
 :root {
-  --bg:#060e18;--bg-panel:#0a1522;--bg-card:#0f1d2e;--bg-hover:#15283a;
-  --border:#1a3548;--border-focus:#00bcd4;
-  --text:#b8d0d8;--text-dim:#508090;--text-bright:#e0f4f8;
-  --gold:#00bcd4;--gold-dim:#007090;--purple:#5c9ce0;
-  --red:#e05555;--green:#3bb878;
-  --option-1:#0097a7;--option-2:#0277bd;--option-3:#00897b;--option-4:#d8434f;
-  --radius:16px;--shadow:0 4px 24px rgba(0,0,0,.4);
+  --bg:#040e1a;--bg-panel:#081828;--bg-card:#0c1e30;--bg-hover:#102438;
+  --border:#162e44;--border-focus:#00c8d8;
+  --text:#c0d4e0;--text-dim:#508098;--text-bright:#e0f4fc;
+  --gold:#00c8d8;--gold-dim:#007888;--purple:#6098e0;--purple-hover:#78b0f0;
+  --red:#e05858;--green:#3cb878;--red-dim:#181820;
+  --option-1:#00a0b0;--option-2:#1a80c8;--option-3:#009080;--option-4:#d85050;
+  --radius:18px;--shadow:0 4px 24px rgba(0,0,0,.4);
 }
-body{font-family:'Segoe UI','Microsoft YaHei',sans-serif}
-.game-title{color:var(--gold);letter-spacing:6px;text-shadow:0 0 20px rgba(0,188,212,.2)}
-.option-btn{border-radius:20px;border-width:2px;transition:all .3s ease}
-.option-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,188,212,.15)}
-.image-frame{border-radius:16px;overflow:hidden;box-shadow:0 0 24px rgba(0,188,212,.08)}
-#top-bar{border-bottom:2px solid var(--border-focus);background:linear-gradient(180deg,rgba(0,188,212,.04),transparent)}
-.settlement-box{border-left:3px solid var(--gold);border-radius:12px}
-.overlay .modal{border-radius:18px;border:1px solid var(--border-focus)}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:10px!important}
-.chip.selected{background:var(--gold);color:#060e18;font-weight:600}
-.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#060e18;border-radius:20px}
-.ach-progress-fill{background:var(--gold)}
-.story-round-badge{background:rgba(0,188,212,.1);color:var(--gold)}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:14px;font-weight:350;letter-spacing:.3px}
+
+/* 气泡粒子 */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(circle at 15% 80%,rgba(0,200,216,.15),transparent 30px),
+    radial-gradient(circle at 35% 70%,rgba(0,200,216,.1),transparent 22px),
+    radial-gradient(circle at 52% 85%,rgba(0,190,210,.12),transparent 26px),
+    radial-gradient(circle at 68% 75%,rgba(0,200,216,.11),transparent 24px),
+    radial-gradient(circle at 82% 82%,rgba(0,210,220,.14),transparent 28px);
+  background-size:300px 400px,250px 350px,280px 380px,260px 360px,290px 390px;
+  animation:bubbles 8s ease-in-out infinite}
+@keyframes bubbles{0%,100%{background-position:0 0,0 0,0 0,0 0,0 0}50%{background-position:20px -30px,-15px -20px,10px -25px,-20px -15px,5px -35px}}
+
+/* 故事框 — 深海舷窗 */
+#story-box{border:2px solid var(--border-focus);border-radius:18px;box-shadow:inset 0 0 60px rgba(0,200,216,.06);border-left:4px solid var(--gold)}
+#story-box::before{color:var(--gold);content:'🌊 现状';font-size:11px}
+.story-fade-in{animation:deepRise .7s cubic-bezier(.25,.46,.45,.94)}
+@keyframes deepRise{from{opacity:0;transform:translateY(24px);filter:blur(3px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+
+/* 图片框 — 波浪底边 */
+.image-frame{border:2px solid var(--gold-dim);border-radius:18px 18px 40% 40%;overflow:hidden;box-shadow:0 0 30px rgba(0,200,216,.1)}
+.image-frame img{filter:brightness(.9) saturate(1.2)}
+
+.game-title{color:var(--gold);letter-spacing:9px;text-shadow:0 0 20px rgba(0,200,216,.3);font-size:20px;font-weight:300}
+.option-btn{border-radius:22px;border:2px solid var(--border);transition:all .3s ease}
+.option-btn:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,200,216,.2);border-color:var(--gold);background:rgba(0,200,216,.05)}
+.option-btn .option-num{border-radius:50%;color:#fff}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+
+#top-bar{border-bottom:2px solid var(--gold-dim);background:linear-gradient(180deg,rgba(0,200,216,.05),transparent)}
+.modal,.save-card{border-radius:20px;border:1px solid var(--border-focus)}.save-card:hover{border-color:var(--gold)}
+.settlement-box{border-left:3px solid var(--gold);border-radius:14px}
+.overlay .modal{border:1px solid var(--border-focus);border-radius:20px}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:12px!important}
+.chip.selected{background:var(--gold);color:#040e1a;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#040e1a;border-radius:22px;font-weight:600}.btn-primary:hover{background:#00dcec}
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(0,200,216,.12);color:var(--gold);border-radius:12px}
+.save-card-upload{background:rgba(0,200,216,.1);border-color:var(--gold-dim);color:var(--gold)}

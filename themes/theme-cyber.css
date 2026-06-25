@@ -1,25 +1,43 @@
-/* 💜 赛博 — 霓虹发光、斜切角、终端字体 */
+/* 💜 赛博 — 纯黑基底 + 电青x品红撞色 + CRT扫描线 + 斜切画框 + glitch */
 :root {
-  --bg:#050510;--bg-panel:#0a0a18;--bg-card:#0f0f22;--bg-hover:#161630;
-  --border:#1a2a3a;--border-focus:#00e5ff;
-  --text:#b0c8d8;--text-dim:#406080;--text-bright:#e0f8ff;
-  --gold:#00e5ff;--gold-dim:#006080;--purple:#b44cff;
-  --red:#ff3355;--green:#00cc66;
-  --option-1:#00bcd4;--option-2:#7c4dff;--option-3:#00e676;--option-4:#ff5252;
-  --radius:0px;--shadow:0 4px 30px rgba(0,0,0,.8);
+  --bg:#02020a;--bg-panel:#060616;--bg-card:#0a0a1e;--bg-hover:#10102c;
+  --border:#182038;--border-focus:#00e0f8;
+  --text:#b8d0e0;--text-dim:#4870a0;--text-bright:#e0f8ff;
+  --gold:#00e0f8;--gold-dim:#0068a0;--purple:#c050ff;--purple-hover:#d868ff;
+  --red:#ff3050;--green:#00cc60;--red-dim:#200a10;
+  --option-1:#00c0d8;--option-2:#8850ff;--option-3:#00e870;--option-4:#ff4848;
+  --radius:0px;--shadow:0 4px 40px rgba(0,0,0,.8);
 }
-body{font-family:'Consolas','Courier New','Microsoft YaHei',monospace;font-size:13px}
-.game-title{color:var(--gold);text-shadow:0 0 20px rgba(0,229,255,.4),0 0 60px rgba(0,229,255,.1);letter-spacing:8px}
-.option-btn{clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);border:1px solid var(--border);transition:all .2s}
-.option-btn:hover{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);border-color:var(--gold);box-shadow:0 0 16px rgba(0,229,255,.2);background:rgba(0,229,255,.05)}
-.image-frame{clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);border:1px solid var(--gold-dim);box-shadow:0 0 30px rgba(0,229,255,.1)}
-#top-bar{border-bottom:1px solid var(--gold);background:linear-gradient(180deg,rgba(0,229,255,.03),transparent)}
-.overlay .modal{border:1px solid var(--gold-dim);box-shadow:0 0 40px rgba(0,0,0,.8)}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;font-family:inherit}
-.chip.selected{background:var(--gold);color:#050510;font-weight:600}
-.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#050510;text-transform:uppercase}
-.ach-progress-fill{background:var(--gold)}
-.settlement-box{border-left:3px solid var(--gold)}
-#story-box::before{color:var(--gold);background:var(--bg-panel)}
-.story-round-badge{background:rgba(0,229,255,.1);color:var(--gold)}
+body{font-family:'Consolas','Cascadia Code','Courier New','Microsoft YaHei',monospace;font-size:13px;background:var(--bg);letter-spacing:0}
+
+/* CRT 扫描线 */
+#game-container::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
+
+/* 故事框 — 终端窗口 */
+#story-box{border:1px solid var(--gold);border-radius:0;box-shadow:inset 0 0 80px rgba(0,224,248,.05),0 0 20px rgba(0,224,248,.12);animation:neonBreathe 3s ease-in-out infinite;border-left:3px solid var(--purple)}
+@keyframes neonBreathe{0%,100%{box-shadow:inset 0 0 80px rgba(0,224,248,.05),0 0 20px rgba(0,224,248,.12)}50%{box-shadow:inset 0 0 100px rgba(0,224,248,.08),0 0 35px rgba(0,224,248,.2)}}
+#story-box::before{color:var(--gold);content:'> sys.story';font-family:'Consolas',monospace;font-size:10px;text-transform:uppercase}
+.story-fade-in{animation:terminalIn .35s steps(16)}
+@keyframes terminalIn{from{opacity:0;transform:translateX(16px);clip-path:inset(0 100% 0 0)}to{opacity:1;transform:translateX(0);clip-path:inset(0 0 0 0)}}
+
+/* 图片框 — 斜切 */
+.image-frame{clip-path:polygon(16px 0,100% 0,calc(100% - 16px) 100%,0 100%);border:1px solid var(--gold-dim);box-shadow:0 0 40px rgba(0,224,248,.15)}
+.image-frame img{filter:saturate(1.3) contrast(1.1)}
+
+.game-title{color:var(--gold);text-shadow:0 0 20px rgba(0,224,248,.6),0 0 60px rgba(0,224,248,.2);letter-spacing:12px;font-size:17px;text-transform:uppercase}
+.option-btn{clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);border:1px solid var(--border);transition:all .15s;border-radius:0}
+.option-btn:hover{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);border-color:var(--gold);box-shadow:0 0 24px rgba(0,224,248,.3);background:rgba(0,224,248,.06);animation:glitchHover .25s steps(2)}
+@keyframes glitchHover{0%{transform:translate(0)}33%{transform:translate(-2px,1px)}66%{transform:translate(2px,-1px)}100%{transform:translate(0)}}
+.option-btn .option-num{border-radius:0;font-family:'Consolas',monospace;color:#02020a;font-weight:700}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+
+#top-bar{border-bottom:1px solid var(--gold);background:linear-gradient(180deg,rgba(0,224,248,.05),transparent)}
+.modal,.save-card{border:1px solid var(--gold-dim);box-shadow:0 0 50px rgba(0,0,0,.8);border-radius:0}.save-card:hover{border-color:var(--gold)}
+.settlement-box{border-left:3px solid var(--gold);border-radius:0}
+.overlay{background:rgba(0,0,0,.85)}.overlay .modal{border:1px solid var(--gold-dim);border-radius:0}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;font-family:inherit;border-radius:0!important}
+.chip.selected{background:var(--gold);color:#02020a;font-weight:700;border-radius:0}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#02020a;text-transform:uppercase;font-weight:700;border-radius:0}.btn-primary:hover{box-shadow:0 0 24px rgba(0,224,248,.35)}
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(0,224,248,.12);color:var(--gold);border-radius:0}
+.save-card-upload{background:rgba(0,224,248,.1);border-color:var(--gold-dim);color:var(--gold)}

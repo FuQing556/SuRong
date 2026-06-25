@@ -1,23 +1,55 @@
-/* 🌃 子夜 — 深蓝靛、优雅间距 */
+/* 🌃 子夜 — 深空黑基底 + 亮星 + 极光紫边 + 圆形画框 */
 :root {
-  --bg:#080818;--bg-panel:#0d0d24;--bg-card:#121230;--bg-hover:#18183c;
-  --border:#252548;--border-focus:#6c6cf0;
-  --text:#c8c8e0;--text-dim:#6060a0;--text-bright:#e8e8ff;
-  --gold:#8b8bff;--gold-dim:#5050c0;--purple:#a88bff;
-  --red:#ff5c6c;--green:#5cc9a0;
-  --option-1:#5c6cf0;--option-2:#7c4dff;--option-3:#4db6ac;--option-4:#ff5c6c;
-  --radius:10px;--shadow:0 4px 30px rgba(0,0,0,.5);
+  --bg:#040410;--bg-panel:#0a0a1c;--bg-card:#0e0e24;--bg-hover:#141430;
+  --border:#1e1e40;--border-focus:#8080f0;
+  --text:#c8c8e0;--text-dim:#6068a0;--text-bright:#e8e8ff;
+  --gold:#9898ff;--gold-dim:#5860c0;--purple:#b098ff;--purple-hover:#c8b0ff;
+  --red:#ff5c6c;--green:#5cc9a0;--red-dim:#181828;
+  --option-1:#7878f0;--option-2:#9878f0;--option-3:#50b8a8;--option-4:#ff7078;
+  --radius:12px;--shadow:0 4px 30px rgba(0,0,0,.5);
 }
-body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-weight:300}
-.game-title{color:var(--gold);letter-spacing:8px;font-weight:200;text-shadow:0 0 24px rgba(139,139,255,.2)}
-.option-btn{border-radius:12px;border:1px solid var(--border);transition:all .3s}
-.option-btn:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(139,139,255,.15);background:rgba(139,139,255,.04)}
-.image-frame{border-radius:12px;box-shadow:0 0 30px rgba(139,139,255,.06)}
-.overlay .modal{border:1px solid var(--border-focus);box-shadow:0 0 40px rgba(0,0,0,.6)}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important}
-.chip.selected{background:var(--gold);color:#080818;font-weight:600}
-.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#080818}
-.ach-progress-fill{background:var(--gold)}
-.story-round-badge{background:rgba(139,139,255,.1);color:var(--gold)}
-.settlement-box{border-left:3px solid var(--gold)}
+body{font-family:'Segoe UI Light','Segoe UI','Microsoft YaHei',sans-serif;font-weight:300;font-size:14px;letter-spacing:.5px}
+
+/* 明亮星空 — 12颗 */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(2px 2px at 8% 10%,rgba(255,255,255,1),transparent),
+    radial-gradient(1px 1px at 22% 25%,rgba(255,255,255,.85),transparent),
+    radial-gradient(3px 3px at 35% 6%,rgba(200,200,255,.9),transparent),
+    radial-gradient(1px 1px at 48% 32%,rgba(255,255,255,.8),transparent),
+    radial-gradient(3px 3px at 55% 12%,rgba(220,220,255,.85),transparent),
+    radial-gradient(2px 2px at 62% 40%,rgba(255,255,255,.9),transparent),
+    radial-gradient(2px 2px at 75% 15%,rgba(200,200,255,.95),transparent),
+    radial-gradient(1px 1px at 85% 28%,rgba(255,255,255,.8),transparent),
+    radial-gradient(2px 2px at 12% 45%,rgba(220,220,255,.75),transparent),
+    radial-gradient(1px 1px at 92% 18%,rgba(255,255,255,.85),transparent),
+    radial-gradient(2px 2px at 42% 52%,rgba(200,200,255,.8),transparent),
+    radial-gradient(1px 1px at 68% 44%,rgba(255,255,255,.75),transparent);
+  animation:starTwinkle 3.5s ease-in-out infinite}
+@keyframes starTwinkle{0%,100%{opacity:.8}30%{opacity:1}60%{opacity:.9}}
+
+/* 故事框 — 天文台 */
+#story-box{border:1px solid var(--border-focus);border-radius:12px;background:linear-gradient(180deg,rgba(152,152,255,.05),transparent 40%);box-shadow:0 0 40px rgba(152,152,255,.1);border-left:3px solid var(--gold)}
+#story-box::before{color:var(--gold);content:'🌃 现状';font-size:11px}
+.story-fade-in{animation:midnightFloat .6s ease-out}
+@keyframes midnightFloat{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* 图片框 — 圆形望远镜 */
+.image-frame{border:2px solid var(--border-focus);border-radius:50%;overflow:hidden;box-shadow:0 0 40px rgba(152,152,255,.15);max-width:280px;margin:0 auto;aspect-ratio:1}
+.image-frame img{border-radius:50%;filter:brightness(.85) contrast(1.1)}
+
+.game-title{color:var(--gold);letter-spacing:12px;font-weight:200;text-shadow:0 0 28px rgba(152,152,255,.35);font-size:22px}
+.option-btn{border-radius:14px;border:1px solid var(--border);transition:all .3s}
+.option-btn:hover{border-color:var(--gold);box-shadow:0 0 24px rgba(152,152,255,.22);background:rgba(152,152,255,.06);transform:translateY(-2px)}
+.option-btn .option-num{border-radius:50%;color:#fff}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+
+.modal,.save-card{border:1px solid var(--border-focus);border-radius:14px}.save-card:hover{border-color:var(--gold)}
+.settlement-box{border-left:3px solid var(--gold);border-radius:12px}
+.overlay .modal{border:1px solid var(--border-focus);box-shadow:0 0 50px rgba(0,0,0,.6);border-radius:14px}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:10px!important}
+.chip.selected{background:var(--gold);color:#040410;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#040410;border-radius:12px}.btn-primary:hover{background:#a8a8ff}
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(152,152,255,.12);color:var(--gold)}
+.save-card-upload{background:rgba(152,152,255,.1);border-color:var(--gold-dim);color:var(--gold)}

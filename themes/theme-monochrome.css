@@ -1,23 +1,38 @@
-/* ⬜ 黑白 — 极简、灰阶、干净利落 */
+/* ⬜ 黑白 — 纯灰阶、左线白→灰区分、负片画框、零动画 */
 :root {
-  --bg:#121212;--bg-panel:#1a1a1a;--bg-card:#222;--bg-hover:#2a2a2a;
-  --border:#333;--border-focus:#888;
-  --text:#ccc;--text-dim:#777;--text-bright:#fff;
-  --gold:#aaa;--gold-dim:#666;--purple:#888;
-  --red:#e06c6c;--green:#6cbf6c;
-  --option-1:#666;--option-2:#777;--option-3:#888;--option-4:#999;
-  --radius:4px;--shadow:0 2px 16px rgba(0,0,0,.5);
+  --bg:#0a0a0a;--bg-panel:#121212;--bg-card:#1a1a1a;--bg-hover:#222;
+  --border:#2a2a2a;--border-focus:#808080;
+  --text:#c8c8c8;--text-dim:#666;--text-bright:#f0f0f0;
+  --gold:#999;--gold-dim:#555;--purple:#777;--purple-hover:#888;
+  --red:#d06060;--green:#60b060;--red-dim:#1a1a1a;
+  --option-1:#888;--option-2:#777;--option-3:#999;--option-4:#aaa;
+  --radius:4px;--shadow:0 2px 12px rgba(0,0,0,.6);
 }
-body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;letter-spacing:.5px}
-.game-title{color:var(--text-bright);letter-spacing:8px;font-weight:200;text-transform:uppercase}
-.option-btn{border-radius:4px;border:1px solid var(--border)}
-.option-btn:hover{border-color:var(--text);background:var(--bg-hover)}
-.image-frame{border-radius:4px;filter:grayscale(30%)}
-.settlement-box{border-left:3px solid var(--text-dim)}
-.overlay .modal{border:1px solid var(--border)}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important}
-.chip.selected{background:var(--text-dim);color:var(--bg);font-weight:600}
-.tab-btn.active{color:var(--text-bright);border-bottom-color:var(--text)}
-.btn-primary{background:var(--text-dim);border-color:var(--text-dim);color:var(--bg)}
-.ach-progress-fill{background:var(--text-dim)}
-.story-round-badge{background:rgba(255,255,255,.06);color:var(--text-dim)}
+body{font-family:'Segoe UI','Helvetica Neue','Microsoft YaHei',sans-serif;letter-spacing:.5px;font-size:14px;font-weight:350}
+
+/* 故事框 — 极简 */
+#story-box{border:1px solid var(--border);border-radius:2px}
+#story-box::before{color:var(--text-dim);content:'STATUS';letter-spacing:6px;font-size:10px;font-weight:300}
+.story-fade-in{animation:monoAppear .1s ease-out}
+@keyframes monoAppear{from{opacity:.4}to{opacity:1}}
+
+/* 图片框 — 负片感 */
+.image-frame{border:1px solid var(--border);border-radius:2px}
+
+.game-title{color:var(--text-bright);letter-spacing:12px;font-weight:200;text-transform:uppercase;font-size:17px}
+.option-btn{border-radius:2px;border:1px solid var(--border);transition:all .1s}
+.option-btn:hover{border-color:var(--text);background:var(--bg-hover);transform:none;box-shadow:none}
+.option-btn:nth-child(1){border-left:3px solid #f0f0f0}.option-btn:nth-child(2){border-left:3px solid #c8c8c8}
+.option-btn:nth-child(3){border-left:3px solid #a0a0a0}.option-btn:nth-child(4){border-left:3px solid #787878}
+.option-btn .option-num{border-radius:1px;font-size:10px;font-weight:400}
+.option-btn:nth-child(1) .option-num{background:#f0f0f0;color:#0a0a0a}.option-btn:nth-child(2) .option-num{background:#c8c8c8;color:#0a0a0a}
+.option-btn:nth-child(3) .option-num{background:#a0a0a0;color:#0a0a0a}.option-btn:nth-child(4) .option-num{background:#787878;color:#0a0a0a}
+
+.modal,.save-card{border:1px solid var(--border);border-radius:2px}.save-card:hover{border-color:var(--text)}
+.settlement-box{border-left:3px solid var(--text-dim);border-radius:2px}
+.overlay .modal{border:1px solid var(--border);border-radius:2px}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:2px!important}
+.chip.selected{background:var(--text-dim);color:var(--bg);font-weight:600}.tab-btn.active{color:var(--text-bright);border-bottom-color:var(--text)}
+.btn-primary{background:var(--text-dim);border-color:var(--text-dim);color:var(--bg);border-radius:2px}
+.ach-progress-fill{background:var(--text-dim)}.story-round-badge{background:rgba(255,255,255,.04);color:var(--text-dim);border-radius:1px}
+.save-card-upload{background:rgba(255,255,255,.03);border-color:var(--text-dim);color:var(--text-dim)}

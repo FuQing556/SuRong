@@ -1,24 +1,41 @@
-/* 🌅 日落 — 暖色渐变、发光边框 */
+/* 🌅 日落 — 深紫灰基底 + 暖琥珀点缀 + 地平线光 + 半圆画框 */
 :root {
-  --bg:#1a0e06;--bg-panel:#241810;--bg-card:#2d2016;--bg-hover:#38281c;
-  --border:#4a3020;--border-focus:#ff9800;
-  --text:#d8c8b8;--text-dim:#8a6a50;--text-bright:#f8e8d8;
-  --gold:#ff9800;--gold-dim:#8a5000;--purple:#e8734a;
-  --red:#f44336;--green:#8bc34a;
-  --option-1:#e65100;--option-2:#bf360c;--option-3:#ff6f00;--option-4:#c0392b;
-  --radius:8px;--shadow:0 4px 24px rgba(0,0,0,.4);
+  --bg:#120c10;--bg-panel:#1a1218;--bg-card:#221820;--bg-hover:#2a1e26;
+  --border:#34242e;--border-focus:#d47830;
+  --text:#d4c8c4;--text-dim:#8a7068;--text-bright:#f0e0d8;
+  --gold:#d47830;--gold-dim:#8a4818;--purple:#b8706c;--purple-hover:#c8807c;
+  --red:#e06050;--green:#7ab850;--red-dim:#281418;
+  --option-1:#c86830;--option-2:#b05838;--option-3:#d08028;--option-4:#a05840;
+  --radius:10px;--shadow:0 4px 24px rgba(0,0,0,.4);
 }
-body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:15px}
-.game-title{color:var(--gold);text-shadow:0 0 20px rgba(255,152,0,.3);letter-spacing:6px}
-.option-btn{border:2px solid transparent;border-image:linear-gradient(135deg,var(--gold-dim),var(--gold)) 1;transition:all .3s}
-.option-btn:hover{box-shadow:0 0 20px rgba(255,152,0,.2);transform:scale(1.01)}
-.image-frame{border:2px solid var(--gold-dim);box-shadow:0 0 30px rgba(255,152,0,.1)}
-#top-bar{background:linear-gradient(180deg,rgba(255,152,0,.05),transparent);border-bottom:1px solid var(--gold-dim)}
-.settlement-box{border-left:3px solid var(--gold)}
-.overlay .modal{border:1px solid var(--gold-dim)}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important}
-.chip.selected{background:var(--gold);color:#1a0e06;font-weight:600}
-.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#1a0e06}
-.ach-progress-fill{background:var(--gold)}
-.story-round-badge{background:rgba(255,152,0,.12);color:var(--gold)}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:15px;font-weight:350}
+
+/* 地平线暖光 */
+#top-bar{background:linear-gradient(180deg,rgba(212,120,48,.08),transparent);border-bottom:2px solid var(--gold-dim);position:relative}
+#top-bar::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:horizonGlow 4s ease-in-out infinite}
+@keyframes horizonGlow{0%,100%{opacity:.3}50%{opacity:.8}}
+
+/* 故事框 — 暮光 */
+#story-box{border:1px solid var(--border);border-radius:10px;box-shadow:inset 0 -50px 70px rgba(212,120,48,.03);border-left:3px solid var(--gold)}
+#story-box::before{color:var(--gold);content:'🌅 现状';font-size:11px}
+.story-fade-in{animation:sunsetSlide .5s cubic-bezier(.25,.46,.45,.94)}
+@keyframes sunsetSlide{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+
+/* 图片框 — 半圆落日 */
+.image-frame{border:2px solid var(--gold-dim);border-radius:50% 50% 10px 10px;overflow:hidden;box-shadow:0 0 30px rgba(212,120,48,.1)}
+.image-frame img{filter:brightness(.95) saturate(1.15)}
+
+.game-title{color:var(--gold);text-shadow:0 0 20px rgba(212,120,48,.3);letter-spacing:8px;font-size:20px;font-weight:400}
+.option-btn{border:2px solid var(--border);transition:all .3s;border-radius:10px}
+.option-btn:hover{box-shadow:0 0 22px rgba(212,120,48,.2);border-color:var(--gold);transform:translateY(-2px);background:rgba(212,120,48,.04)}
+.option-btn .option-num{border-radius:50%;color:#fff}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+
+.modal,.save-card{border:1px solid var(--border);border-radius:10px}.save-card:hover{border-color:var(--gold)}
+.settlement-box{border-left:3px solid var(--gold);border-radius:10px}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:8px!important}
+.chip.selected{background:var(--gold);color:#120c10;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#120c10}.btn-primary:hover{background:#e08840}
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(212,120,48,.1);color:var(--gold)}
+.save-card-upload{background:rgba(212,120,48,.1);border-color:var(--gold-dim);color:var(--gold)}

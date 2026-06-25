@@ -90,10 +90,12 @@ function bindEvents() {
 
   // 键盘快捷键
   document.addEventListener('keydown', (e) => {
+    // 任何弹窗/输入框激活时，禁用游戏快捷键
     if (dom.settingsOverlay?.classList.contains('active')) return;
     if (dom.warningOverlay?.classList.contains('active')) return;
     if (dom.saveSelectorOverlay?.classList.contains('active')) return;
     if (dom.createSaveOverlay?.classList.contains('active')) return;
+    if ($('#dialog-overlay')?.classList.contains('active')) return;
     if ($('#prologue-overlay')?.classList.contains('active')) return;
     if ($('#ending-overlay')?.classList.contains('active')) return;
     if ($('#help-overlay')?.classList.contains('active')) return;

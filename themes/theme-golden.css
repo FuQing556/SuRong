@@ -1,25 +1,43 @@
-/* ✨ 鎏金 — 奢华金调、深棕底色 */
+/* ✨ 鎏金 — 浓黑基底 + 暖金点缀 + 金属流光 + 画框镀金角 */
 :root {
-  --bg:#100a02;--bg-panel:#1a1206;--bg-card:#241a0a;--bg-hover:#2e220e;
-  --border:#4a3a1a;--border-focus:#d4a030;
-  --text:#d8ccb0;--text-dim:#8a7a50;--text-bright:#f8e8c8;
-  --gold:#d4a030;--gold-dim:#8a6018;--purple:#9a7b3a;
-  --red:#d9443a;--green:#5a9a3a;
-  --option-1:#9a7018;--option-2:#7a5a14;--option-3:#b8860b;--option-4:#8b4513;
-  --radius:6px;--shadow:0 4px 24px rgba(0,0,0,.5);
+  --bg:#060402;--bg-panel:#0e0a06;--bg-card:#161008;--bg-hover:#1e160c;
+  --border:#2e2210;--border-focus:#c89828;
+  --text:#d4ccb8;--text-dim:#7a7058;--text-bright:#f0e4c8;
+  --gold:#c89828;--gold-dim:#785818;--purple:#a08030;--purple-hover:#b89040;
+  --red:#cc4038;--green:#509038;--red-dim:#201410;
+  --option-1:#a87820;--option-2:#8a6818;--option-3:#b88820;--option-4:#906828;
+  --radius:6px;--shadow:0 4px 24px rgba(0,0,0,.6);
 }
-body{font-family:'Georgia','Times New Roman','Microsoft YaHei',serif}
-.game-title{color:var(--gold);text-shadow:0 0 16px rgba(212,160,48,.3),0 2px 4px rgba(0,0,0,.5);letter-spacing:8px;font-size:22px}
-.option-btn{border:2px solid var(--border);border-radius:6px;background:linear-gradient(135deg,var(--bg-card),rgba(212,160,48,.03))}
-.option-btn:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(212,160,48,.2),inset 0 0 20px rgba(212,160,48,.03)}
-.image-frame{border:2px solid var(--gold-dim);box-shadow:0 0 30px rgba(212,160,48,.1);border-radius:6px}
-.settlement-box{border-left:4px solid var(--gold)}
-.overlay .modal{border:2px solid var(--gold-dim);box-shadow:0 0 40px rgba(0,0,0,.6)}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important}
-input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 10px rgba(212,160,48,.1)}
-.chip.selected{background:var(--gold);color:#100a02;font-weight:600}
-.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-dim));border-color:var(--gold);color:#100a02;font-weight:700}
-.ach-progress-fill{background:var(--gold)}
-.story-round-badge{background:rgba(212,160,48,.12);color:var(--gold)}
+body{font-family:'Georgia','Times New Roman','Noto Serif SC','Microsoft YaHei',serif;font-size:15px;font-weight:400}
+
+/* 按钮金属光泽 */
+.option-btn{border:2px solid var(--border);border-radius:6px;background:linear-gradient(135deg,var(--bg-card),rgba(200,152,40,.04));position:relative;overflow:hidden}
+.option-btn::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent 40%,rgba(200,152,40,.06) 50%,transparent 60%);animation:goldShine 3s ease-in-out infinite;pointer-events:none}
+@keyframes goldShine{0%{transform:translateX(-100%) translateY(-100%)}100%{transform:translateX(100%) translateY(100%)}}
+.option-btn:hover{border-color:var(--gold);box-shadow:0 0 24px rgba(200,152,40,.25),inset 0 0 30px rgba(200,152,40,.04);transform:translateY(-2px)}
+.option-btn .option-num{border-radius:2px;font-family:Georgia,serif;color:#060402;font-weight:700}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+
+/* 故事框 — 镀金框 */
+#story-box{border:2px solid var(--border);border-radius:6px;background:linear-gradient(180deg,rgba(200,152,40,.02),transparent 50%,rgba(200,152,40,.02));position:relative;border-left:4px solid var(--gold)}
+#story-box::before{color:var(--gold);content:'◆ 现状';font-family:Georgia,serif;font-size:11px}
+#story-box::after{content:'◆';position:absolute;bottom:8px;right:12px;font-size:10px;color:var(--gold-dim);opacity:.5}
+.story-fade-in{animation:goldReveal .7s ease-out}
+@keyframes goldReveal{from{opacity:0;transform:translateY(8px);color:var(--gold-dim)}to{opacity:1;transform:translateY(0);color:var(--text-bright)}}
+
+/* 图片框 — 镀金画框 */
+.image-frame{border:4px solid transparent;border-image:linear-gradient(135deg,var(--gold-dim),var(--gold),var(--gold-dim)) 1;box-shadow:0 0 30px rgba(200,152,40,.12),inset 0 0 10px rgba(0,0,0,.3);border-radius:4px}
+.image-frame img{filter:brightness(.9) contrast(1.05)}
+
+.game-title{color:var(--gold);text-shadow:0 0 18px rgba(200,152,40,.4),0 2px 4px rgba(0,0,0,.5);letter-spacing:12px;font-size:23px;font-family:Georgia,serif}
+.modal,.save-card{border:2px solid var(--border);border-radius:6px}.save-card:hover{border-color:var(--gold)}
+.settlement-box{border-left:4px solid var(--gold);border-radius:6px}
+.overlay .modal{border:2px solid var(--gold-dim);box-shadow:0 0 50px rgba(0,0,0,.7);border-radius:6px}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:4px!important}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 12px rgba(200,152,40,.12)}
+.chip.selected{background:var(--gold);color:#060402;font-weight:700}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-dim));border-color:var(--gold);color:#060402;font-weight:700;border-radius:6px}.btn-primary:hover{box-shadow:0 0 18px rgba(200,152,40,.3)}
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(200,152,40,.15);color:var(--gold);border-radius:4px}
 .status-value{color:var(--text-bright)}
+.save-card-upload{background:rgba(200,152,40,.12);border-color:var(--gold-dim);color:var(--gold)}
