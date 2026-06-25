@@ -225,10 +225,45 @@ async function sendMessage(userContent) {
       throw new Error(errData.error || '请求失败 (' + resp.status + ')');
     }
 
-    const data = await resp.json();
-    gameState.fullHistory.push({ role: 'assistant', content: data.content });
+    // ── 流式读取 SSE 响应 ──
+    dom.loadingIndicator.classList.add('hidden');
+    if (dom.optionsContainer) dom.optionsContainer.style.visibility = '';
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let streamBuffer = '';
+    let fullContent = '';
+    // 创建实时预览元素
+    const liveEl = document.createElement('div');
+    liveEl.className = 'story-entry story-fade-in';
+    liveEl.style.cssText = 'opacity:.85;white-space:pre-wrap;';
+    dom.storyContent.appendChild(liveEl);
 
-    const parsed = parseAIResponse(data.content, tpl);
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      streamBuffer += decoder.decode(value, { stream: true });
+      const lines = streamBuffer.split('\n');
+      streamBuffer = lines.pop() || '';
+      for (const line of lines) {
+        if (line.startsWith('data: ') && line.length > 6) {
+          try {
+            const json = JSON.parse(line.slice(6));
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullContent += delta;
+              liveEl.textContent = fullContent;
+              $('#story-box').scrollTop = $('#story-box').scrollHeight;
+            }
+          } catch (e) { /* 跳过非JSON行(如[DONE]) */ }
+        }
+      }
+    }
+    liveEl.remove();
+    showLoading(false);
+
+    gameState.fullHistory.push({ role: 'assistant', content: fullContent });
+
+    const parsed = parseAIResponse(fullContent, tpl);
     // AI返回了故事但漏了选项 → 视为格式异常，触发重试
     if (parsed.options.length === 0) {
       gameState.fullHistory.pop();

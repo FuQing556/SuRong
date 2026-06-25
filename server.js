@@ -210,21 +210,17 @@ async function callDeepSeek(messages, apiKey, temperature = 0.8, maxTokens = 102
   return data.choices[0].message.content;
 }
 
-// ── API: 游戏对话 ──
+// ── API: 游戏对话（流式输出）──
 app.post('/api/chat', async (req, res) => {
   const { messages, summary, template, systemPrompt } = req.body;
 
   // 构建消息数组
   let fullMessages;
-
   if (systemPrompt && systemPrompt.trim().length >= 100) {
-    // 前端传了完整系统提示词
     fullMessages = [{ role: 'system', content: systemPrompt }];
   } else if (messages && Array.isArray(messages) && messages.length > 0 && messages[0].role === 'system') {
-    // 前端已构建好完整消息数组（含多条system消息），直接使用
     fullMessages = [...messages];
   } else {
-    // 传统模式：构建系统提示词
     let activeSystemPrompt;
     if (template && template.outputSections) {
       activeSystemPrompt = buildSystemPrompt(template);
@@ -238,14 +234,9 @@ app.post('/api/chat', async (req, res) => {
       return res.status(500).json({ error: '游戏提示词未加载' });
     }
     fullMessages = [{ role: 'system', content: activeSystemPrompt }];
-    // 插入历史摘要
     if (summary && summary.trim()) {
-      fullMessages.push({
-        role: 'system',
-        content: `【历史摘要】${summary}`,
-      });
+      fullMessages.push({ role: 'system', content: `【历史摘要】${summary}` });
     }
-    // 插入最近对话
     if (messages && Array.isArray(messages)) {
       fullMessages.push(...messages);
     }
@@ -253,11 +244,46 @@ app.post('/api/chat', async (req, res) => {
 
   try {
     const apiKey = getApiKey(req.body);
-    const content = await callDeepSeek(fullMessages, apiKey);
-    res.json({ content });
+    // 流式请求 DeepSeek
+    const dsResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: 'deepseek-chat', messages: fullMessages, temperature: 0.8, max_tokens: 1024, stream: true }),
+    });
+
+    if (!dsResp.ok) {
+      const errText = await dsResp.text();
+      return res.status(dsResp.status).json({ error: `DeepSeek API 错误 (${dsResp.status}): ${errText}` });
+    }
+
+    // 设置 SSE 响应头
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    // 逐块转发 DeepSeek 的 SSE 流到客户端
+    const reader = dsResp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) { res.end(); break; }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          res.write(line + '\n\n');
+        }
+      }
+    }
   } catch (err) {
     console.error('对话请求失败:', err.message);
-    res.status(500).json({ error: err.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    }
   }
 });
 
