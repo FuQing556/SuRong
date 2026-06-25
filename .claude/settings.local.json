@@ -72,7 +72,11 @@
       "Bash(\\\\\"#ending-narrative\\\\\")",
       "Bash(\\\\\"#ending-stats\\\\\")",
       "Bash(\\\\\"#ending-overlay\\\\\")",
-      "Bash(node patch2.js)"
+      "Bash(node patch2.js)",
+      "Bash(node final_patch.js)",
+      "Bash(grep -v \"V2\\\\|_OLD\\\\|function \\\\|//\")",
+      "Bash(node -e \"require\\('./server.js'\\)\")",
+      "Bash(node test_comprehensive.js)"
     ]
   }
 }

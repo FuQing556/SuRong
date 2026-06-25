@@ -82,18 +82,6 @@ function showAchievementToast(name) {
   setTimeout(() => toast.classList.add('hidden'), 3500);
 }
 
-function checkAchievementsFromResponse(text) {
-  const matches = text.matchAll(/【[🏆🏅⭐🎖️]?\s*成就解锁[：:]\s*(.+?)】/g);
-  for (const m of matches) {
-    if (getAchievements()[m[1].trim()]) unlockAchievement(m[1].trim());
-  }
-  const achLine = text.match(/成就[：:]\s*(.+)/);
-  if (achLine) {
-    achLine[1].split(/[\/,，]/).map(s => s.trim()).filter(Boolean).forEach(name => {
-      if (name !== '无' && getAchievements()[name]) unlockAchievement(name);
-    });
-  }
-}
 
 function renderAchievementsPanelV2() {
   const all = getUnlockedAchievements();
@@ -621,7 +609,6 @@ async function sendMessage(userContent) {
 
     const parsed = parseAIResponse(data.content, tpl);
     renderGameState(parsed, tpl);
-    checkAchievementsFromResponse(data.content);
     gameState.gameStarted = true;
     saveGameState(); // 自动存档
 
@@ -784,7 +771,7 @@ function renderGameState(parsed, template) {
     $('#story-box').scrollTop = 0;
   }
 
-  updateOptionButtons(parsed.options);
+  updateOptionButtonsV2(parsed.options);
   gameState.currentOptions = parsed.options;
 
   updateAllDynamicFields(parsed.fields, template);
@@ -888,11 +875,11 @@ async function openSettings() {
     dom.promptEditor.value = gameState.activeSystemPrompt;
     dom.promptLength.textContent = `字数: ${dom.promptEditor.value.length} (当前模板)`;
   } else {
-    const localPrompt = localStorage.getItem('xixi_custom_prompt');
-    if (localPrompt && localPrompt.trim()) {
-      dom.promptEditor.value = localPrompt;
-      dom.promptLength.textContent = `字数: ${dom.promptEditor.value.length} (本地版本)`;
-    } else {
+    const tplOs2 = getActiveTemplate();
+  if (tplOs2.promptBody && tplOs2.promptBody.length >= 100) {
+    dom.promptEditor.value = tplOs2.promptBody;
+    dom.promptLength.textContent = "字数: " + dom.promptEditor.value.length + " (当前模板: " + (tplOs2.name || "未命名") + ")";
+  } else {
       try {
         const resp = await fetch('/api/prompt');
         const data = await resp.json();
@@ -920,7 +907,7 @@ async function savePrompt() {
     dom.settingsMsg.style.color = 'var(--red)';
     return;
   }
-  localStorage.setItem('xixi_custom_prompt', prompt);
+  // 已迁移到 xixi_edited_template_{id}
   gameState.customPrompt = prompt;
   gameState.activeSystemPrompt = prompt; // 手动编辑的提示词直接使用
   dom.settingsMsg.textContent = '⏳ 保存中...';
@@ -955,7 +942,6 @@ async function resetPrompt() {
   }
   dom.promptEditor.value = gameState.originalPrompt;
   dom.promptLength.textContent = `字数: ${dom.promptEditor.value.length}`;
-  localStorage.removeItem('xixi_custom_prompt');
   gameState.customPrompt = '';
   dom.settingsMsg.textContent = '✅ 已恢复默认提示词';
   dom.settingsMsg.style.color = 'var(--green)';
