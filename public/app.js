@@ -390,11 +390,8 @@ function bindEvents() {
   document.querySelector("#create-save-overlay")?.addEventListener("click", e => { if (e.target === e.currentTarget) closeCreateSave(); });
 
   // 风格选择芯片
-  $('#style-chips').addEventListener('click', (e) => {
-    if (e.target.classList.contains('chip')) {
-      e.target.classList.toggle('selected');
-    }
-  });
+  $('#style-chips').addEventListener('click', function(e) { if (e.target.classList.contains('chip')) { e.target.classList.toggle('selected'); } });
+  $('#length-chips').addEventListener('click', function(e) { if (e.target.classList.contains('chip')) { document.querySelectorAll('#length-chips .chip').forEach(function(c) { c.classList.remove('selected'); }); e.target.classList.add('selected'); } });
 
   // AI 聊天
   $('#btn-ai-send').addEventListener('click', sendAiInstruction);
@@ -451,6 +448,8 @@ function bindEvents() {
     if (document.querySelector('#prologue-overlay')?.classList.contains("active")) return;
     if (document.querySelector('#ending-overlay')?.classList.contains("active")) return;
     if (document.querySelector('#help-overlay')?.classList.contains("active")) return;
+    if (document.querySelector('#ending-overlay')?.classList.contains("active")) return;
+    if (document.querySelector('#help-overlay')?.classList.contains("active")) return;
     if (gameState.isLoading) return;
     const key = parseInt(e.key);
     if (key >= 1 && key <= 4 && gameState.currentOptions[key - 1]) {
@@ -490,6 +489,15 @@ function bindEvents() {
   $('#achievements-overlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
   });
+  $('#btn-help').addEventListener('click', () => { $('#help-overlay').classList.add('active'); });
+  $('#btn-close-help').addEventListener('click', () => { $('#help-overlay').classList.remove('active'); });
+  $('#help-overlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('active'); });
+  $('#btn-close-history').addEventListener('click', () => { $('#history-overlay').classList.remove('active'); });
+  $('#history-overlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('active'); });
+  $('#btn-ending-restart').addEventListener('click', () => { closeEndingOverlay(); startNewGame(); });
+  $('#btn-ending-saves').addEventListener('click', () => { closeEndingOverlay(); showSaveSelector(); });
+  $('#btn-ending-continue').addEventListener('click', closeEndingOverlay);
+  $('#ending-overlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeEndingOverlay(); });
 
   document.querySelector("#save-selector-overlay")?.addEventListener("click", e => { /* 不关闭，必须选存档 */ });
 
@@ -504,7 +512,24 @@ function bindEvents() {
   }
 
   dom.promptEditor.addEventListener('input', () => {
-    dom.promptLength.textContent = `字数: ${dom.promptEditor.value.length}`;
+    dom.promptLength.textContent = '字数: ' + dom.promptEditor.value.length;
+  });
+
+  // 状态栏数值点击编辑
+  document.querySelector('#status-panel')?.addEventListener('click', (e) => {
+    const ve = e.target.closest('.status-value'); if (!ve || gameState.isLoading) return;
+    const fid = ve.id?.replace('field-', ''); if (!fid) return;
+    const cv = ve.textContent;
+    dlPrompt('修改「' + (ve.previousElementSibling?.textContent?.trim()||'') + '」的当前值：', cv).then(nv => {
+      if (nv === null || nv === cv) return;
+      if (!gameState.fieldHistory[fid]) gameState.fieldHistory[fid] = {};
+      const num = parseInt(nv);
+      if (!isNaN(num)) { gameState.fieldHistory[fid].current = num; gameState.fieldHistory[fid].max = Math.max(gameState.fieldHistory[fid].max || 0, num); }
+      else { gameState.fieldHistory[fid].currentText = nv; }
+      ve.textContent = nv; ve.className = 'status-value';
+      if (!isNaN(num)) { if (num >= 70) ve.classList.add('pressure-danger'); else if (num >= 40) ve.classList.add('pressure-warn'); else ve.classList.add('pressure-safe'); }
+      if (gameState.gameStarted) saveGameState();
+    });
   });
 }
 
@@ -863,9 +888,17 @@ function updateAllDynamicFields(fieldValues, template) {
   }
 }
 
-// ── 加载状态 ──
+let _loadingTimer = null; let _loadingStart = 0;
 function showLoading(show) {
   dom.loadingIndicator.classList.toggle('hidden', !show);
+  if (show) { _loadingStart = Date.now(); _updateLoadingText(); _loadingTimer = setInterval(_updateLoadingText, 1000); }
+  else { if (_loadingTimer) { clearInterval(_loadingTimer); _loadingTimer = null; } }
+}
+function _updateLoadingText() {
+  const elapsed = Math.floor((Date.now() - _loadingStart) / 1000);
+  const roundNum = gameState.fullHistory.filter(m => m.role === 'user').length + 1;
+  const textEl = dom.loadingIndicator.querySelector('.spinner')?.nextSibling;
+  if (textEl) textEl.textContent = '第' + roundNum + '回合 · 已等待' + elapsed + '秒';
 }
 
 // ── 错误处理 ──
@@ -915,7 +948,7 @@ async function openSettings() {
   dom.settingsOverlay.classList.add('active');
 }
 
-function closeSettings() { dom.settingsOverlay.classList.remove('active'); }
+function closeSettings() { dom.settingsOverlay.classList.remove('active'); if (gameState.gameStarted) updateAllDynamicFieldsFromHistory(); }
 
 async function savePrompt() {
   const prompt = dom.promptEditor.value;
@@ -1169,7 +1202,8 @@ function initSaveTabs() {
 
   // 刷新酒馆按钮
   const refreshBtn = document.querySelector('#btn-refresh-tavern');
-  if (refreshBtn) refreshBtn.addEventListener('click', renderTavernPanel);
+  if (refreshBtn) refreshBtn.addEventListener('click', function() { renderTavernPanel(); });
+  var si = document.querySelector('#tavern-search'); if (si) si.addEventListener('input', function() { renderTavernPanel(); });
   // 管理员按钮
   const adminBtn = document.querySelector('#btn-admin-login');
   if (adminBtn) {
@@ -1513,13 +1547,15 @@ async function loadTavernList() {
   }
 }
 
-async function renderTavernPanel() {
+async function renderTavernPanel(filterText) {
   const grid = $('#tavern-grid');
   if (!grid) return;
   grid.innerHTML = '<div class="tavern-loading">⏳ 正在加载酒馆...</div>';
 
-  const shared = await loadTavernList();
-  if (shared.length === 0) {
+  var allSharedT = await loadTavernList();
+  var q = (filterText || document.querySelector('#tavern-search')?.value || '').trim().toLowerCase();
+  var shared = q ? allSharedT.filter(function(s) { return (s.name||'').toLowerCase().indexOf(q)>=0 || (s.description||'').toLowerCase().indexOf(q)>=0 || (s.protagonist||'').toLowerCase().indexOf(q)>=0 || (s.worldSetting||'').toLowerCase().indexOf(q)>=0 || (s.author||'').toLowerCase().indexOf(q)>=0 || (s.styles||[]).some(function(st){return st.toLowerCase().indexOf(q)>=0;}); }) : allSharedT;
+  if (allSharedT.length === 0) {
     grid.innerHTML = '<div class="tavern-empty">🍺 酒馆空空如也<br><span style="font-size:12px;color:var(--text-dim);">暂时没有人分享故事设定，来做第一个吧！</span></div>';
   } else {
     grid.innerHTML = shared.map(s => {
@@ -1559,7 +1595,7 @@ async function renderTavernPanel() {
   }
 
   const infoEl = $('#tavern-info');
-  if (infoEl) infoEl.textContent = `共 ${shared.length} 个分享`;
+  if (infoEl) { infoEl.innerHTML = '共 ' + shared.length + ' 个分享'; if (isTavernAdmin) { infoEl.innerHTML += ' <button id="btn-backup-tavern" class="btn btn-ghost btn-tiny">📥 备份</button>'; infoEl.innerHTML += ' <button id="btn-restore-tavern" class="btn btn-ghost btn-tiny">📤 恢复</button>'; } }
 }
 
 async function importFromTavern(sharedId) {
@@ -2144,3 +2180,30 @@ async function exportTemplateAsNewSave() {
   await dlAlert('✅ 已导出为新存档「' + newName.trim() + '」！\n返回存档选择页即可看到。');
   renderAchievementsPanelV2();
 }
+
+// 酒馆备份恢复
+$('#btn-backup-tavern')?.addEventListener('click', async function() {
+  try {
+    var resp = await fetch('/api/tavern/backup');
+    if (!resp.ok) throw new Error('备份失败');
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'tavern_backup.json'; a.click(); URL.revokeObjectURL(url);
+    alert('✅ 酒馆数据已下载！');
+  } catch(e) { alert('❌ 备份失败: ' + e.message); }
+});
+$('#btn-restore-tavern')?.addEventListener('click', function() {
+  var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = async function(e) {
+    var file = e.target.files[0]; if (!file) return;
+    try {
+      var text = await file.text(); var data = JSON.parse(text);
+      if (!data.shared) throw new Error('格式不正确');
+      var ow = confirm('文件包含 ' + data.shared.length + ' 个分享。覆盖已存在的？');
+      var resp = await fetch('/api/tavern/restore', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({shared:data.shared,overwrite:ow}) });
+      var r = await resp.json(); alert('✅ 已导入 ' + r.imported + '/' + r.total + ' 个分享！');
+      renderTavernPanel();
+    } catch(e) { alert('❌ 恢复失败: ' + e.message); }
+  };
+  inp.click();
+});
