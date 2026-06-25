@@ -105,17 +105,17 @@ function renderAchievementsPanelV2() {
 const KEEP_ROUNDS = 8;
 
 let gameState = {
-  fullHistory: [],
-  summary: '',
-  summarisedCount: 0,
-  currentOptions: [],
-  isLoading: false,
-  gameStarted: false,
-  originalPrompt: '',
-  customPrompt: '',
-  activeTemplate: null,           // 当前活动模板（含 outputSections, sceneImages 等）
-  activeSystemPrompt: '',         // 由模板自动生成的完整系统提示词
-  activeSaveId: 'surongrong',     // 当前存档ID（用于存档/读档）
+  fullHistory: [], summary: '', summarisedCount: 0,
+  currentOptions: [], isLoading: false, gameStarted: false,
+  originalPrompt: '', customPrompt: '',
+  activeTemplate: null, activeSystemPrompt: '', activeSaveId: 'surongrong',
+  fieldHistory: {}, _lastChoiceText: '',
+  achievementFlags: {
+    gambitChosen: false, gambitSucceeded: false, gambitSuccessCount: 0,
+    endingTriggered: false, endingType: '',
+    counterAttack: false, tradeCompleted: false,
+    choiceCounts: {}, responseMatches: {},
+  },
 };
 
 // ── 默认模板（后备）──
@@ -971,44 +971,50 @@ function saveUserSaves(saves) {
 }
 
 // ── 游戏存档（自动保存/读取）──
-function getSaveKey(templateId) {
-  return 'xixi_gamesave_' + (templateId || 'default');
+function getSaveKey(templateId, slot) {
+  const suffix = (slot && slot > 0) ? '_' + slot : '';
+  return 'xixi_gamesave_' + (templateId || 'default') + suffix;
 }
 
-function saveGameState() {
+function saveGameState(slot) {
   if (!gameState.gameStarted || gameState.fullHistory.length < 2) return;
   const tpl = getActiveTemplate();
-  const saveKey = getSaveKey(gameState.activeSaveId || tpl.id || 'default');
+  const saveSlot = (slot !== undefined) ? slot : 0;
+  const saveKey = getSaveKey(gameState.activeSaveId || tpl.id || 'default', saveSlot);
   const saveData = {
-    templateId: gameState.activeSaveId || tpl.id || 'default',
-    fullHistory: gameState.fullHistory,
-    summary: gameState.summary,
-    summarisedCount: gameState.summarisedCount,
-    currentOptions: gameState.currentOptions,
+    templateId: gameState.activeSaveId || tpl.id || 'default', slot: saveSlot,
+    fullHistory: gameState.fullHistory, summary: gameState.summary,
+    summarisedCount: gameState.summarisedCount, currentOptions: gameState.currentOptions,
     lastPlayed: Date.now(),
     roundNumber: gameState.fullHistory.filter(m => m.role === "user").length,
     theme: gameState._currentTheme || tpl.theme || "dark",
+    fieldHistory: gameState.fieldHistory, achievementFlags: gameState.achievementFlags,
   };
   try { localStorage.setItem(saveKey, JSON.stringify(saveData)); } catch(e) {}
 }
 
-function loadGameState(templateId) {
-  const saveKey = getSaveKey(templateId);
+function loadGameState(templateId, slot) {
+  const saveKey = getSaveKey(templateId, slot !== undefined ? slot : 0);
   try {
     const data = JSON.parse(localStorage.getItem(saveKey));
-    if (data && data.fullHistory && data.fullHistory.length > 0) return data;
+    if (data && data.fullHistory && data.fullHistory.length > 0) {
+      if (data.fieldHistory) gameState.fieldHistory = data.fieldHistory;
+      if (data.achievementFlags) gameState.achievementFlags = data.achievementFlags;
+      return data;
+    }
   } catch(e) {}
   return null;
 }
 
 function getSaveInfo(templateId) {
-  const data = loadGameState(templateId);
-  if (!data) return null;
-  return {
-    roundNumber: data.roundNumber || 0,
-    lastPlayed: data.lastPlayed || 0,
-    hasSave: true,
-  };
+  let best = null;
+  for (let slot = 0; slot < 10; slot++) {
+    const key = getSaveKey(templateId, slot);
+    try { const data = JSON.parse(localStorage.getItem(key)); if (data && data.fullHistory && data.fullHistory.length > 0) { if (!best || data.lastPlayed > best.lastPlayed) best = data; } } catch(e) {}
+  }
+  if (!best) return null;
+  let slotCount = 0; for (let s = 0; s < 10; s++) { if (localStorage.getItem(getSaveKey(templateId, s))) slotCount++; }
+  return { roundNumber: best.roundNumber || 0, lastPlayed: best.lastPlayed || 0, hasSave: true, slotCount };
 }
 
 // ── 成就隔离存储（按模板ID）──
