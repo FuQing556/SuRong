@@ -629,7 +629,16 @@ async function sendMessage(userContent) {
 // ── 处理选择 ──
 async function handleChoice(num) {
   if (gameState.isLoading) return;
-  await sendMessage(`选择 ${num}`);
+  const btn = dom.optionBtns[num - 1]; if (btn && btn.disabled) return;
+  const chosenOption = gameState.currentOptions[num - 1];
+  if (chosenOption) {
+    gameState._lastChoiceText = chosenOption.action || ('选项 ' + num);
+    const fullText = (chosenOption.action || '') + ' ' + (chosenOption.cost || '');
+    if (fullText.includes('孤注一掷')) gameState.achievementFlags.gambitChosen = true;
+    const tplC = getActiveTemplate(); const hiddenC = tplC.hiddenAchievements || {};
+    for (const [name, ha] of Object.entries(hiddenC)) { const trigger = ha.trigger || {}; if (trigger.type === 'choice' && trigger.pattern) { const re = new RegExp(trigger.pattern); if (re.test(chosenOption.action || '') || re.test(chosenOption.cost || '')) { if (!gameState.achievementFlags.choiceCounts) gameState.achievementFlags.choiceCounts = {}; gameState.achievementFlags.choiceCounts[trigger.pattern] = (gameState.achievementFlags.choiceCounts[trigger.pattern] || 0) + 1; } } }
+  }
+  await sendMessage('选择 ' + num);
 }
 
 async function retryLastRequest() {
@@ -721,10 +730,11 @@ function parseAIResponse(text, template) {
 
 function extractField(text, fieldName) {
   const escaped = fieldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // 值到换行符或 | 分隔符为止，避免跨字段匹配
-  const re = new RegExp(`${escaped}[：:]\\s*([^|\\n]+?)(?:\\s*[|]|\\s*\\n|$)`);
-  const m = text.match(re);
-  return m ? m[1].trim() : '—';
+  // 全局匹配取最后一次出现——状态字段在回复末尾，避免被叙事区干扰
+  const re = new RegExp(escaped + '[：:]\\s*([^|\\n]+?)(?:\\s*[|]|\\s*\\n|$)', 'g');
+  let m, lastMatch = null;
+  while ((m = re.exec(text)) !== null) lastMatch = m;
+  return lastMatch ? lastMatch[1].trim() : '—';
 }
 
 // ── 场景图片（模板驱动）──
@@ -775,6 +785,13 @@ function renderGameState(parsed, template) {
   gameState.currentOptions = parsed.options;
 
   updateAllDynamicFields(parsed.fields, template);
+
+  const endingType = detectEnding(parsed.raw); if (endingType) { gameState.achievementFlags.endingTriggered = true; gameState.achievementFlags.endingType = endingType; setTimeout(() => showEndingOverlay(endingType, parsed), 800); }
+  if (gameState.achievementFlags.gambitChosen) { gameState.achievementFlags.gambitChosen = false; if (/赌对了|运气在|成了|如愿|得手|翻盘|逆转|成功|顺利|赢了|赌赢|押对/.test(parsed.raw)) { gameState.achievementFlags.gambitSucceeded = true; gameState.achievementFlags.gambitSuccessCount = (gameState.achievementFlags.gambitSuccessCount || 0) + 1; } }
+  if (/反杀|设局成功|反制|翻盘|中计|落入.*陷阱/.test(parsed.raw)) gameState.achievementFlags.counterAttack = true;
+  if (/交易完成|情报.*交换|以.*情报.*换|用.*消息.*换/.test(parsed.raw)) gameState.achievementFlags.tradeCompleted = true;
+  const tplHH = getActiveTemplate(); const hiddenHH = tplHH.hiddenAchievements || {}; for (const [name, ha] of Object.entries(hiddenHH)) { const trigger = ha.trigger || {}; if (trigger.type === 'response_match' && trigger.pattern) { const re = new RegExp(trigger.pattern); if (re.test(parsed.raw)) { if (!gameState.achievementFlags.responseMatches) gameState.achievementFlags.responseMatches = {}; gameState.achievementFlags.responseMatches[trigger.pattern] = (gameState.achievementFlags.responseMatches[trigger.pattern] || 0) + 1; } } }
+  if (gameState.gameStarted) checkAchievementsFromState(parsed);
 
   if (!parsed.situation && parsed.options.length === 0) {
     dom.storyContent.innerHTML = '';
