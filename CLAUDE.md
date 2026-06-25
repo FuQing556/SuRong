@@ -38,7 +38,7 @@ xixi/
 │   ├── sw.js              #   Service Worker（网络优先v4，只缓存GET）
 │   ├── manifest.json      #   PWA 清单
 │   ├── *.png              #   场景图片
-│   └── js/                #   前端模块（12文件，按依赖顺序加载）
+│   └── js/                #   前端模块（13文件，按依赖顺序加载）
 │       ├── state.js       #     全局状态/DOM引用/常量
 │       ├── utils.js       #     工具函数/提示词构建/文本解析
 │       ├── dialogs.js     #     自定义对话框+Emoji选择器(pickEmoji)
@@ -49,6 +49,7 @@ xixi/
 │       ├── templates.js   #     模板加载/创建/字段编辑器
 │       ├── tavern.js      #     酒馆分享(上传合并编辑版)
 │       ├── ai.js          #     AI实时指令
+│       ├── audio.js       #     Web Audio 合成音效+主题氛围
 │       ├── core.js        #     游戏核心循环
 │       └── init.js        #     事件绑定/启动/全局错误捕获
 └── 启动游戏.bat           # 本地开发启动（双击即跑）

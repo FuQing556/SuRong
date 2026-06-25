@@ -90,9 +90,21 @@ function bindEvents() {
   dom.optionBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.index);
-      if (!isNaN(idx) && gameState.currentOptions[idx] && !gameState.isLoading) handleChoice(idx + 1);
+      if (!isNaN(idx) && gameState.currentOptions[idx] && !gameState.isLoading) {
+        if (typeof playClick === 'function') playClick();
+        handleChoice(idx + 1);
+      }
     });
   });
+
+  // 音效开关
+  const audioBtn = $('#btn-audio');
+  if (audioBtn) {
+    audioBtn.addEventListener('click', () => {
+      const on = typeof toggleAudio === 'function' ? toggleAudio() : true;
+      audioBtn.textContent = on ? '🔊' : '🔇';
+    });
+  }
 
   // 键盘快捷键
   document.addEventListener('keydown', (e) => {

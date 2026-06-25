@@ -56,6 +56,7 @@ function _updateLoadingText() {
 function showError(msg) {
   dom.errorBox.classList.remove('hidden');
   dom.errorMsg.textContent = msg;
+  if (typeof playError === 'function') playError();
   // 确保关闭按钮存在
   if (!$('#btn-dismiss-error')) {
     const dismissBtn = document.createElement('button');
@@ -287,13 +288,19 @@ function applyTheme(themeName) {
   const existing = $('#theme-style');
   if (existing) existing.remove();
 
-  if (!themeName || themeName === 'dark') return; // dark 是基础样式
+  if (!themeName || themeName === 'dark') {
+    if (typeof startAmbient === 'function') startAmbient('dark');
+    return;
+  }
 
   const link = document.createElement('link');
   link.id = 'theme-style';
   link.rel = 'stylesheet';
   link.href = 'themes/theme-' + themeName + '.css';
   document.head.appendChild(link);
+
+  // 切换氛围音效
+  if (typeof startAmbient === 'function') startAmbient(themeName);
 }
 
 // ── 序章弹窗 ──

@@ -33,7 +33,7 @@ for (const f of MODULES) {
 
 const indexHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
 const scriptCount = (indexHtml.match(/src="js\//g) || []).length;
-check('index.html script tags', scriptCount === 12, scriptCount + ' modules referenced');
+check('index.html script tags', scriptCount === 13, scriptCount + ' modules referenced');
 check('index.html no app.js', !indexHtml.includes('src="app.js"'));
 
 // ═══════════ 2. 括号平衡 ═══════════

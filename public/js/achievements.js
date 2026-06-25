@@ -37,6 +37,7 @@ function unlockAchievement(name) {
     console.error('🏆 成就解锁保存失败（localStorage可能已满）:', name);
     return false;  // 保存失败则不弹toast，避免"假解锁"
   }
+  if (typeof playAchievement === 'function') playAchievement();
   showAchievementToast(name);
   return true;
 }
