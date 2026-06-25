@@ -4,7 +4,7 @@
 
 基于 DeepSeek API 驱动的多模板互动叙事引擎。默认模板「苏蓉蓉·潜伏」为斗罗大陆世界观卧底叙事，支持 AI 辅助创建任意世界观的自定义存档。每个存档使用独立的提示词、UI 字段、场景图片和主题。
 
-**在线版**：部署在 Railway → `xixi-tavern.up.railway.app`
+**在线版**：部署在 Railway → `xixi-fable.up.railway.app`
 手机电脑浏览器打开即玩，无需安装任何东西。
 
 ## 文件结构
@@ -75,7 +75,7 @@ state → utils → dialogs → saves → ui → achievements
 Railway 每次 `git push` 部署会清空文件系统，酒馆共享数据（`templates/shared/`）会丢失。
 **推代码前**必须提醒用户备份酒馆：
 
-1. 打开 `https://xixi-tavern.up.railway.app` → 酒馆标签 → 🔑 管理员登录（密码在 tavern.js 中，不公开）
+1. 打开 `https://xixi-fable.up.railway.app` → 酒馆标签 → 🔑 管理员登录（密码在 tavern.js 中，不公开）
 2. 📥 备份下载 `tavern_backup.json`
 3. git push 部署
 4. 部署完成后 → 📤 恢复上传备份
