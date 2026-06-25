@@ -95,7 +95,7 @@ function checkAchievementsFromResponse(text) {
   }
 }
 
-function renderAchievementsPanel() {
+function renderAchievementsPanelV2() {
   const all = getUnlockedAchievements();
   const list = $('#achievements-list');
   if (!list) return;
@@ -483,7 +483,7 @@ function bindEvents() {
 
   $('#btn-achievements').addEventListener('click', () => {
     try {
-      renderAchievementsPanel();
+      renderAchievementsPanelV2();
       const overlay = $('#achievements-overlay');
       if (overlay) {
         overlay.classList.add('active');
@@ -546,7 +546,7 @@ async function startNewGame() {
   console.log('startNewGame: template', tpl?.name, 'openingMessages:', tpl?.openingMessages?.length || 0);
   renderStatusContainers(tpl);
   updateAllDynamicFields({}, tpl);
-  updateOptionButtons([]);
+  updateOptionButtonsV2([]);
   switchSceneImage('日常', tpl);
 
   clearAiInstructions();
@@ -571,7 +571,7 @@ async function sendMessage(userContent) {
   gameState.isLoading = true;
   showLoading(true);
   dom.errorBox.classList.add('hidden');
-  updateOptionButtons([]);
+  updateOptionButtonsV2([]);
 
   try {
     // AI 实时指令：注入到用户消息中（AI无法忽略用户消息中的内容）
@@ -796,12 +796,12 @@ function renderGameState(parsed, template) {
     p.style.whiteSpace = 'pre-wrap';
     p.classList.add('story-fade-in');
     dom.storyContent.appendChild(p);
-    updateOptionButtons([]);
+    updateOptionButtonsV2([]);
   }
 }
 
 // ── 更新选项按钮 ──
-function updateOptionButtons(options) {
+function updateOptionButtonsV2(options) {
   dom.optionBtns.forEach((btn, i) => {
     const opt = options[i];
     const actionEl = btn.querySelector('.option-action');
@@ -868,7 +868,7 @@ function showLoading(show) {
 function showError(msg) {
   dom.errorBox.classList.remove('hidden');
   dom.errorMsg.textContent = msg;
-  if (gameState.currentOptions.length > 0) updateOptionButtons(gameState.currentOptions);
+  if (gameState.currentOptions.length > 0) updateOptionButtonsV2(gameState.currentOptions);
 }
 
 // ── 设置弹窗 ──
@@ -1264,7 +1264,7 @@ async function continueGame(saveId) {
     renderGameState(parsed, template);
   } else {
     // 没有AI消息，显示初始状态
-    updateOptionButtons([]);
+    updateOptionButtonsV2([]);
     updateAllDynamicFields({}, template);
   }
 }
@@ -1956,6 +1956,182 @@ function closeEndingOverlay() { $("#ending-overlay").classList.remove("active");
 function manualSave() { if (!gameState.gameStarted) return; const tplId = gameState.activeSaveId || getActiveTemplate().id || "default"; let slot = 1; while (slot < 10 && localStorage.getItem(getSaveKey(tplId, slot))) slot++; if (slot >= 10) slot = 1; saveGameState(slot); alert("💾 已存档到槽位 "+slot+"（第"+gameState.fullHistory.filter(m=>m.role==="user").length+"回合）"); }
 async function clearAllSaves(saveId) { const info = getSaveInfo(saveId); const count = info?.slotCount || 0; if (count === 0) { alert("没有存档可清除"); return; } if (!confirm("确定清除「"+saveId+"」的全部 "+count+" 个存档槽位？\n模板和成就保留，仅删除游戏进度。")) return; for (let s = 0; s < 10; s++) localStorage.removeItem(getSaveKey(saveId, s)); renderMySavesPanel(); }
 function exportStory() { if (gameState.fullHistory.length === 0) { alert("还没有游戏内容可导出"); return; } const tpl = getActiveTemplate(); let txt = "《"+tpl.name+"》· 游戏记录\n导出时间："+new Date().toLocaleString("zh-CN")+"\n"+"═".repeat(40)+"\n\n"; let roundN = 0; for (let i = 0; i < gameState.fullHistory.length; i++) { const msg = gameState.fullHistory[i]; if (msg.role === "user") { if(msg.content.startsWith("开始游戏")) continue; roundN++; const prevAi=i>0?gameState.fullHistory[i-1]:null; let chosen=msg.content.replace(/^选择\s*/,""); if(prevAi&&prevAi.role==="assistant"){const opts=parseAIResponse(prevAi.content,tpl).options;const idx=parseInt(chosen)-1;if(opts[idx])chosen=(opts[idx].action||chosen).replace(/^\d+[\.\、\s]+/,"");} txt += "\n"+"─".repeat(30)+"\n第"+roundN+"回合 · "+chosen+"\n"; } else { const parsed=parseAIResponse(msg.content,tpl); if(parsed.settlement&&parsed.settlement!=="游戏开始。"&&parsed.settlement!=="游戏开始") txt+="  结算："+parsed.settlement+"\n"; if(parsed.situation) txt+="  现状："+parsed.situation+"\n"; const nfs=Object.entries(parsed.fields).filter(([id,v])=>!isNaN(parseInt(v))&&v.trim()); if(nfs.length>0){const fl={};for(const sec of Object.values(tpl.outputSections||{}))for(const f of sec.fields||[])fl[f.id]=f.label;txt+="  📊 "+nfs.map(([id,v])=>fl[id]||id+":"+v).join(" | ")+"\n";} } } const blob=new Blob([txt],{type:"text/plain;charset=utf-8"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url;a.download=(tpl.name||"story")+"_"+new Date().toISOString().slice(0,10)+".txt";a.click();URL.revokeObjectURL(url); }
-async function undoLastRound() { if (gameState.isLoading) return; if (gameState.fullHistory.length < 2) { alert("没有可撤销的步骤"); return; } if (!confirm("撤销上一步操作，回到上一回合？")) return; const lui = gameState.fullHistory.map((m,i)=>m.role==="user"?i:-1).filter(i=>i>=0).pop(); if (lui===undefined||lui>=gameState.fullHistory.length-1) return; gameState.fullHistory.splice(lui); gameState.currentOptions=[]; gameState.isLoading=false; const lastAi=[...gameState.fullHistory].reverse().find(m=>m.role==="assistant"); if (lastAi) { const tpl=getActiveTemplate(); const parsed=parseAIResponse(lastAi.content,tpl); renderGameState(parsed,tpl); } else { dom.storyContent.innerHTML="<div id=\"initial-placeholder\"><p class=\"placeholder-text\">命运之轮重新转动...</p></div>"; updateOptionButtons([]); updateAllDynamicFields({},getActiveTemplate()); } saveGameState(); }
+async function undoLastRound() { if (gameState.isLoading) return; if (gameState.fullHistory.length < 2) { alert("没有可撤销的步骤"); return; } if (!confirm("撤销上一步操作，回到上一回合？")) return; const lui = gameState.fullHistory.map((m,i)=>m.role==="user"?i:-1).filter(i=>i>=0).pop(); if (lui===undefined||lui>=gameState.fullHistory.length-1) return; gameState.fullHistory.splice(lui); gameState.currentOptions=[]; gameState.isLoading=false; const lastAi=[...gameState.fullHistory].reverse().find(m=>m.role==="assistant"); if (lastAi) { const tpl=getActiveTemplate(); const parsed=parseAIResponse(lastAi.content,tpl); renderGameState(parsed,tpl); } else { dom.storyContent.innerHTML="<div id=\"initial-placeholder\"><p class=\"placeholder-text\">命运之轮重新转动...</p></div>"; updateOptionButtonsV2([]); updateAllDynamicFields({},getActiveTemplate()); } saveGameState(); }
 function renderHistoryModal() { if (gameState.fullHistory.length===0) { alert("还没有游戏内容"); return; } const tpl=getActiveTemplate(); const body=$("#history-body"); if(!body) return; const fl={}; for(const sec of Object.values(tpl.outputSections||{})) for(const f of sec.fields||[]) fl[f.id]=f.label; let html="", rn=0; for(let i=0;i<gameState.fullHistory.length;i++){const msg=gameState.fullHistory[i]; if(msg.role==="user"){if(msg.content.startsWith("开始游戏"))continue;rn++;const pa=i>0?gameState.fullHistory[i-1]:null;let c=msg.content.replace(/^选择\s*/,"");if(pa&&pa.role==="assistant"){const opts=parseAIResponse(pa.content,tpl).options;const idx=parseInt(c)-1;if(opts[idx])c=(opts[idx].action||c).replace(/^\d+[\.\、\s]+/,"");}html+="<div class=\"hist-round\"><span class=\"hist-round-num\">第"+rn+"回合</span> <span class=\"hist-choice\">▸ "+escapeHtml(c)+"</span></div>";} else{const parsed=parseAIResponse(msg.content,tpl);if(parsed.settlement&&parsed.settlement!=="游戏开始。"&&parsed.settlement!=="游戏开始")html+="<div class=\"hist-settlement\">"+escapeHtml(parsed.settlement)+"</div>";if(parsed.situation)html+="<div class=\"hist-situation\">"+escapeHtml(parsed.situation)+"</div>";const ns=Object.entries(parsed.fields).filter(([id,v])=>!isNaN(parseInt(v))&&v.trim());if(ns.length>0)html+="<div class=\"hist-fields\">"+ns.map(([id,v])=>fl[id]||id+":<b>"+v+"</b>").join(" · ")+"</div>";}} body.innerHTML=html||"<p style=\"color:var(--text-dim);\">暂无记录</p>"; $("#history-overlay").classList.add("active"); }
 async function mergeInstructionsToPrompt() { const instructions = getAiInstructions(); if (instructions.length===0) { alert("没有可合并的指令。请先在AI聊天框中输入指令并发送。"); return; } if (!confirm("将 "+instructions.length+" 条AI指令合并到提示词末尾？\n合并后新游戏将包含这些规则。")) return; const tpl=getActiveTemplate(); const saveId=gameState.activeSaveId||tpl.id||"default"; const oldRules=[]; const oi=tpl.promptBody.indexOf("【玩家补充规则"); if(oi>=0){const os=tpl.promptBody.substring(oi);const ois=os.match(/\d+\.\s+(.+)/g);if(ois)ois.forEach(item=>oldRules.push(item.replace(/^\d+\.\s+/,"")));tpl.promptBody=tpl.promptBody.substring(0,oi).trimEnd();} const allRules=[...oldRules]; instructions.forEach(i=>{if(!allRules.includes(i.text))allRules.push(i.text);}); tpl.promptBody=tpl.promptBody+"\n\n【玩家补充规则——以下规则由玩家在游戏过程中添加，优先级高于原有规则】\n"+allRules.map((r,idx)=>(idx+1)+". "+r).join("\n"); gameState.activeTemplate.promptBody=tpl.promptBody; localStorage.setItem("xixi_edited_template_"+saveId, JSON.stringify(tpl)); refreshSystemPrompt(); clearAiInstructions(); alert("✅ 已将 "+instructions.length+" 条指令合并到提示词！\n新游戏和继续游戏均生效。"); }
+
+// ══════════════════════════════════════
+// 补全文件 — 直接追加到 app.js 末尾
+// ══════════════════════════════════════
+
+// ── 自定义对话框 ──
+function showDialog(message, options = {}) {
+  const { type = 'alert', placeholder = '', defaultValue = '' } = options;
+  return new Promise((resolve) => {
+    const overlay = document.querySelector('#dialog-overlay');
+    if (!overlay) { resolve(null); return; }
+    document.querySelector('#dialog-message').textContent = message;
+    const inputRow = document.querySelector('#dialog-input-row');
+    const input = document.querySelector('#dialog-input');
+    if (type === 'prompt') { inputRow.style.display = ''; input.value = defaultValue; input.placeholder = placeholder; input.focus(); }
+    else { inputRow.style.display = 'none'; }
+    document.querySelector('#dialog-cancel').style.display = (type === 'alert') ? 'none' : '';
+    document.querySelector('#dialog-ok').textContent = (type === 'alert') ? '关闭' : '确定';
+    overlay.classList.add('active');
+    function done(value) { overlay.classList.remove('active'); resolve(value); }
+    document.querySelector('#dialog-ok').onclick = function() { done(type === 'prompt' ? input.value : true); };
+    document.querySelector('#dialog-cancel').onclick = function() { done(type === 'confirm' ? false : (type === 'prompt' ? null : undefined)); };
+    overlay.onclick = function(e) { if (e.target === overlay) done(type === 'confirm' ? false : (type === 'prompt' ? null : undefined)); };
+    input.onkeydown = function(e) { if (e.key === 'Enter') done(type === 'prompt' ? input.value : true); };
+  });
+}
+async function dlAlert(msg) { return showDialog(msg, { type: 'alert' }); }
+async function dlConfirm(msg) { return showDialog(msg, { type: 'confirm' }); }
+async function dlPrompt(msg, def) { return showDialog(msg, { type: 'prompt', defaultValue: def || '' }); }
+
+// ── 资源检测版 updateOptionButtons ──
+function updateOptionButtonsV2(options) {
+  var tpl = getActiveTemplate();
+  var resourceFields = (tpl.outputSections && tpl.outputSections.resources && tpl.outputSections.resources.fields) || [];
+  var resValues = {};
+  resourceFields.forEach(function(f) {
+    var hist = gameState.fieldHistory[f.id];
+    if (hist && hist.current !== undefined && hist.current !== null) { resValues[f.label] = hist.current; }
+    else if (hist && hist.currentText && hist.currentText !== '—') { var n = parseInt(hist.currentText); if (!isNaN(n)) resValues[f.label] = n; }
+  });
+  dom.optionBtns.forEach(function(btn, i) {
+    var opt = options[i];
+    var actionEl = btn.querySelector('.option-action');
+    var costEl = btn.querySelector('.option-cost');
+    if (opt) {
+      var actionText = (opt.action || '').replace(/^\d+[\.\、\s]+/, '');
+      var costText = opt.cost || '';
+      var fullText = actionText + ' ' + costText;
+      var resourceBlocked = fullText.indexOf('【资源不足】') >= 0;
+      if (!resourceBlocked) {
+        for (var label in resValues) {
+          var cur = resValues[label];
+          var escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var re = new RegExp(escaped + '[：:\\s]*[xX×\\-–]?\\s*(\\d+)');
+          var m = costText.match(re) || actionText.match(re);
+          if (m && cur < parseInt(m[1])) { resourceBlocked = true; break; }
+        }
+      }
+      actionEl.textContent = actionText;
+      costEl.textContent = costText ? '— ' + costText : '';
+      btn.disabled = resourceBlocked;
+      btn.style.display = '';
+      btn.style.opacity = resourceBlocked ? '0.45' : '';
+      btn.title = resourceBlocked ? '资源不足，无法选择' : '';
+    } else {
+      actionEl.textContent = ''; costEl.textContent = ''; btn.disabled = true;
+      btn.style.opacity = ''; btn.title = '';
+      if (i >= (options.length || 0)) btn.style.display = options.length === 0 ? '' : 'none';
+    }
+  });
+  if (options.length === 0) {
+    dom.optionBtns.forEach(function(btn) {
+      btn.querySelector('.option-action').textContent = '等待中...';
+      btn.querySelector('.option-cost').textContent = '';
+      btn.disabled = true; btn.style.opacity = ''; btn.title = ''; btn.style.display = '';
+    });
+  }
+}
+
+// ── 成就面板增强（编辑/删除/添加/隐藏）──
+function renderAchievementsPanelV2() {
+  var all = getUnlockedAchievements();
+  var list = document.querySelector('#achievements-list');
+  if (!list) return;
+  var achievements = getAchievements();
+  var tpl = getActiveTemplate();
+  var hidden = tpl.hiddenAchievements || {};
+  if (!achievements || (Object.keys(achievements).length === 0 && Object.keys(hidden).length === 0)) {
+    list.innerHTML = '<p style="color:var(--text-dim);">该模板未定义成就</p>'; return;
+  }
+  function buildItem(name, ach, unlocked) {
+    var progress = unlocked ? null : getAchievementProgress(name);
+    var pb = '';
+    if (progress && progress.target > 1) {
+      var pct = Math.min(100, Math.round((progress.current / progress.target) * 100));
+      pb = '<div class="ach-progress-bar"><div class="ach-progress-fill" style="width:' + pct + '%"></div></div><div class="ach-progress-text">' + progress.current + '/' + progress.target + ' ' + progress.text + '</div>';
+    } else if (progress && progress.target === 1 && !unlocked) {
+      pb = '<div class="ach-progress-text" style="color:var(--text-dim);">' + progress.text + '</div>';
+    }
+    var ds = typeof unlocked === 'string' ? unlocked : (all[name] || '');
+    return '<div class="ach-item' + (unlocked ? '' : ' locked') + '" data-ach-name="' + escapeHtml(name) + '"><span class="ach-icon">' + (unlocked ? ach.icon : '🔒') + '</span><div class="ach-info"><span class="ach-name">' + escapeHtml(name) + '</span><span class="ach-desc">' + escapeHtml(ach.desc || '') + '</span>' + pb + '</div>' + (ds ? '<span class="ach-date">' + ds + '</span>' : '') + '<button class="ach-edit-btn" data-ach-name="' + escapeHtml(name) + '">✏️</button><button class="ach-del-btn" data-ach-name="' + escapeHtml(name) + '">✕</button></div>';
+  }
+  var html = '<div style="font-size:13px;color:var(--gold);margin-bottom:8px;">📋 可见成就</div>';
+  if (Object.keys(achievements).length === 0) html += '<p style="color:var(--text-dim);font-size:12px;">无</p>';
+  else html += Object.entries(achievements).map(function(e) { return buildItem(e[0], e[1], all[e[0]]); }).join('');
+  html += '<div style="font-size:13px;color:var(--purple-hover);margin:14px 0 8px;">🎭 隐藏成就</div>';
+  if (Object.keys(hidden).length === 0) html += '<p style="color:var(--text-dim);font-size:12px;">无</p>';
+  else html += Object.entries(hidden).map(function(e) { var u = !!all[e[0]]; return u ? buildItem(e[0], {icon: e[1].icon, desc: e[1].desc}, true) : '<div class="ach-item locked"><span class="ach-icon">❓</span><div class="ach-info"><span class="ach-name">???</span><span class="ach-desc">隐藏成就 — 解锁条件未知</span></div></div>'; }).join('');
+  html += '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><button id="btn-add-achievement" class="btn btn-small">＋ 添加可见成就</button><button id="btn-add-hidden-ach" class="btn btn-small btn-ghost">🎭 添加隐藏成就</button><button id="btn-export-template" class="btn btn-small btn-primary">📦 另存为新存档</button></div>';
+  list.innerHTML = html;
+  document.querySelector('#btn-add-achievement').addEventListener('click', function() { addNewAchievement(false); });
+  document.querySelector('#btn-add-hidden-ach').addEventListener('click', function() { addNewAchievement(true); });
+  document.querySelector('#btn-export-template').addEventListener('click', exportTemplateAsNewSave);
+  list.querySelectorAll('.ach-edit-btn').forEach(function(b) { b.addEventListener('click', function(e) { e.stopPropagation(); editAchievement(b.dataset.achName); }); });
+  list.querySelectorAll('.ach-del-btn').forEach(function(b) { b.addEventListener('click', function(e) { e.stopPropagation(); deleteAchievement(b.dataset.achName); }); });
+}
+async function editAchievement(name) {
+  var tpl = getActiveTemplate();
+  var isHidden = tpl.hiddenAchievements && tpl.hiddenAchievements[name];
+  var ach = isHidden ? tpl.hiddenAchievements[name] : (tpl.achievements || {})[name];
+  if (!ach) return;
+  var newName = await dlPrompt('成就名称：', name);
+  if (newName === null) return;
+  var fn = newName.trim() || name;
+  var newIcon = await dlPrompt('图标（emoji）：', ach.icon || '🏆');
+  if (newIcon === null) return;
+  var fi = newIcon.trim() || ach.icon || '🏆';
+  var newDesc = await dlPrompt(isHidden ? '描述（解锁后可见）：' : '描述（需含字段名+数值）：', ach.desc || '');
+  if (newDesc === null) return;
+  var fd = newDesc.trim() || ach.desc || '';
+  var saveId = gameState.activeSaveId || tpl.id || 'default';
+  if (isHidden) {
+    if (fn !== name) { tpl.hiddenAchievements[fn] = tpl.hiddenAchievements[name]; delete tpl.hiddenAchievements[name]; }
+    tpl.hiddenAchievements[fn].icon = fi; tpl.hiddenAchievements[fn].desc = fd;
+  } else {
+    if (fn !== name) { tpl.achievements[fn] = tpl.achievements[name]; delete tpl.achievements[name]; var allA = getUnlockedAchievements(); if (allA[name]) { allA[fn] = allA[name]; delete allA[name]; saveAchievements(allA); } }
+    tpl.achievements[fn].icon = fi; tpl.achievements[fn].desc = fd;
+  }
+  localStorage.setItem('xixi_edited_template_' + saveId, JSON.stringify(tpl));
+  renderAchievementsPanelV2();
+}
+async function deleteAchievement(name) {
+  var tpl = getActiveTemplate();
+  if (!(await dlConfirm('确定删除成就「' + name + '」？'))) return;
+  if (tpl.hiddenAchievements && tpl.hiddenAchievements[name]) delete tpl.hiddenAchievements[name];
+  else delete tpl.achievements[name];
+  localStorage.setItem('xixi_edited_template_' + (gameState.activeSaveId || tpl.id || 'default'), JSON.stringify(tpl));
+  renderAchievementsPanelV2();
+}
+async function addNewAchievement(isHidden) {
+  var tpl = getActiveTemplate();
+  var name = await dlPrompt('新' + (isHidden ? '隐藏' : '可见') + '成就名称：');
+  if (!name || !name.trim()) return;
+  var icon = await dlPrompt('图标（emoji）：', '🏆');
+  if (icon === null) return;
+  var desc = await dlPrompt(isHidden ? '描述（解锁后可见）：' : '描述（需含字段名+阈值）：');
+  if (desc === null) return;
+  if (isHidden) { if (!tpl.hiddenAchievements) tpl.hiddenAchievements = {}; tpl.hiddenAchievements[name.trim()] = { icon: icon.trim() || '🎭', desc: desc.trim() || name.trim(), trigger: { type: 'gambit', count: 1 } }; }
+  else { if (!tpl.achievements) tpl.achievements = {}; tpl.achievements[name.trim()] = { icon: icon.trim() || '🏆', desc: desc.trim() || name.trim() }; }
+  localStorage.setItem('xixi_edited_template_' + (gameState.activeSaveId || tpl.id || 'default'), JSON.stringify(tpl));
+  renderAchievementsPanelV2();
+}
+async function exportTemplateAsNewSave() {
+  var tpl = getActiveTemplate();
+  var newName = await dlPrompt('新存档名称：', tpl.name + '（修改版）');
+  if (!newName || !newName.trim()) return;
+  var exported = JSON.parse(JSON.stringify(tpl));
+  var newId = 'custom_' + Date.now();
+  exported.id = newId; exported.name = newName.trim(); exported.author = '手动编辑';
+  var saves = loadSaves();
+  saves.push({ id: newId, name: exported.name, desc: exported.description || '', icon: '✏️', type: 'custom', template: exported, worldSetting: exported.worldSetting || '', protagonist: exported.protagonist || '', conflict: exported.conflict || '', styles: exported.styles || [] });
+  saveUserSaves(saves);
+  try { fetch('/api/templates/' + newId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: exported }) }); } catch (e) {}
+  await dlAlert('✅ 已导出为新存档「' + newName.trim() + '」！\n返回存档选择页即可看到。');
+  renderAchievementsPanelV2();
+}
