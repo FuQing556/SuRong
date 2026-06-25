@@ -1287,9 +1287,37 @@ async function continueGame(saveId) {
   }
   if (!template) { console.error('Template not found'); return; }
 
-  // 恢复存档数据
-  const saveData = loadGameState(saveId);
-  if (!saveData) { selectSave(saveId); return; } // 没有存档，开新游戏
+  // 检查编辑过的模板
+  const editKey = 'xixi_edited_template_' + saveId;
+  const ej = localStorage.getItem(editKey);
+  if (ej) { try { const ed = JSON.parse(ej); template.outputSections = ed.outputSections || template.outputSections; template.achievements = ed.achievements || template.achievements; template.hiddenAchievements = ed.hiddenAchievements || template.hiddenAchievements; template.promptBody = ed.promptBody || template.promptBody; } catch(e) {} }
+
+  // 多槽位：扫描所有存档
+  var savesAvail = [];
+  for (var s = 0; s < 10; s++) { var d = loadGameState(saveId, s); if (d) savesAvail.push({ slot: s, data: d }); }
+  if (savesAvail.length === 0) { selectSave(saveId); return; }
+  var saveData;
+  if (savesAvail.length === 1) { saveData = savesAvail[0].data; }
+  else {
+    savesAvail.sort(function(a, b) { return b.data.lastPlayed - a.data.lastPlayed; });
+    var lines = savesAvail.map(function(s) { return '槽位' + s.slot + ': 第' + s.data.roundNumber + '回合 (' + new Date(s.data.lastPlayed).toLocaleString('zh-CN') + ')'; });
+    var choice = await dlPrompt('有多个存档：\n' + lines.join('\n') + '\n\n输入槽位编号读取，输入"删X"删除槽位X，取消则读取最新');
+    if (!choice || !choice.trim()) { saveData = savesAvail[0].data; }
+    else if (choice.startsWith('删')) {
+      var ds = parseInt(choice.replace('删', '').trim());
+      if (!isNaN(ds) && savesAvail.some(function(s) { return s.slot === ds; })) {
+        if (await dlConfirm('确定删除槽位' + ds + '？')) {
+          localStorage.removeItem(getSaveKey(saveId, ds));
+          var rem = []; for (var rs = 0; rs < 10; rs++) { var rd = loadGameState(saveId, rs); if (rd) rem.push({ slot: rs, data: rd }); }
+          if (rem.length === 0) { selectSave(saveId); return; }
+          saveData = rem.length === 1 ? rem[0].data : rem.sort(function(a, b) { return b.data.lastPlayed - a.data.lastPlayed; })[0].data;
+        } else { saveData = savesAvail[0].data; }
+      } else { saveData = savesAvail[0].data; }
+    } else {
+      var chosen = savesAvail.find(function(s) { return s.slot === parseInt(choice); });
+      saveData = chosen ? chosen.data : savesAvail[0].data;
+    }
+  }
 
   gameState.activeTemplate = template;
   gameState.activeSaveId = saveId;
@@ -1804,18 +1832,27 @@ function removeField(sectionKey, index) {
   renderFieldEditor();
 }
 
-function addField() {
+async function addField() {
   const tpl = getActiveTemplate();
   const sections = tpl.outputSections || {};
-  // 默认添加到变量追踪
-  const target = sections.variables || sections.statusTop || Object.values(sections)[0];
-  if (!target || !target.fields) return;
+  const choices = Object.keys(sections).filter(k => sections[k] && Array.isArray(sections[k].fields));
+  if (choices.length === 0) return;
+  var targetKey;
+  if (choices.length === 1) { targetKey = choices[0]; }
+  else {
+    const choice = await dlPrompt('添加到哪个区段？\n' + choices.map((k, i) => (i+1) + '. ' + (sections[k].label || k)).join('\n'));
+    if (!choice) return;
+    const idx = parseInt(choice) - 1;
+    targetKey = (!isNaN(idx) && idx >= 0 && idx < choices.length) ? choices[idx] : (choices.find(k => k === choice || sections[k].label === choice) || 'variables');
+  }
+  const target = sections[targetKey];
+  if (!target || !Array.isArray(target.fields)) return;
   target.fields.push({
-    id: 'newField' + Date.now(),
+    id: 'f_' + Date.now().toString(36),
     label: '新字段',
     icon: '📌',
     formatHint: '[数值]',
-    type: 'text',
+    type: 'number',
   });
   renderFieldEditor();
 }
