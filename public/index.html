@@ -261,7 +261,7 @@
       </section>
 
       <!-- 故事框 -->
-      <section id="story-box">
+      <section id="story-box" aria-label="故事内容" aria-live="polite">
         <div id="story-content">
           <div id="initial-placeholder">
             <p class="placeholder-text">选择一个存档开始游戏</p>
@@ -282,26 +282,26 @@
       </div>
 
       <!-- 选项按钮 -->
-      <section id="options-container">
+      <section id="options-container" aria-label="可选行动">
         <div class="options-hint">💡 键盘 1-4 快速选择</div>
-        <div class="options-grid">
-          <button class="option-btn" data-index="0">
-            <span class="option-num">1</span>
+        <div class="options-grid" role="list">
+          <button class="option-btn" data-index="0" role="listitem" aria-label="选项1">
+            <span class="option-num" aria-hidden="true">1</span>
             <span class="option-action"></span>
             <span class="option-cost"></span>
           </button>
-          <button class="option-btn" data-index="1">
-            <span class="option-num">2</span>
+          <button class="option-btn" data-index="1" role="listitem" aria-label="选项2">
+            <span class="option-num" aria-hidden="true">2</span>
             <span class="option-action"></span>
             <span class="option-cost"></span>
           </button>
-          <button class="option-btn" data-index="2">
-            <span class="option-num">3</span>
+          <button class="option-btn" data-index="2" role="listitem" aria-label="选项3">
+            <span class="option-num" aria-hidden="true">3</span>
             <span class="option-action"></span>
             <span class="option-cost"></span>
           </button>
-          <button class="option-btn" data-index="3">
-            <span class="option-num">4</span>
+          <button class="option-btn" data-index="3" role="listitem" aria-label="选项4">
+            <span class="option-num" aria-hidden="true">4</span>
             <span class="option-action"></span>
             <span class="option-cost"></span>
           </button>

@@ -40,6 +40,22 @@ html, body {
   overflow: hidden;
 }
 
+/* ── 无障碍：键盘焦点环 ── */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+/* 已有自定义focus样式的元素，保留其样式同时加outline回退 */
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
 /* ── 弹窗覆盖层 ── */
 .overlay {
   display: none;
@@ -594,23 +610,107 @@ html, body {
 .ach-edit-btn:hover { opacity: 1 !important; color: var(--gold); }
 .ach-del-btn:hover { opacity: 1 !important; color: var(--red); }
 
-/* ── 响应式 (移动端) ── */
+/* ═══════════ 响应式 (平板/手机) ═══════════ */
 @media (max-width: 900px) {
+  /* 整体布局 — 竖排 */
   #game-container { flex-direction: column; }
-  #left-panel { flex: 0 0 auto; flex-direction: row; border-right: none; border-bottom: 1px solid var(--border); max-height: 40vh; }
-  .image-frame { flex: 1; }
-  .image-frame img { max-height: 30vh; }
-  .ai-chat-box { flex: 1; max-height: 30vh; min-width: 0; }
-  #content-panel { padding: 10px; }
-  .options-grid { grid-template-columns: 1fr; }
-  .status-grid { grid-template-columns: 1fr 1fr; }
-  .vars-grid { grid-template-columns: 1fr 1fr; }
-  #story-box { max-height: 250px; }
-  .game-title { font-size: 16px; letter-spacing: 2px; }
-  .settlement-box { margin-bottom: 20px; }
-  .ai-chat-input-row { flex-wrap: wrap; gap: 4px; }
-  #ai-chat-input { min-width: 80px; }
-  .ai-chat-input-row .btn-small { padding: 4px 8px; font-size: 11px; white-space: nowrap; }
+  #left-panel {
+    flex: 0 0 auto; flex-direction: row; border-right: none;
+    border-bottom: 1px solid var(--border); max-height: 35vh;
+  }
+  .image-frame { flex: 0 0 45%; max-width: 45%; }
+  .image-frame img { max-height: 25vh; object-fit: cover; }
+  .ai-chat-box { flex: 1; max-height: 25vh; min-width: 0; overflow-y: auto; }
+  #content-panel { padding: 8px 12px; }
+
+  /* 顶部栏 — 按钮缩小换行 */
+  #top-bar { flex-wrap: wrap; gap: 4px; padding: 8px 0; }
+  .game-title { font-size: 15px; letter-spacing: 2px; flex: 0 0 100%; text-align: center; margin-bottom: 4px; }
+  .top-actions { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; width: 100%; }
+  .top-actions .btn-small { font-size: 10px; padding: 4px 7px; }
+  #btn-back-saves { position: absolute; left: 12px; top: 8px; z-index: 10; }
+
+  /* 故事框 — 适屏高度 */
+  #story-box { max-height: 35vh; }
+
+  /* 选项 — 单列 + 大触控 */
+  .options-grid { grid-template-columns: 1fr; gap: 8px; }
+  .option-btn { padding: 12px 14px; min-height: 52px; }
+  .option-num { width: 28px; height: 28px; line-height: 28px; font-size: 14px; flex-shrink: 0; }
+
+  /* 状态面板 — 双列 */
+  .status-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .resources-row { flex-wrap: wrap; gap: 6px; }
+  .vars-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  /* 弹窗 — 全宽 */
+  .modal { max-width: 95vw; width: 95vw; padding: 20px; border-radius: 8px; max-height: 90vh; }
+  .prologue-modal { max-height: 90vh; padding: 16px; }
+  .settings-modal { max-height: 92vh; }
+  .save-selector-modal { max-width: 95vw; }
+
+  /* 存档卡片 — 单列 */
+  .save-grid { grid-template-columns: 1fr; gap: 10px; }
+
+  /* 结算框 */
+  .settlement-box { margin-bottom: 12px; padding: 8px 12px; font-size: 12px; }
+
+  /* AI聊天 — 紧凑 */
+  .ai-chat-input-row { flex-wrap: wrap; gap: 3px; padding: 6px; }
+  #ai-chat-input { min-width: 60px; font-size: 12px; }
+  .ai-chat-input-row .btn-small { padding: 3px 6px; font-size: 10px; }
+  .ai-chat-messages { max-height: 15vh; font-size: 11px; }
+
+  /* 帮助 — 字体缩小 */
+  .help-body { font-size: 12px; }
+  .help-section h3 { font-size: 13px; }
+
+  /* 设置 — 全宽 */
+  .field-editor-row { flex-wrap: wrap; gap: 4px; }
+  .field-editor-row input { flex: 1 1 60px; min-width: 50px; font-size: 11px; }
+  #prompt-editor { font-size: 12px; min-height: 200px; }
+}
+
+/* ═══════════ 小屏手机 (≤480px) ═══════════ */
+@media (max-width: 480px) {
+  /* 左侧面板 — 图片在上，AI聊天可折叠 */
+  #left-panel { flex-direction: column; max-height: none; }
+  .image-frame { flex: 0 0 auto; max-width: 100%; }
+  .image-frame img { max-height: 22vh; }
+  .ai-chat-box { max-height: 18vh; font-size: 11px; }
+
+  /* 故事框 */
+  #story-box { max-height: 30vh; padding: 10px; font-size: 13px; }
+  .story-entry { margin-bottom: 10px; padding-bottom: 8px; }
+
+  /* 选项 — 更大触控区 */
+  .option-btn { padding: 14px 12px; min-height: 56px; }
+
+  /* 状态 — 双列紧凑 */
+  .status-item { padding: 4px 6px; font-size: 11px; }
+
+  /* 弹窗 — 全屏 */
+  .modal { max-width: 100vw; width: 100vw; border-radius: 0; padding: 14px; max-height: 100vh; }
+  .overlay{ backdrop-filter: none; }
+
+  /* 顶部栏 — 标题缩小，按钮更紧凑 */
+  .game-title { font-size: 14px; }
+  .top-actions .btn-small { font-size: 9px; padding: 3px 5px; letter-spacing: 0; }
+
+  /* 创建存档表单 */
+  .create-save-form input, .create-save-form textarea { font-size: 12px; }
+  .style-chips .chip { font-size: 11px; padding: 4px 8px; }
+
+  /* 设置面板 */
+  .settings-buttons { flex-wrap: wrap; gap: 4px; }
+  .settings-buttons .btn { font-size: 11px; padding: 6px 10px; }
+
+  /* 存档卡片 */
+  .save-card { padding: 10px; }
+  .save-card-name { font-size: 14px; }
+
+  /* 选项提示 */
+  .options-hint { font-size: 10px; }
 }
 
 /* ── 选项悬浮动画 ── */
@@ -1174,8 +1274,3 @@ input:focus, textarea:focus { border-color: var(--gold); outline: none; }
 #error-message { color: #fca5a5; }
 .achievement-toast { border-color: var(--gold); }
 #ach-toast-text { color: var(--gold); }
-
-/* ── 移动端 ── */
-@media (max-width: 900px) {
-  #left-panel { border-bottom-color: var(--border); }
-}
