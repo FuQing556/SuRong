@@ -4,3 +4,6 @@ node_modules/
 .DS_Store
 release/
 dist/
+.claude/settings.local.json
+templates/shared/
+templates/custom_*.json
