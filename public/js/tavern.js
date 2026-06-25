@@ -185,8 +185,13 @@ async function importFromTavern(sharedId) {
     });
     saveUserSaves(updatedSaves);
 
-    await dlAlert('✅ 已导入「' + template.name + '」！切换到"我的存档"即可开始游戏。');
+    // 自动切到"我的存档"标签
+    const myTab = document.querySelector('.tab-btn[data-tab="my-saves"]');
+    if (myTab) myTab.click();
     renderMySavesPanel();
+
+    const playNow = await dlConfirm('✅ 已导入「' + template.name + '」！\n是否立即开始游戏？');
+    if (playNow) selectSave(sharedId);
   } catch (err) {
     dlAlert('❌ 导入失败: ' + err.message);
   }

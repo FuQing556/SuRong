@@ -301,6 +301,7 @@ app.post('/api/generate-prompt', async (req, res) => {
 风格倾向：${styleText}
 游戏长度：${length}
 结局回合门槛：早期${lengthGuide.early}回合 | 中期${lengthGuide.mid}回合 | 后期${lengthGuide.late}回合 | 大后期${lengthGuide.epic}回合
+${extra ? '玩家额外要求（★ 必须体现在提示词设计中）：' + extra : ''}
 
 ══════════════════════════════════
 【第一部分：outputSections — 字段架构】

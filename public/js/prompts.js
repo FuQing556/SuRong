@@ -3,9 +3,15 @@
    依赖：state.js, utils.js, dialogs.js, saves.js, ui.js
    ═══════════════════════════════════════════ */
 
+// ── 未保存修改追踪 ──
+let _settingsDirty = false;
+function markSettingsDirty() { _settingsDirty = true; }
+function clearSettingsDirty() { _settingsDirty = false; }
+
 // ── 打开设置弹窗 ──
 async function openSettings() {
   if (dom.settingsMsg) dom.settingsMsg.textContent = '';
+  _settingsDirty = false;  // 重置脏标记
 
   // 插入修改提醒
   if (!$('#settings-warning')) {
@@ -32,25 +38,21 @@ async function openSettings() {
     } catch (e) { /* corrupt */ }
   }
 
-  // 优先显示活动模板的系统提示词
-  if (gameState.activeSystemPrompt && gameState.activeSystemPrompt.length >= 100) {
-    dom.promptEditor.value = gameState.activeSystemPrompt;
-    dom.promptLength.textContent = '字数: ' + dom.promptEditor.value.length + ' (当前模板)';
+  // 始终只显示 promptBody（正文），格式模板由 outputSections 自动生成，不可编辑
+  // 之前显示 activeSystemPrompt 会导致保存后格式模板被嵌套进 promptBody
+  const tpl = getActiveTemplate();
+  if (tpl.promptBody && tpl.promptBody.length >= 100) {
+    dom.promptEditor.value = tpl.promptBody;
+    dom.promptLength.textContent = '字数: ' + dom.promptEditor.value.length + ' (当前模板: ' + (tpl.name || '未命名') + ')';
   } else {
-    const tpl = getActiveTemplate();
-    if (tpl.promptBody && tpl.promptBody.length >= 100) {
-      dom.promptEditor.value = tpl.promptBody;
-      dom.promptLength.textContent = '字数: ' + dom.promptEditor.value.length + ' (当前模板: ' + (tpl.name || '未命名') + ')';
-    } else {
-      try {
-        const resp = await fetch('/api/prompt');
-        const data = await resp.json();
-        dom.promptEditor.value = data.prompt || '';
-        dom.promptLength.textContent = '字数: ' + dom.promptEditor.value.length;
-      } catch (e) {
-        dom.promptEditor.value = '';
-        dom.promptLength.textContent = '字数: 0';
-      }
+    try {
+      const resp = await fetch('/api/prompt');
+      const data = await resp.json();
+      dom.promptEditor.value = data.prompt || '';
+      dom.promptLength.textContent = '字数: ' + dom.promptEditor.value.length;
+    } catch (e) {
+      dom.promptEditor.value = '';
+      dom.promptLength.textContent = '字数: 0';
     }
   }
 
@@ -66,7 +68,12 @@ async function openSettings() {
   renderImageManager();
 }
 
-function closeSettings() {
+async function closeSettings() {
+  if (_settingsDirty) {
+    const confirmed = await dlConfirm('设置有未保存的修改，确定关闭？');
+    if (!confirmed) return;
+  }
+  _settingsDirty = false;
   dom.settingsOverlay.classList.remove('active');
   if (gameState.gameStarted) updateAllDynamicFieldsFromHistory();
 }
@@ -82,18 +89,23 @@ async function savePrompt() {
   gameState.customPrompt = prompt;
   gameState.activeSystemPrompt = prompt;
 
-  // 持久化到编辑版模板，确保新游戏和继续游戏都能加载
+  // 持久化——只保存 promptBody，不覆盖字段/成就等其他编辑
   const tpl = getActiveTemplate();
   const saveId = gameState.activeSaveId || tpl.id || 'default';
   tpl.promptBody = prompt;
   gameState.activeTemplate.promptBody = prompt;
-  localStorage.setItem('xixi_edited_template_' + saveId, JSON.stringify(tpl));
+  const editKey = 'xixi_edited_template_' + saveId;
+  let edited = {};
+  try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
+  edited.promptBody = prompt;
+  localStorage.setItem(editKey, JSON.stringify(edited));
 
   dom.settingsMsg.textContent = '⏳ 保存中...';
   dom.settingsMsg.style.color = 'var(--text-dim)';
   try {
     await fetch('/api/prompt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
   } catch (e) { /* server optional */ }
+  clearSettingsDirty();
   dom.settingsMsg.textContent = '✅ 提示词已保存！新游戏和继续游戏均生效。';
   dom.settingsMsg.style.color = 'var(--green)';
   dom.promptLength.textContent = '字数: ' + prompt.length;
@@ -183,32 +195,38 @@ async function mergeInstructionsToPrompt() {
   instructions.forEach(i => { if (!allRules.includes(i.text)) allRules.push(i.text); });
   tpl.promptBody = tpl.promptBody + '\n\n【玩家补充规则——以下规则由玩家在游戏过程中添加，优先级高于原有规则】\n' + allRules.map((r, idx) => (idx + 1) + '. ' + r).join('\n');
   gameState.activeTemplate.promptBody = tpl.promptBody;
-  localStorage.setItem('xixi_edited_template_' + saveId, JSON.stringify(tpl));
+  // 只持久化 promptBody，不覆盖字段/成就等其他编辑
+  const editKey = 'xixi_edited_template_' + saveId;
+  let edited = {};
+  try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
+  edited.promptBody = tpl.promptBody;
+  localStorage.setItem(editKey, JSON.stringify(edited));
   refreshSystemPrompt();
   clearAiInstructions();
   await dlAlert('✅ 已将 ' + instructions.length + ' 条指令合并到提示词！\n新游戏和继续游戏均生效。');
 }
 
-// ── 主题选择器 ──
+// ── 主题选择器（自动应用，无需额外点击）──
 function initThemeSelector() {
   const sel = $('#theme-selector');
   if (!sel) return;
+  if (sel.dataset.bound) return;  // 只绑定一次
+  sel.dataset.bound = '1';
   const tpl = getActiveTemplate();
   const saveId = gameState.activeSaveId || 'default';
   sel.value = localStorage.getItem('xixi_theme_' + saveId) || tpl.theme || 'dark';
 
+  sel.addEventListener('change', function() {
+    const theme = sel.value;
+    localStorage.setItem('xixi_theme_' + saveId, theme);
+    applyTheme(theme);
+    if (gameState.gameStarted) saveGameState();
+    if (gameState.activeTemplate) gameState.activeTemplate.theme = theme;
+  });
+
+  // 隐藏"应用"按钮——自动应用后不再需要
   const applyBtn = $('#btn-apply-theme');
-  if (applyBtn) {
-    applyBtn.onclick = function() {
-      const theme = sel.value;
-      localStorage.setItem('xixi_theme_' + saveId, theme);
-      applyTheme(theme);
-      if (gameState.gameStarted) saveGameState();
-      if (gameState.activeTemplate) gameState.activeTemplate.theme = theme;
-      const msgEl = document.querySelector('#fields-msg') || document.querySelector('#settings-msg');
-      if (msgEl) { msgEl.textContent = '✅ 主题已应用（仅当前存档）：' + theme; msgEl.style.color = 'var(--green)'; }
-    };
-  }
+  if (applyBtn) applyBtn.style.display = 'none';
 }
 
 // ── 图片管理 ──
@@ -246,7 +264,13 @@ function renderImageManager() {
         reader.onload = () => {
           const imgs = JSON.parse(localStorage.getItem('xixi_custom_images') || '{}');
           imgs[sceneType] = reader.result;
-          localStorage.setItem('xixi_custom_images', JSON.stringify(imgs));
+          try {
+            localStorage.setItem('xixi_custom_images', JSON.stringify(imgs));
+          } catch (e) {
+            delete imgs[sceneType];
+            dlAlert('⚠ 图片保存失败：localStorage 空间不足。请清理浏览器数据或先删除其他自定义图片。');
+            return;
+          }
           if (parsedLastSceneType === sceneType || !parsedLastSceneType) {
             const img = dom.characterImage;
             if (img) img.src = reader.result;

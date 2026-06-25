@@ -4,11 +4,17 @@
    ═══════════════════════════════════════════ */
 
 // ── 通用对话框 ──
+let _pendingDialogDone = null;  // 追踪当前活跃对话框，防止重叠
+
 function showDialog(message, options = {}) {
+  // 关闭上一个未完成的对话框
+  if (_pendingDialogDone) { _pendingDialogDone(null); _pendingDialogDone = null; }
+
   const { type = 'alert', placeholder = '', defaultValue = '' } = options;
   return new Promise((resolve) => {
+    _pendingDialogDone = resolve;
     const overlay = $('#dialog-overlay');
-    if (!overlay) { resolve(null); return; }
+    if (!overlay) { _pendingDialogDone = null; resolve(null); return; }
     $('#dialog-message').textContent = message;
     const inputRow = $('#dialog-input-row');
     const input = $('#dialog-input');
@@ -25,6 +31,7 @@ function showDialog(message, options = {}) {
     overlay.classList.add('active');
 
     function done(value) {
+      _pendingDialogDone = null;
       overlay.classList.remove('active');
       resolve(value);
     }

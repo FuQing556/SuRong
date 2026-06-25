@@ -96,6 +96,7 @@ function bindEvents() {
     if (dom.saveSelectorOverlay?.classList.contains('active')) return;
     if (dom.createSaveOverlay?.classList.contains('active')) return;
     if ($('#dialog-overlay')?.classList.contains('active')) return;
+    if ($('#emoji-picker-popup')) return;  // emoji选择器打开时禁用快捷键
     if ($('#prologue-overlay')?.classList.contains('active')) return;
     if ($('#ending-overlay')?.classList.contains('active')) return;
     if ($('#help-overlay')?.classList.contains('active')) return;
@@ -172,9 +173,10 @@ function bindEvents() {
     });
   }
 
-  // 提示词字数统计
+  // 提示词字数统计 + 未保存标记
   dom.promptEditor.addEventListener('input', () => {
     dom.promptLength.textContent = '字数: ' + dom.promptEditor.value.length;
+    if (typeof markSettingsDirty === 'function') markSettingsDirty();
   });
 
   // 状态栏数值点击编辑
@@ -244,6 +246,15 @@ async function init() {
   // 初始化AI聊天消息
   try { renderAiChatMessages(); } catch (e) { console.error('Init chat error:', e); }
 }
+
+// ── 页面离开警告（游戏进行中关闭/刷新标签页时确认）──
+window.addEventListener('beforeunload', (e) => {
+  if (gameState.gameStarted && gameState.isLoading) {
+    e.preventDefault();
+    e.returnValue = 'AI正在生成回复，离开将丢失当前回合进度。';
+    return e.returnValue;
+  }
+});
 
 // ── 全局错误捕获 ──
 window.addEventListener('error', (e) => {

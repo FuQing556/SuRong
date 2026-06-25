@@ -28,17 +28,22 @@ function saveGameState(slot) {
     fieldHistory: gameState.fieldHistory,
     achievementFlags: gameState.achievementFlags,
   };
-  try { localStorage.setItem(saveKey, JSON.stringify(saveData)); } catch (e) { /* quota exceeded */ }
+  try { localStorage.setItem(saveKey, JSON.stringify(saveData)); gameState._saveFailed = false; }
+  catch (e) {
+    console.error('💾 存档失败！localStorage 可能已满:', e.message,
+      '存档:', saveKey, '大小:', JSON.stringify(saveData).length, '字符');
+    gameState._saveFailed = true;  // 供 UI 层检测并提醒用户
+  }
+  // 更新保存时间指示器
+  updateSaveIndicator();
 }
 
-// ── 读取存档 ──
+// ── 读取存档（纯读取，不修改 gameState）──
 function loadGameState(templateId, slot) {
   const saveKey = getSaveKey(templateId, slot !== undefined ? slot : 0);
   try {
     const data = JSON.parse(localStorage.getItem(saveKey));
     if (data && data.fullHistory && data.fullHistory.length > 0) {
-      if (data.fieldHistory) gameState.fieldHistory = data.fieldHistory;
-      if (data.achievementFlags) gameState.achievementFlags = data.achievementFlags;
       return data;
     }
   } catch (e) { /* corrupt data */ }
@@ -78,13 +83,24 @@ function loadSaves() {
       styles: ['潜行谍战', '社交博弈', '沉沦堕落', '冒险战斗'],
     },
   ];
-  const userSaves = JSON.parse(localStorage.getItem('xixi_saves') || '[]');
-  return [...saves, ...userSaves];
+  try {
+    const raw = JSON.parse(localStorage.getItem('xixi_saves') || '[]');
+    const userSaves = Array.isArray(raw) ? raw : [];
+    return [...saves, ...userSaves];
+  } catch (e) {
+    console.error('📂 存档列表损坏，已重置:', e.message);
+    localStorage.removeItem('xixi_saves');
+    return saves;
+  }
 }
 
 function saveUserSaves(saves) {
   const userSaves = saves.filter(s => s.type !== 'default');
-  localStorage.setItem('xixi_saves', JSON.stringify(userSaves));
+  try {
+    localStorage.setItem('xixi_saves', JSON.stringify(userSaves));
+  } catch (e) {
+    console.error('📂 保存存档列表失败（localStorage可能已满）:', e.message);
+  }
 }
 
 // ── 删除存档模板 ──
@@ -131,7 +147,13 @@ function getUnlockedAchievements() {
 }
 
 function saveAchievements(data) {
-  localStorage.setItem(getAchieveKey(), JSON.stringify(data));
+  try {
+    localStorage.setItem(getAchieveKey(), JSON.stringify(data));
+    return true;
+  } catch (e) {
+    console.error('保存成就失败:', e.message);
+    return false;
+  }
 }
 
 console.log('📦 saves.js 已加载');

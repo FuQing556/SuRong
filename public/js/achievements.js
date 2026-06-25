@@ -12,7 +12,9 @@ function getAchievements() {
   if (vars.length > 0) {
     const generated = {};
     vars.forEach(v => {
-      generated[v.label + '大师'] = { icon: v.icon || '⭐', desc: v.label + '达到较高水平' };
+      // 用 field id 做 key（稳定），label 放 desc（可编辑）
+      const key = (v.id || v.label) + '大师';
+      generated[key] = { icon: v.icon || '⭐', desc: v.label + '达到较高水平' };
     });
     generated['幸存者'] = { icon: '🍀', desc: '轮次≥30且未触发任何结局' };
     generated['崩坏'] = { icon: '💔', desc: '触发任一结局' };
@@ -31,21 +33,28 @@ function unlockAchievement(name) {
   const all = getUnlockedAchievements();
   if (all[name]) return false;
   all[name] = new Date().toISOString().slice(0, 10);
-  saveAchievements(all);
+  if (!saveAchievements(all)) {
+    console.error('🏆 成就解锁保存失败（localStorage可能已满）:', name);
+    return false;  // 保存失败则不弹toast，避免"假解锁"
+  }
   showAchievementToast(name);
   return true;
 }
+
+let _achToastTimer = null;  // 追踪当前toast定时器，防止连续解锁时互相覆盖
 
 function showAchievementToast(name) {
   const ach = getAchievements()[name];
   const toast = $('#achievement-toast');
   if (!toast) return;
+  // 清除上一个toast的定时器，确保新toast完整展示3.5秒
+  if (_achToastTimer) { clearTimeout(_achToastTimer); _achToastTimer = null; }
   $('#ach-toast-text').textContent = (ach?.icon || '🏆') + ' ' + name;
   toast.classList.remove('hidden');
   toast.style.animation = 'none';
   toast.offsetHeight;
-  toast.style.animation = 'achSlideIn .5s ease, achSlideOut .5s ease 3s forwards';
-  setTimeout(() => toast.classList.add('hidden'), 3500);
+  toast.style.animation = 'achSlideIn .5s ease, achSlideOut .5s ease 4.5s forwards';
+  _achToastTimer = setTimeout(() => { toast.classList.add('hidden'); _achToastTimer = null; }, 5000);
 }
 
 // ── 从解析结果更新 fieldHistory ──
@@ -328,7 +337,13 @@ async function editAchievement(name) {
     tpl.achievements[fn].icon = fi;
     tpl.achievements[fn].desc = fd;
   }
-  localStorage.setItem('xixi_edited_template_' + saveId, JSON.stringify(tpl));
+  // 只持久化成就部分，不覆盖字段/提示词等其他编辑
+  const editKey = 'xixi_edited_template_' + saveId;
+  let edited = {};
+  try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
+  edited.achievements = tpl.achievements;
+  edited.hiddenAchievements = tpl.hiddenAchievements;
+  localStorage.setItem(editKey, JSON.stringify(edited));
   renderAchievementsPanelV2();
 }
 
@@ -339,7 +354,13 @@ async function deleteAchievement(name) {
   if (!confirmed) return;
   if (tpl.hiddenAchievements && tpl.hiddenAchievements[name]) delete tpl.hiddenAchievements[name];
   else delete tpl.achievements[name];
-  localStorage.setItem('xixi_edited_template_' + (gameState.activeSaveId || tpl.id || 'default'), JSON.stringify(tpl));
+  const saveId = gameState.activeSaveId || tpl.id || 'default';
+  const editKey = 'xixi_edited_template_' + saveId;
+  let edited = {};
+  try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
+  edited.achievements = tpl.achievements;
+  edited.hiddenAchievements = tpl.hiddenAchievements;
+  localStorage.setItem(editKey, JSON.stringify(edited));
   renderAchievementsPanelV2();
 }
 
@@ -364,7 +385,13 @@ async function addNewAchievement(isHidden) {
     if (!tpl.achievements) tpl.achievements = {};
     tpl.achievements[name.trim()] = { icon: icon.trim() || '🏆', desc: desc.trim() || name.trim() };
   }
-  localStorage.setItem('xixi_edited_template_' + (gameState.activeSaveId || tpl.id || 'default'), JSON.stringify(tpl));
+  const saveId = gameState.activeSaveId || tpl.id || 'default';
+  const editKey = 'xixi_edited_template_' + saveId;
+  let edited = {};
+  try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
+  edited.achievements = tpl.achievements;
+  edited.hiddenAchievements = tpl.hiddenAchievements;
+  localStorage.setItem(editKey, JSON.stringify(edited));
   renderAchievementsPanelV2();
 }
 

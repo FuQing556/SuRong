@@ -206,7 +206,12 @@ async function confirmCreateSave() {
   });
   saveUserSaves(saves);
 
-  try { await fetch('/api/templates/' + newId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: generatedTemplate }) }); } catch (e) { /* server optional */ }
+  // 保存引用后清除缓存，防止下次创建时恢复旧模板
+  const savedTemplate = generatedTemplate;
+  generatedTemplate = null;
+  localStorage.removeItem('xixi_generated_template');
+
+  try { await fetch('/api/templates/' + newId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: savedTemplate }) }); } catch (e) { /* server optional */ }
 
   const csOv = $('#create-save-overlay');
   if (csOv) csOv.classList.remove('active');
@@ -229,7 +234,7 @@ function renderFieldEditor() {
         '<input class="field-id" value="' + (f.id || '') + '" placeholder="ID" title="字段ID（英文）">' +
         '<input class="field-label" value="' + (f.label || '') + '" placeholder="标签" title="显示标签">' +
         '<input class="field-icon" value="' + (f.icon || '') + '" placeholder="图标" title="点击右侧按钮选emoji" style="width:50px;text-align:center;">' +
-        '<button class="btn-pick-emoji" data-target="field-icon" title="选择图标" style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:14px;padding:2px 6px;">🎨</button>' +
+        '<button class="btn-pick-emoji" title="选择图标" style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:16px;padding:4px 8px;min-width:36px;">' + (f.icon || '🎨') + '</button>' +
         '<input class="field-format" value="' + (f.formatHint || '') + '" placeholder="格式提示" title="AI输出格式">' +
         '<button class="btn-remove-field" data-section="' + sectionKey + '" data-index="' + idx + '">✕</button>' +
         '</div>';
@@ -250,17 +255,21 @@ function renderFieldEditor() {
       const row = btn.closest('.field-editor-row');
       const iconInput = row.querySelector('.field-icon');
       if (!iconInput) return;
-      const picked = await pickEmoji(iconInput.value);
-      if (picked) iconInput.value = picked;
+      const picked = await pickEmoji(iconInput.value || btn.textContent);
+      if (picked) { iconInput.value = picked; btn.textContent = picked; }
     });
   });
 }
 
-function removeField(sectionKey, index) {
+async function removeField(sectionKey, index) {
   const tpl = getActiveTemplate();
   const fields = tpl.outputSections?.[sectionKey]?.fields;
   if (!fields || index >= fields.length) return;
+  const label = fields[index]?.label || '未命名';
+  const confirmed = await dlConfirm('确定删除字段「' + label + '」？\n关闭设置前可刷新页面恢复。');
+  if (!confirmed) return;
   fields.splice(index, 1);
+  if (typeof markSettingsDirty === 'function') markSettingsDirty();
   renderFieldEditor();
 }
 
@@ -289,6 +298,7 @@ async function addField() {
     formatHint: '[数值]',
     type: 'number',
   });
+  if (typeof markSettingsDirty === 'function') markSettingsDirty();
   renderFieldEditor();
 }
 
@@ -326,6 +336,22 @@ function saveFields() {
     newSections[sKey].fields.push(fieldData);
   });
 
+  // 检查字段 ID 唯一性
+  const seenIds = new Set();
+  let dupFound = false;
+  for (const section of Object.values(newSections)) {
+    for (const f of (section.fields || [])) {
+      if (seenIds.has(f.id)) { dupFound = true; break; }
+      seenIds.add(f.id);
+    }
+    if (dupFound) break;
+  }
+  if (dupFound) {
+    const msgEl = $('#fields-msg');
+    if (msgEl) { msgEl.textContent = '⚠ 存在重复的字段ID，请修改后再保存。'; msgEl.style.color = 'var(--red)'; }
+    return;
+  }
+
   // 保留原有 label 和 display
   for (const [sKey, section] of Object.entries(newSections)) {
     const orig = tpl.outputSections?.[sKey];
@@ -334,13 +360,29 @@ function saveFields() {
 
   tpl.outputSections = newSections;
   refreshSystemPrompt();
+
+  // 为新增字段初始化 fieldHistory 默认值，避免全显"—"
+  for (const section of Object.values(newSections)) {
+    for (const f of (section.fields || [])) {
+      if (!gameState.fieldHistory[f.id]) {
+        if (f.type === 'number') {
+          gameState.fieldHistory[f.id] = { current: 0, max: 0 };
+        } else {
+          gameState.fieldHistory[f.id] = { currentText: '—' };
+        }
+      }
+    }
+  }
+
   renderStatusContainers(tpl);
+  updateAllDynamicFieldsFromHistory();  // 重建DOM后立即回填数值
   renderFieldEditor();
 
   // 按存档隔离保存
   const saveId = gameState.activeSaveId || tpl.id || 'default';
   localStorage.setItem('xixi_edited_template_' + saveId, JSON.stringify(tpl));
 
+  if (typeof clearSettingsDirty === 'function') clearSettingsDirty();
   const msgEl = $('#fields-msg');
   if (msgEl) {
     msgEl.textContent = '✅ 字段已保存！系统提示词已自动同步。';

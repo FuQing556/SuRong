@@ -86,8 +86,22 @@ function renderGameState(parsed, template) {
     entry.innerHTML = entryHtml;
     dom.storyContent.appendChild(entry);
     const entries = dom.storyContent.querySelectorAll('.story-entry');
-    if (entries.length > 20) entries[0].remove();
-    $('#story-box').scrollTop = $('#story-box').scrollHeight;
+    if (entries.length > 20) {
+      entries[0].remove();
+      // 显示截断提示，引导玩家使用历程回顾
+      let notice = document.getElementById('truncation-notice');
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'truncation-notice';
+        notice.style.cssText = 'text-align:center;font-size:11px;color:var(--text-dim);padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:8px;';
+        notice.textContent = '📜 仅显示最近20回合 · 完整记录请点击 📜历程 查看';
+        dom.storyContent.insertBefore(notice, dom.storyContent.firstChild);
+      }
+    }
+    // 只有用户在底部（容差50px）才自动滚动，避免打断阅读旧内容
+    const sb = $('#story-box');
+    const atBottom = sb.scrollHeight - sb.scrollTop - sb.clientHeight < 50;
+    if (atBottom) sb.scrollTop = sb.scrollHeight;
   }
 
   updateFieldHistoryFromParsed(parsed);
@@ -148,20 +162,34 @@ function renderGameState(parsed, template) {
 }
 
 // ── 发送消息 ──
+let _abortController = null;  // 用于取消正在进行的请求
+
 async function sendMessage(userContent) {
   if (gameState.isLoading) return;
+  // 清理上一次失败请求残留的user消息（用户可能点重试，也可能点了新选项）
+  if (gameState.fullHistory.length > 0 &&
+      gameState.fullHistory[gameState.fullHistory.length - 1].role === 'user') {
+    gameState.fullHistory.pop();
+  }
   gameState.isLoading = true;
   showLoading(true);
   dom.errorBox.classList.add('hidden');
   updateOptionButtons([]);
 
+  // 创建可取消的请求控制器（60秒超时 + 手动取消）
+  _abortController = new AbortController();
+  const timeoutId = setTimeout(() => _abortController.abort(), 60000);
+
   try {
-    // AI 实时指令注入
+    // AI 实时指令注入（先剥离已有指令块，防止重试时重复叠加）
     const instructions = getAiInstructions();
-    let enhancedContent = userContent;
+    let enhancedContent = userContent.replace(
+      /\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：[\s\S]*?】$/,
+      ''
+    );
     if (instructions.length > 0) {
       const instrText = instructions.map(i => i.text).join('；');
-      enhancedContent = userContent + '\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：' + instrText + '。请在本次回复中直接体现这些指令的效果，不要只是说"收到"——用剧情和选项来展示变化。】';
+      enhancedContent = enhancedContent + '\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：' + instrText + '。请在本次回复中直接体现这些指令的效果，不要只是说"收到"——用剧情和选项来展示变化。】';
     }
 
     gameState.fullHistory.push({ role: 'user', content: enhancedContent });
@@ -189,7 +217,7 @@ async function sendMessage(userContent) {
         template: { id: tpl.id, outputSections: tpl.outputSections, promptBody: tpl.promptBody },
         apiKey: localStorage.getItem('xixi_apikey') || '',
       }),
-      signal: AbortSignal.timeout(60000),
+      signal: _abortController.signal,
     });
 
     if (!resp.ok) {
@@ -201,19 +229,35 @@ async function sendMessage(userContent) {
     gameState.fullHistory.push({ role: 'assistant', content: data.content });
 
     const parsed = parseAIResponse(data.content, tpl);
+    // AI返回了故事但漏了选项 → 视为格式异常，触发重试
+    if (parsed.options.length === 0) {
+      gameState.fullHistory.pop();
+      throw new Error('AI 返回格式异常：未包含可选行动。请点击重试。');
+    }
     renderGameState(parsed, tpl);
     gameState.gameStarted = true;
     saveGameState();
 
   } catch (err) {
+    clearTimeout(timeoutId);
     console.error('请求失败:', err);
-    if (err.name === 'AbortError' || err.name === 'TimeoutError') {
-      showError('请求超时（60秒）。请检查网络连接，或在设置页确认 API Key 有效。');
+    if (err.name === 'AbortError') {
+      // 区分手动取消和超时——手动取消不显示错误
+      if (!gameState._cancelledByUser) {
+        showError('请求超时（60秒）。请检查网络连接，或在设置页确认 API Key 有效。');
+      }
+      gameState._cancelledByUser = false;
     } else {
       showError(err.message);
     }
-    gameState.fullHistory.pop();
+    // 只移除已接收的assistant消息，保留user消息供retryLastRequest正确重试
+    if (gameState.fullHistory.length > 0 &&
+        gameState.fullHistory[gameState.fullHistory.length - 1].role === 'assistant') {
+      gameState.fullHistory.pop();
+    }
   } finally {
+    clearTimeout(timeoutId);
+    _abortController = null;
     gameState.isLoading = false;
     showLoading(false);
   }
@@ -292,6 +336,7 @@ async function startNewGame() {
     gameState.summary = '';
     gameState.summarisedCount = 0;
     gameState.currentOptions = [];
+    gameState._lastChoiceText = '';
     gameState.gameStarted = false;
     gameState.isLoading = false;
 
@@ -417,6 +462,13 @@ async function continueGame(saveId) {
   gameState.summary = saveData.summary || '';
   gameState.summarisedCount = saveData.summarisedCount || 0;
   gameState.currentOptions = saveData.currentOptions || [];
+  gameState._lastChoiceText = '';
+  gameState.fieldHistory = saveData.fieldHistory || {};
+  gameState.achievementFlags = saveData.achievementFlags || {
+    gambitChosen: false, gambitSucceeded: false, gambitSuccessCount: 0,
+    endingTriggered: false, endingType: '', counterAttack: false, tradeCompleted: false,
+    choiceCounts: {}, responseMatches: {},
+  };
   gameState.gameStarted = true;
   gameState.isLoading = false;
 
@@ -428,6 +480,9 @@ async function continueGame(saveId) {
   localStorage.setItem('xixi_active_template_id', saveId);
 
   // 渲染最后一回合（跳过成就检测，避免读档时重复触发）
+  // 清空故事面板，防止切换存档时旧存档故事残留累加
+  dom.storyContent.innerHTML = '';
+  dom.settlementBox.style.display = 'none';
   const lastAiMsg = [...gameState.fullHistory].reverse().find(m => m.role === 'assistant');
   if (lastAiMsg) {
     gameState._loadingSave = true;
@@ -454,10 +509,15 @@ async function undoLastRound() {
   gameState.fullHistory.splice(lui);
   gameState.currentOptions = [];
   gameState.isLoading = false;
+  // 撤销后清理摘要，防止AI看到已撤销事件的旧摘要
+  gameState.summary = '';
+  gameState.summarisedCount = 0;
   const lastAi = [...gameState.fullHistory].reverse().find(m => m.role === 'assistant');
   if (lastAi) {
     const tpl = getActiveTemplate();
     const parsed = parseAIResponse(lastAi.content, tpl);
+    dom.storyContent.innerHTML = '';
+    dom.settlementBox.style.display = 'none';
     renderGameState(parsed, tpl);
   } else {
     dom.storyContent.innerHTML = '<div id="initial-placeholder"><p class="placeholder-text">命运之轮重新转动...</p></div>';
@@ -468,24 +528,59 @@ async function undoLastRound() {
 }
 
 // ── 手动存档 ──
-function manualSave() {
+async function manualSave() {
   if (!gameState.gameStarted) return;
   const tplId = gameState.activeSaveId || getActiveTemplate().id || 'default';
-  let slot = 1;
-  while (slot < 10 && localStorage.getItem(getSaveKey(tplId, slot))) slot++;
-  if (slot >= 10) slot = 1;
+  // 从上一次使用的槽位之后轮转，避免总覆写槽位1
+  const lastSlotKey = 'xixi_last_manual_slot_' + tplId;
+  let startSlot = parseInt(localStorage.getItem(lastSlotKey) || '0') || 0;
+  let slot = startSlot + 1;
+  if (slot > 9) slot = 1;
+  // 找下一个空槽
+  let found = false;
+  for (let i = 0; i < 9; i++) {
+    const trySlot = ((slot - 1 + i) % 9) + 1;
+    if (!localStorage.getItem(getSaveKey(tplId, trySlot))) {
+      slot = trySlot; found = true; break;
+    }
+  }
+  if (!found) {
+    // 全部满，轮转到下一个
+    slot = startSlot + 1;
+    if (slot > 9) slot = 1;
+    const confirmed = await dlConfirm('所有存档槽位已满（1-9），将覆盖槽位' + slot + '的旧存档。是否继续？');
+    if (!confirmed) return;
+  }
+  localStorage.setItem(lastSlotKey, String(slot));
   saveGameState(slot);
-  dlAlert('💾 已存档到槽位 ' + slot + '（第' + gameState.fullHistory.filter(m => m.role === 'user').length + '回合）');
+  if (gameState._saveFailed) {
+    dlAlert('⚠ 存档失败！localStorage 空间可能不足，请清理浏览器数据或导出故事备份。');
+  } else {
+    dlAlert('💾 已存档到槽位 ' + slot + '（第' + gameState.fullHistory.filter(m => m.role === 'user').length + '回合）');
+  }
 }
 
 // ── 结局弹窗 ──
 function showEndingOverlay(endingType, parsed) {
   const tpl = getActiveTemplate();
-  const ei = {
-    '精神崩溃': '💔', '身份暴露': '🚨', '成功撤离': '🏃', '快速撤离': '💨',
-    '反向渗透': '👑', '魂师大赛': '⚔'
-  };
-  $('#ending-icon').textContent = ei[endingType] || '🎭';
+  // 根据关键词动态匹配图标，不硬编码具体结局名
+  const iconMap = [
+    [/崩|溃|碎|裂|破|毁|亡|死|灭|终|尽|绝/, '💔'],
+    [/暴露|揭穿|发现|捕获|落网|陷阱/, '🚨'],
+    [/撤离|逃离|逃脱|逃出|逃命|出走/, '🏃'],
+    [/反杀|反制|逆转|翻盘|复仇|反击/, '👑'],
+    [/成|胜|赢|王|冠|巅|顶|极|升|圆满/, '👑'],
+    [/战|斗|决|赛|竞|擂/, '⚔'],
+    [/光|明|新|始|曙|晨|希望|重生|轮回/, '✨'],
+    [/暗|黑|堕|沉|沦|深渊|地狱/, '🌑'],
+    [/爱|情|恋|婚|眷|缘/, '💕'],
+    [/牺牲|献身|守护|拯救|舍/, '🕊️'],
+  ];
+  let icon = '🎭';
+  for (const [re, emoji] of iconMap) {
+    if (re.test(endingType)) { icon = emoji; break; }
+  }
+  $('#ending-icon').textContent = icon;
   $('#ending-title').textContent = '结局：' + endingType;
   $('#ending-narrative').textContent = (parsed.situation || parsed.raw || '故事到此结束。').substring(0, 600);
 

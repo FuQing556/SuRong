@@ -10,13 +10,37 @@ let parsedLastSceneType = '';
 let _loadingTimer = null;
 let _loadingStart = 0;
 
+// ── 取消当前请求 ──
+function cancelCurrentRequest() {
+  if (_abortController) {
+    gameState._cancelledByUser = true;
+    _abortController.abort();
+  }
+}
+
 function showLoading(show) {
   dom.loadingIndicator.classList.toggle('hidden', !show);
+  // 加载时隐藏选项区，比显示4个"等待中..."更干净
+  if (dom.optionsContainer) dom.optionsContainer.style.visibility = show ? 'hidden' : '';
+  // 加载时显示取消按钮
+  let cancelBtn = $('#btn-cancel-request');
   if (show) {
+    if (!cancelBtn) {
+      cancelBtn = document.createElement('button');
+      cancelBtn.id = 'btn-cancel-request';
+      cancelBtn.className = 'btn btn-ghost btn-tiny';
+      cancelBtn.textContent = '✕ 取消';
+      cancelBtn.title = '取消当前请求，恢复到选择前的状态';
+      cancelBtn.style.cssText = 'margin-left:12px;font-size:11px;';
+      cancelBtn.addEventListener('click', cancelCurrentRequest);
+      dom.loadingIndicator.appendChild(cancelBtn);
+    }
+    cancelBtn.style.display = '';
     _loadingStart = Date.now();
     _updateLoadingText();
     _loadingTimer = setInterval(_updateLoadingText, 1000);
   } else {
+    if (cancelBtn) cancelBtn.style.display = 'none';
     if (_loadingTimer) { clearInterval(_loadingTimer); _loadingTimer = null; }
   }
 }
@@ -32,6 +56,16 @@ function _updateLoadingText() {
 function showError(msg) {
   dom.errorBox.classList.remove('hidden');
   dom.errorMsg.textContent = msg;
+  // 确保关闭按钮存在
+  if (!$('#btn-dismiss-error')) {
+    const dismissBtn = document.createElement('button');
+    dismissBtn.id = 'btn-dismiss-error';
+    dismissBtn.className = 'btn btn-ghost btn-tiny';
+    dismissBtn.textContent = '✕ 关闭';
+    dismissBtn.style.cssText = 'margin-left:8px;font-size:11px;';
+    dismissBtn.addEventListener('click', () => dom.errorBox.classList.add('hidden'));
+    $('#btn-retry').after(dismissBtn);
+  }
   if (gameState.currentOptions.length > 0) updateOptionButtons(gameState.currentOptions);
 }
 
@@ -231,6 +265,22 @@ function switchSceneImage(sceneType, template) {
   }
 }
 
+// ── 存档时间指示器 ──
+function updateSaveIndicator() {
+  let el = $('#save-indicator');
+  if (!el) {
+    el = document.createElement('span');
+    el.id = 'save-indicator';
+    el.style.cssText = 'font-size:10px;color:var(--text-dim);margin-left:8px;opacity:.7;';
+    const topActions = document.querySelector('.top-actions');
+    if (topActions) topActions.appendChild(el);
+  }
+  const now = new Date();
+  const ts = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  el.textContent = '💾 ' + ts;
+  el.title = '上次存档时间';
+}
+
 // ── 应用主题 ──
 function applyTheme(themeName) {
   gameState._currentTheme = themeName;
@@ -305,7 +355,8 @@ function closePrologue() {
 
 // ── 存档选择器 ──
 function showSaveSelector() {
-  if (gameState.gameStarted) saveGameState();
+  // 加载中不自动存档，防止保存缺AI回复的半截状态
+  if (gameState.gameStarted && !gameState.isLoading) saveGameState();
 
   const ov = $('#save-selector-overlay');
   if (ov) ov.classList.add('active');
@@ -468,7 +519,8 @@ async function selectSave(saveId) {
       } catch (e) { /* corrupt */ }
     }
 
-    localStorage.removeItem(getSaveKey(saveId)); // 清除旧存档
+    // 清除所有槽位的旧存档（0-9）防止残留手动存档干扰
+    for (let s = 0; s < 10; s++) localStorage.removeItem(getSaveKey(saveId, s));
     gameState.activeTemplate = template;
     gameState.activeSaveId = saveId;
     localStorage.setItem('xixi_last_save_id', saveId);
