@@ -235,8 +235,8 @@ async function sendMessage(userContent) {
     let fullContent = '';
     // 创建实时预览元素
     liveEl = document.createElement('div');
-    liveEl.className = 'story-entry story-fade-in';
-    liveEl.style.cssText = 'opacity:.85;white-space:pre-wrap;';
+    liveEl.className = 'story-entry story-streaming';
+    liveEl.style.cssText = 'white-space:pre-wrap;';
     dom.storyContent.appendChild(liveEl);
 
     while (true) {
