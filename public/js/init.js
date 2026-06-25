@@ -5,16 +5,22 @@
 
 // ── 事件绑定 ──
 function bindEvents() {
-  // 18+ 警告
-  $('#btn-enter').addEventListener('click', () => {
-    localStorage.setItem('xixi_age_verified', 'true');
-    dom.warningOverlay.classList.remove('active');
-    showSaveSelector();
-  });
-  $('#btn-leave').addEventListener('click', () => {
-    window.close();
-    if (!window.closed) document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#78788c;font-family:sans-serif;font-size:18px;">已退出</div>';
-  });
+  // 首次访问提示
+  const btnEnter = $('#btn-enter');
+  if (btnEnter) {
+    btnEnter.addEventListener('click', () => {
+      localStorage.setItem('xixi_age_verified', 'true');
+      if (dom.warningOverlay) dom.warningOverlay.classList.remove('active');
+      showSaveSelector();
+    });
+  }
+  const btnLeave = $('#btn-leave');
+  if (btnLeave) {
+    btnLeave.addEventListener('click', () => {
+      window.close();
+      if (!window.closed) document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#78788c;font-family:sans-serif;font-size:18px;">已退出</div>';
+    });
+  }
 
   // 创建存档
   $('#btn-create-save').addEventListener('click', openCreateSave);

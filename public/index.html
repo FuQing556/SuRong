@@ -15,21 +15,21 @@
 </head>
 <body>
 
-  <!-- ═══════════ 18+ 警告弹窗 ═══════════ -->
+  <!-- ═══════════ 首次访问提示 ═══════════ -->
   <div id="warning-overlay" class="overlay active">
     <div class="modal warning-modal">
-      <div class="warning-icon">🔞</div>
-      <h1>内容警告</h1>
-      <p>本游戏包含成人向黑暗叙事内容，包括但不限于：</p>
+      <div class="warning-icon">📖</div>
+      <h1>内容提示</h1>
+      <p>本游戏为深度互动叙事体验，包含：</p>
       <ul>
-        <li>权力压迫与羞辱</li>
-        <li>性暗示与性交易情节</li>
-        <li>心理操控与社交暴力</li>
+        <li>权力博弈与道德困境</li>
+        <li>复杂人际关系与情感冲突</li>
+        <li>高压环境下的心理叙事</li>
       </ul>
-      <p class="warning-note">所有内容均为虚构叙事，请在心理上做好相应准备。</p>
-      <p class="warning-age">仅限 <strong>18岁以上</strong> 玩家进入</p>
+      <p class="warning-note">故事内容偏向成熟审美，建议在安静环境中沉浸体验。</p>
+      <p class="warning-age">适合 <strong>18岁以上</strong> 玩家</p>
       <div class="warning-buttons">
-        <button id="btn-enter" class="btn btn-primary">我已满18岁，进入游戏</button>
+        <button id="btn-enter" class="btn btn-primary">进入游戏</button>
         <button id="btn-leave" class="btn btn-ghost">离开</button>
       </div>
     </div>
@@ -103,11 +103,11 @@
         </div>
         <div class="form-row">
           <label>世界观背景 <span class="required">*</span></label>
-          <textarea id="new-save-world" placeholder="例如：修真界，正邪对立，灵气复苏时代，宗门林立..." rows="2"></textarea>
+          <textarea id="new-save-world" placeholder="例如：修真界，正邪对立，灵气复苏时代，宗门林立..." rows="5"></textarea>
         </div>
         <div class="form-row">
           <label>主角设定 <span class="required">*</span></label>
-          <textarea id="new-save-protagonist" placeholder="例如：被诬陷杀害师父的天才弟子，身怀禁忌功法，被逐出师门..." rows="2"></textarea>
+          <textarea id="new-save-protagonist" placeholder="例如：被诬陷杀害师父的天才弟子，身怀禁忌功法，被逐出师门..." rows="5"></textarea>
         </div>
         <div class="form-row">
           <label>核心冲突</label>
@@ -134,7 +134,7 @@
         </div>
         <div class="form-row">
           <label>额外要求（可选）</label>
-          <textarea id="new-save-extra" placeholder="例如：需要有炼丹系统；加入门派大比；反派可以洗白..." rows="2"></textarea>
+          <textarea id="new-save-extra" placeholder="例如：需要有炼丹系统；加入门派大比；反派可以洗白..." rows="4"></textarea>
         </div>
       </div>
       <div class="create-save-footer">

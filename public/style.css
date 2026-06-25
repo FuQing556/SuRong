@@ -926,12 +926,14 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 /* ── 创建存档表单 ── */
-.create-save-modal { max-width: 580px; max-height: 85vh; overflow-y: auto; }
+.create-save-modal { max-width: 680px; max-height: 88vh; overflow-y: auto; }
+.create-save-form textarea { width: 100%; min-height: 80px; resize: vertical; }
 .create-save-form { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
 .form-row { display: flex; flex-direction: column; gap: 4px; }
 .form-row label { font-size: 13px; color: var(--text-dim); font-weight: 500; }
 .form-row .required { color: var(--red); }
 .form-row input, .form-row textarea {
+  width: 100%;
   background: var(--bg-card);
   color: var(--text);
   border: 1px solid var(--border);

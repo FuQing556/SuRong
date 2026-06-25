@@ -82,7 +82,15 @@
       "Bash(node split_modules.js)",
       "Bash(node fix_modules.js)",
       "Bash(node --check public/js/state.js)",
-      "Bash(node --check public/js/*.js)"
+      "Bash(node --check public/js/*.js)",
+      "Bash(timeout 5 node server.js)",
+      "Bash(node server.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{size_download}b\" http://localhost:3000/js/state.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{size_download}b\" http://localhost:3000/js/utils.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{size_download}b\" http://localhost:3000/js/dialogs.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{size_download}b\" http://localhost:3000/js/saves.js)",
+      "Bash(node test.js)",
+      "Bash(git restore *)"
     ]
   }
 }
