@@ -76,7 +76,13 @@
       "Bash(node final_patch.js)",
       "Bash(grep -v \"V2\\\\|_OLD\\\\|function \\\\|//\")",
       "Bash(node -e \"require\\('./server.js'\\)\")",
-      "Bash(node test_comprehensive.js)"
+      "Bash(node test_comprehensive.js)",
+      "Bash(node fix_all.js)",
+      "Bash(node apply_fixes.js)",
+      "Bash(node split_modules.js)",
+      "Bash(node fix_modules.js)",
+      "Bash(node --check public/js/state.js)",
+      "Bash(node --check public/js/*.js)"
     ]
   }
 }

@@ -798,14 +798,23 @@ function renderGameState(parsed, template) {
   }
 
   if (parsed.situation) {
-    dom.storyContent.innerHTML = '';
-    const p = document.createElement('p');
-    p.textContent = parsed.situation;
-    p.classList.add('story-fade-in');
-    dom.storyContent.appendChild(p);
-    $('#story-box').scrollTop = 0;
+    const ph = document.getElementById('initial-placeholder');
+    if (ph) ph.style.display = 'none';
+    const roundNum = gameState.fullHistory.filter(m => m.role === 'user').length;
+    const lastChoice = gameState._lastChoiceText || ''; gameState._lastChoiceText = '';
+    const entry = document.createElement('div'); entry.className = 'story-entry story-fade-in';
+    var entryHtml = '<div class="story-round-badge">第' + roundNum + '回合</div>';
+    if (lastChoice) entryHtml += '<div class="story-choice-inline">▸ ' + escapeHtml(lastChoice) + '</div>';
+    if (parsed.settlement) entryHtml += '<div class="story-settlement-inline">◂ ' + escapeHtml(parsed.settlement) + '</div>';
+    entryHtml += '<div class="story-situation">' + escapeHtml(parsed.situation) + '</div>';
+    entry.innerHTML = entryHtml;
+    dom.storyContent.appendChild(entry);
+    var entries = dom.storyContent.querySelectorAll('.story-entry');
+    if (entries.length > 20) entries[0].remove();
+    $('#story-box').scrollTop = $('#story-box').scrollHeight;
   }
 
+  updateFieldHistoryFromParsed(parsed);
   updateOptionButtonsV2(parsed.options);
   gameState.currentOptions = parsed.options;
 
@@ -2098,7 +2107,7 @@ function renderAchievementsPanelV2() {
     var progress = unlocked ? null : getAchievementProgress(name);
     var pb = '';
     if (progress && progress.target > 1) {
-      var pct = Math.min(100, Math.round((progress.current / progress.target) * 100));
+      var cur = Math.max(0, progress.current || 0); var tgt = Math.max(1, progress.target || 1); var pct = Math.min(100, Math.max(0, Math.round((cur / tgt) * 100)));
       pb = '<div class="ach-progress-bar"><div class="ach-progress-fill" style="width:' + pct + '%"></div></div><div class="ach-progress-text">' + progress.current + '/' + progress.target + ' ' + progress.text + '</div>';
     } else if (progress && progress.target === 1 && !unlocked) {
       pb = '<div class="ach-progress-text" style="color:var(--text-dim);">' + progress.text + '</div>';
