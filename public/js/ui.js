@@ -1,0 +1,486 @@
+/* ═══════════════════════════════════════════
+   ui.js — 界面渲染：加载/错误/选项/状态栏/场景图/主题/序章/存档选择
+   依赖：state.js, utils.js, dialogs.js, saves.js
+   ═══════════════════════════════════════════ */
+
+// ── 自定义图片追踪 ──
+let parsedLastSceneType = '';
+
+// ── 加载指示器 ──
+let _loadingTimer = null;
+let _loadingStart = 0;
+
+function showLoading(show) {
+  dom.loadingIndicator.classList.toggle('hidden', !show);
+  if (show) {
+    _loadingStart = Date.now();
+    _updateLoadingText();
+    _loadingTimer = setInterval(_updateLoadingText, 1000);
+  } else {
+    if (_loadingTimer) { clearInterval(_loadingTimer); _loadingTimer = null; }
+  }
+}
+
+function _updateLoadingText() {
+  const elapsed = Math.floor((Date.now() - _loadingStart) / 1000);
+  const roundNum = gameState.fullHistory.filter(m => m.role === 'user').length + 1;
+  const textEl = dom.loadingIndicator.querySelector('.spinner')?.nextSibling;
+  if (textEl) textEl.textContent = '第' + roundNum + '回合 · 已等待' + elapsed + '秒';
+}
+
+// ── 错误提示 ──
+function showError(msg) {
+  dom.errorBox.classList.remove('hidden');
+  dom.errorMsg.textContent = msg;
+  if (gameState.currentOptions.length > 0) updateOptionButtons(gameState.currentOptions);
+}
+
+// ── 选项按钮（资源检测版）──
+function updateOptionButtons(options) {
+  const tpl = getActiveTemplate();
+
+  // 收集所有区段的数值型字段（不仅 resources，AI 模板可能把资源放在 variables 等区段）
+  const resValues = {};
+  for (const [sectionKey, section] of Object.entries(tpl.outputSections || {})) {
+    const fields = section.fields || [];
+    fields.forEach(function(f) {
+      const hist = gameState.fieldHistory[f.id];
+      if (hist && hist.current !== undefined && hist.current !== null) {
+        resValues[f.label] = hist.current;
+      } else if (hist && hist.currentText && hist.currentText !== '—') {
+        const n = parseInt(hist.currentText);
+        if (!isNaN(n)) resValues[f.label] = n;
+      }
+    });
+  }
+
+  dom.optionBtns.forEach(function(btn, i) {
+    const opt = options[i];
+    const actionEl = btn.querySelector('.option-action');
+    const costEl = btn.querySelector('.option-cost');
+    if (opt) {
+      const actionText = (opt.action || '').replace(/^\d+[\.\、\s]+/, '');
+      const costText = opt.cost || '';
+      const fullText = actionText + ' ' + costText;
+      let resourceBlocked = fullText.indexOf('【资源不足】') >= 0;
+      if (!resourceBlocked) {
+        for (const label in resValues) {
+          let cur = resValues[label];
+          // 防御：cur 必须是有效数字
+          if (typeof cur !== 'number' || isNaN(cur)) continue;
+          const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const re = new RegExp(escaped + '[：:\\s]*[xX×\\-–]?\\s*(\\d+)');
+          const m = costText.match(re) || actionText.match(re);
+          if (m) {
+            const needed = parseInt(m[1]);
+            if (!isNaN(needed) && cur < needed) { resourceBlocked = true; break; }
+          }
+        }
+      }
+      actionEl.textContent = actionText;
+      costEl.textContent = costText ? '— ' + costText : '';
+      btn.disabled = resourceBlocked;
+      btn.style.display = '';
+      btn.style.opacity = resourceBlocked ? '0.45' : '';
+      btn.title = resourceBlocked ? '资源不足，无法选择' : '';
+    } else {
+      actionEl.textContent = '';
+      costEl.textContent = '';
+      btn.disabled = true;
+      btn.style.opacity = '';
+      btn.title = '';
+      if (i >= (options.length || 0)) btn.style.display = options.length === 0 ? '' : 'none';
+    }
+  });
+
+  if (options.length === 0) {
+    dom.optionBtns.forEach(function(btn) {
+      btn.querySelector('.option-action').textContent = '等待中...';
+      btn.querySelector('.option-cost').textContent = '';
+      btn.disabled = true;
+      btn.style.opacity = '';
+      btn.title = '';
+      btn.style.display = '';
+    });
+  }
+}
+
+// ── 动态渲染状态栏容器 ──
+function renderStatusContainers(template) {
+  const sections = template?.outputSections || {};
+
+  // 状态栏 + 任务行
+  const statusFields = [
+    ...(sections.statusTop?.fields || []),
+    ...(sections.taskLine?.fields || []),
+  ];
+  if (dom.statusGrid) {
+    dom.statusGrid.innerHTML = statusFields.map(f =>
+      `<div class="status-item" data-field="${f.id}">
+        <span class="status-label">${f.icon || ''} ${f.label}</span>
+        <span class="status-value" id="field-${f.id}">—</span>
+      </div>`
+    ).join('');
+  }
+
+  // 资源行
+  const resFields = sections.resources?.fields || [];
+  if (dom.resourcesRow) {
+    dom.resourcesRow.innerHTML = resFields.length > 0 ? resFields.map(f =>
+      `<div class="status-item resource-item" data-field="${f.id}">
+        <span class="status-label">${f.icon || ''} ${f.label}</span>
+        <span class="status-value" id="field-${f.id}">—</span>
+      </div>`
+    ).join('') : '';
+    dom.resourcesRow.style.display = resFields.length > 0 ? '' : 'none';
+  }
+
+  // 变量追踪
+  const varFields = sections.variables?.fields || [];
+  if (dom.varsGrid) {
+    dom.varsGrid.innerHTML = varFields.map(f =>
+      `<div class="status-item var-item" data-field="${f.id}">
+        <span class="status-label">${f.icon || ''} ${f.label}</span>
+        <span class="status-value" id="field-${f.id}">—</span>
+      </div>`
+    ).join('');
+    dom.varsGrid.classList.remove('collapsed');
+  }
+
+  // 更新变量追踪标题
+  if (dom.varsToggle && sections.variables?.label) {
+    dom.varsToggle.textContent = sections.variables.label + ' ▼';
+  }
+}
+
+// ── 动态更新所有字段值 ──
+function updateAllDynamicFields(fieldValues, template) {
+  const sections = template?.outputSections || FALLBACK_TEMPLATE.outputSections;
+  const allFields = [];
+  for (const [sectionKey, section] of Object.entries(sections)) {
+    const fields = section.fields;
+    if (!fields || !Array.isArray(fields)) continue;
+    for (const f of fields) allFields.push(f);
+  }
+
+  for (const field of allFields) {
+    const el = document.getElementById('field-' + field.id);
+    if (!el) continue;
+    const value = fieldValues[field.id] || '—';
+    el.textContent = value;
+
+    // 数值高亮
+    el.className = 'status-value';
+    if (field.type === 'number') {
+      const num = parseInt(value);
+      if (!isNaN(num)) {
+        if (num >= 70) el.classList.add('pressure-danger');
+        else if (num >= 40) el.classList.add('pressure-warn');
+        else el.classList.add('pressure-safe');
+      }
+    }
+  }
+}
+
+// ── 从 fieldHistory 恢复字段显示 ──
+function updateAllDynamicFieldsFromHistory() {
+  const tpl = getActiveTemplate();
+  const fieldValues = {};
+  for (const [fieldId, hist] of Object.entries(gameState.fieldHistory || {})) {
+    fieldValues[fieldId] = hist.currentText || (hist.current != null ? String(hist.current) : '—');
+  }
+  updateAllDynamicFields(fieldValues, tpl);
+}
+
+// ── 场景图片切换 ──
+function switchSceneImage(sceneType, template) {
+  // 先检查自定义图片
+  const customImages = JSON.parse(localStorage.getItem('xixi_custom_images') || '{}');
+  if (customImages[sceneType]) {
+    const img = dom.characterImage;
+    if (!img) return;
+    if (img.src === customImages[sceneType]) return;
+    img.classList.add('img-fade-out');
+    setTimeout(() => {
+      img.src = customImages[sceneType];
+      img.classList.remove('img-fade-out');
+      img.classList.add('img-fade-in');
+      setTimeout(() => img.classList.remove('img-fade-in'), 500);
+    }, 200);
+    if (sceneType) dom.imageCaption.textContent = '[' + sceneType + '] 📁';
+    return;
+  }
+
+  // 默认图片逻辑
+  const img = dom.characterImage;
+  if (!img) return;
+  const images = template?.sceneImages || FALLBACK_TEMPLATE.sceneImages;
+  const defaultImg = template?.defaultSceneImage || '日常.png';
+  const filename = images[sceneType] || defaultImg;
+  if (img.src && img.src.endsWith(filename)) return;
+  img.classList.add('img-fade-out');
+  setTimeout(() => {
+    img.src = filename;
+    img.classList.remove('img-fade-out');
+    img.classList.add('img-fade-in');
+    setTimeout(() => img.classList.remove('img-fade-in'), 500);
+  }, 200);
+  if (sceneType) {
+    const tplName = template?.name || '';
+    dom.imageCaption.textContent = tplName ? tplName + ' [' + sceneType + ']' : '[' + sceneType + ']';
+  }
+}
+
+// ── 应用主题 ──
+function applyTheme(themeName) {
+  gameState._currentTheme = themeName;
+  const existing = $('#theme-style');
+  if (existing) existing.remove();
+
+  if (!themeName || themeName === 'dark') return; // dark 是基础样式
+
+  const link = document.createElement('link');
+  link.id = 'theme-style';
+  link.rel = 'stylesheet';
+  link.href = 'themes/theme-' + themeName + '.css';
+  document.head.appendChild(link);
+}
+
+// ── 序章弹窗 ──
+function showPrologue(template) {
+  const icon = $('#prologue-icon');
+  const title = $('#prologue-title');
+  const body = $('#prologue-body');
+
+  const world = template.worldSetting || '';
+  const protag = template.protagonist || '';
+  const conflict = template.conflict || '';
+  const styleList = template.styles || [];
+  const desc = template.description || '';
+
+  function renderText(text) {
+    if (!text) return '';
+    const escaped = escapeHtml(text);
+    const paragraphs = escaped.split('\n\n').filter(p => p.trim());
+    return paragraphs.map(p =>
+      '<p class="prologue-section-content">' + p.replace(/\n/g, '<br>') + '</p>'
+    ).join('');
+  }
+
+  if (!world && !protag && !conflict) {
+    body.innerHTML = '<p class="prologue-section-content">' + escapeHtml(desc || '一段未知的冒险即将展开。') + '</p>';
+  } else {
+    let html = '';
+    if (world) {
+      html += '<div class="prologue-section-title">🌍 世界观</div>';
+      html += renderText(world);
+    }
+    if (protag) {
+      html += '<div class="prologue-section-title">👤 主角设定</div>';
+      html += renderText(protag);
+    }
+    if (conflict) {
+      html += '<div class="prologue-section-title">⚔ 核心冲突</div>';
+      html += renderText(conflict);
+    }
+    if (styleList.length > 0) {
+      html += '<div class="prologue-styles-bar">';
+      html += styleList.map(s => '<span class="prologue-style-tag">' + escapeHtml(s) + '</span>').join('');
+      html += '</div>';
+    }
+    body.innerHTML = html;
+  }
+
+  icon.textContent = '📖';
+  title.textContent = template.name || '序章';
+
+  const overlay = $('#prologue-overlay');
+  if (overlay) overlay.classList.add('active');
+}
+
+function closePrologue() {
+  const overlay = $('#prologue-overlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+// ── 存档选择器 ──
+function showSaveSelector() {
+  if (gameState.gameStarted) saveGameState();
+
+  const ov = $('#save-selector-overlay');
+  if (ov) ov.classList.add('active');
+  const setOv = $('#settings-overlay');
+  if (setOv) setOv.classList.remove('active');
+  const csOv = $('#create-save-overlay');
+  if (csOv) csOv.classList.remove('active');
+
+  initSaveTabs();
+  renderMySavesPanel();
+}
+
+function renderMySavesPanel() {
+  const saves = loadSaves();
+  const grid = $('#save-grid');
+  if (!grid) return;
+
+  grid.innerHTML = saves.map(s => {
+    const info = getSaveInfo(s.id);
+    const hasProgress = info && info.roundNumber > 0;
+    const dateStr = info?.lastPlayed ? new Date(info.lastPlayed).toLocaleDateString('zh-CN') : '';
+    const goalLine = s.conflict ? s.conflict.replace(/\n.*/s, '').substring(0, 40) : (s.desc || '').substring(0, 40);
+    const protagLine = s.protagonist ? s.protagonist.replace(/\n.*/s, '').substring(0, 30) : '';
+    return `
+    <div class="save-card" data-save-id="${s.id}">
+      <div class="save-card-header">
+        <span class="save-card-icon">${s.icon}</span>
+        <span class="save-card-name">${escapeHtml(s.name)}</span>
+      </div>
+      ${protagLine ? `<div class="save-card-protag">👤 ${escapeHtml(protagLine)}</div>` : ''}
+      <div class="save-card-goal">🎯 ${escapeHtml(goalLine || '新的冒险即将展开')}</div>
+      <div class="save-card-meta">
+        <span>${s.type === 'default' ? '📦 默认' : '✏ 自定义'}</span>
+        ${hasProgress ? `<span>📝 第${info.roundNumber}回合</span><span>🕐 ${dateStr}</span>` : '<span>🆕 新存档</span>'}
+      </div>
+      ${hasProgress
+        ? `<button class="btn btn-primary save-card-btn save-continue-btn" data-save-id="${s.id}">▶ 继续</button>
+           <button class="save-card-delete save-clear-btn" data-save-id="${s.id}" style="position:absolute;bottom:8px;right:8px;font-size:10px;opacity:.4;" title="清除所有存档槽位">🗑 清档</button>
+           <button class="btn btn-secondary save-card-btn save-new-btn" data-save-id="${s.id}" style="margin-top:4px;">🔄 新游戏</button>`
+        : `<button class="btn btn-primary save-card-btn save-new-btn" data-save-id="${s.id}">▶ 开始</button>`}
+      ${s.type !== 'default' ? `<button class="save-card-upload tavern-upload-btn" data-save-id="${s.id}">☁ 分享到酒馆</button>
+           <button class="save-card-delete save-del-btn" data-save-id="${s.id}">✕</button>` : ''}
+    </div>`;
+  }).join('');
+
+  // 绑定继续按钮
+  grid.querySelectorAll('.save-continue-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); continueGame(btn.dataset.saveId); });
+  });
+  // 绑定新游戏/开始按钮
+  grid.querySelectorAll('.save-new-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); selectSave(btn.dataset.saveId); });
+  });
+  // 绑定删除模板按钮
+  grid.querySelectorAll('.save-del-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); deleteSave(btn.dataset.saveId); });
+  });
+  // 绑定清档按钮
+  grid.querySelectorAll('.save-clear-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); clearAllSaves(btn.dataset.saveId); });
+  });
+  // 绑定上传按钮
+  grid.querySelectorAll('.tavern-upload-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); uploadToTavern(btn.dataset.saveId); });
+  });
+
+  // 底部按钮
+  const footer = document.querySelector('#panel-my-saves .save-selector-footer');
+  if (footer) {
+    if (gameState.gameStarted) {
+      footer.innerHTML = '<button id="btn-return-game" class="btn btn-secondary">↩ 返回游戏</button> <button id="btn-create-save" class="btn btn-primary">＋ 创建新存档</button>';
+    } else {
+      footer.innerHTML = '<button id="btn-create-save" class="btn btn-primary">＋ 创建新存档</button>';
+    }
+    const createBtn = document.querySelector('#btn-create-save');
+    if (createBtn) createBtn.addEventListener('click', openCreateSave);
+    const returnBtn = document.querySelector('#btn-return-game');
+    if (returnBtn) returnBtn.addEventListener('click', () => {
+      const ov = $('#save-selector-overlay');
+      if (ov) ov.classList.remove('active');
+    });
+  }
+}
+
+function initSaveTabs() {
+  // 重置标签
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const myTab = document.querySelector('.tab-btn[data-tab="my-saves"]');
+  if (myTab) myTab.classList.add('active');
+
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const myPanel = document.querySelector('#panel-my-saves');
+  if (myPanel) myPanel.classList.add('active');
+
+  if (window._tabsBound) return;
+  window._tabsBound = true;
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+      if (tab === 'my-saves') {
+        const panel = document.querySelector('#panel-my-saves');
+        if (panel) panel.classList.add('active');
+      } else if (tab === 'tavern') {
+        const panel = document.querySelector('#panel-tavern');
+        if (panel) panel.classList.add('active');
+        renderTavernPanel();
+      }
+    });
+  });
+
+  // 刷新酒馆按钮
+  const refreshBtn = document.querySelector('#btn-refresh-tavern');
+  if (refreshBtn) refreshBtn.addEventListener('click', function() { renderTavernPanel(); });
+  const si = document.querySelector('#tavern-search');
+  if (si) si.addEventListener('input', function() { renderTavernPanel(); });
+  // 管理员按钮
+  const adminBtn = document.querySelector('#btn-admin-login');
+  if (adminBtn) {
+    adminBtn.addEventListener('click', () => {
+      if (isTavernAdmin) adminLogout(); else adminLogin();
+    });
+    adminBtn.title = isTavernAdmin ? '退出管理员' : '管理员登录';
+  }
+}
+
+// ── 选择存档开始新游戏 ──
+async function selectSave(saveId) {
+  try {
+    const ov = $('#save-selector-overlay');
+    if (ov) ov.classList.remove('active');
+
+    let template;
+    if (saveId === 'surongrong') {
+      template = await loadTemplate('surongrong');
+    } else {
+      const saves = loadSaves();
+      const save = saves.find(s => s.id === saveId);
+      template = save?.template || null;
+    }
+    if (!template) { console.error('Template not found for save:', saveId); return; }
+
+    // 深克隆保存原始模板（用于恢复默认）
+    gameState._originalTemplate = JSON.parse(JSON.stringify(template));
+
+    // 加载编辑版模板
+    const editKey = 'xixi_edited_template_' + saveId;
+    const ej = localStorage.getItem(editKey);
+    if (ej) {
+      try {
+        const ed = JSON.parse(ej);
+        template.outputSections = ed.outputSections || template.outputSections;
+        template.achievements = ed.achievements || template.achievements;
+        template.hiddenAchievements = ed.hiddenAchievements || template.hiddenAchievements;
+        template.promptBody = ed.promptBody || template.promptBody;
+      } catch (e) { /* corrupt */ }
+    }
+
+    localStorage.removeItem(getSaveKey(saveId)); // 清除旧存档
+    gameState.activeTemplate = template;
+    gameState.activeSaveId = saveId;
+    localStorage.setItem('xixi_last_save_id', saveId);
+    const theme = localStorage.getItem('xixi_theme_' + saveId) || template.theme || 'dark';
+    applyTheme(theme);
+    refreshSystemPrompt();
+    renderStatusContainers(template);
+    localStorage.setItem('xixi_active_template_id', saveId);
+    showPrologue(template);
+  } catch (e) {
+    console.error('selectSave error:', e);
+  }
+}
+
+console.log('📦 ui.js 已加载');

@@ -50,6 +50,8 @@ html, body {
   align-items: center;
   backdrop-filter: blur(6px);
 }
+/* 对话框必须高于所有其他弹窗（含成就面板） */
+#dialog-overlay { z-index: 2100; }
 .overlay.active { display: flex; }
 
 .modal {

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* https://api.deepseek.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* https://api.deepseek.com;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="苏蓉蓉">
   <meta name="theme-color" content="#0a0a12">
@@ -76,7 +76,7 @@
       <div class="tab-panel" id="panel-tavern">
         <p class="settings-hint">🍻 浏览其他玩家分享的故事设定，下载导入即可游玩。</p>
         <div style="margin-bottom:10px;">
-          <input id="tavern-search" placeholder="🔍 搜索名称、主角、世界观..." style="width:100%;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;font-family:inherit;">
+          <input id="tavern-search" placeholder="🔍 搜索名称、主角、世界观..." autocomplete="off" style="width:100%;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;font-family:inherit;">
         </div>
         <div class="save-grid" id="tavern-grid">
           <div class="tavern-loading">加载中...</div>
@@ -99,7 +99,7 @@
       <div class="create-save-form">
         <div class="form-row">
           <label>存档名称 <span class="required">*</span></label>
-          <input id="new-save-name" placeholder="例如：修仙·宗门争锋" maxlength="30">
+          <input id="new-save-name" placeholder="例如：修仙·宗门争锋" maxlength="30" autocomplete="off">
         </div>
         <div class="form-row">
           <label>世界观背景 <span class="required">*</span></label>
@@ -111,7 +111,7 @@
         </div>
         <div class="form-row">
           <label>核心冲突</label>
-          <input id="new-save-conflict" placeholder="例如：洗清冤屈 / 堕入魔道 / 复仇" maxlength="80">
+          <input id="new-save-conflict" placeholder="例如：洗清冤屈 / 堕入魔道 / 复仇" maxlength="80" autocomplete="off">
         </div>
         <div class="form-row">
           <label>风格倾向</label>
@@ -161,7 +161,7 @@
       <div style="margin-bottom:16px;">
         <label style="font-size:13px;color:var(--text-dim);">🔑 DeepSeek API Key</label>
         <div style="display:flex;gap:8px;margin-top:4px;">
-          <input id="api-key-input" type="password" placeholder="sk-..." style="flex:1;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;">
+          <input id="api-key-input" type="password" placeholder="sk-..." autocomplete="off" style="flex:1;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;">
           <button id="btn-save-apikey" class="btn btn-secondary" style="flex-shrink:0;">💾 保存</button>
         </div>
         <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">在 platform.deepseek.com 获取。Key 仅保存在本地浏览器。</p>
@@ -231,7 +231,7 @@
           <div class="ai-chat-msg system-msg">输入指令实时调整故事方向、修正错误或修改规则。</div>
         </div>
         <div class="ai-chat-input-row">
-          <input id="ai-chat-input" placeholder="输入指令..." maxlength="200">
+          <input id="ai-chat-input" placeholder="输入指令..." maxlength="200" autocomplete="off">
           <button id="btn-ai-send" class="btn btn-small">发送</button>
           <button id="btn-ai-clear" class="btn btn-ghost btn-tiny" title="清除所有指令">清除</button>
           <button id="btn-ai-save-prompt" class="btn btn-ghost btn-tiny" title="将当前所有指令合并到提示词">📝 合并</button>
@@ -347,7 +347,7 @@
     <div class="modal dialog-modal">
       <p id="dialog-message"></p>
       <div id="dialog-input-row" style="display:none;margin:10px 0;">
-        <input id="dialog-input" style="width:100%;padding:8px 12px;font-size:14px;">
+        <input id="dialog-input" autocomplete="off" style="width:100%;padding:8px 12px;font-size:14px;">
       </div>
       <div class="dialog-buttons" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
         <button id="dialog-cancel" class="btn btn-ghost">取消</button>
@@ -368,7 +368,7 @@
         <div class="help-section"><h3>⚙️ 设置</h3><p>设置页可编辑<b>提示词正文</b>（仅promptBody，不含格式模板）。<b>字段编辑器</b>可增删改字段（标签/图标/类型/格式提示），支持<b>emoji下拉选择</b>和<b>自动生成英文ID</b>。<b>主题选择器</b>切换11套主题。<b>场景图片管理</b>可为每个场景类型替换本地图片。修改后点<b>💾保存</b>生效，新游戏和继续游戏均保留。</p></div>
         <div class="help-section"><h3>📂 存档与回溯</h3><p><b>自动存档</b>到槽位0。点<b>💾存档</b>手动保存到额外槽位（最多10个）。继续游戏时多槽位弹出选择框，输入<b>槽位号</b>读取，输入<b>删X</b>删除指定槽位。点<b>↩️撤销</b>回退上一回合。点<b>🗑清档</b>清除所有进度（保留模板和成就），点<b>✕</b>删除整个存档模板。</p></div>
         <div class="help-section"><h3>📜 历程与导出</h3><p>点<b>📜历程</b>打开完整回顾弹窗，含每回合选择、结算、现状和资源数值。点<b>📄导出</b>下载整局故事为txt文件（含选择/结算/现状/每回合资源变动）。</p></div>
-        <div class="help-section"><h3>🍻 酒馆</h3><p>在存档卡点<b>☁分享到酒馆</b>发布。酒馆支持<b>🔍搜索</b>（名称/主角/世界观/风格/作者）。管理员（密码<b>admin123</b>）可删除不当内容、<b>📥备份</b>下载全部酒馆数据、<b>📤恢复</b>上传备份。</p></div>
+        <div class="help-section"><h3>🍻 酒馆</h3><p>在存档卡点<b>☁分享到酒馆</b>发布。酒馆支持<b>🔍搜索</b>（名称/主角/世界观/风格/作者）。管理员（🔑登录后）可删除不当内容、<b>📥备份</b>下载全部酒馆数据、<b>📤恢复</b>上传备份。</p></div>
         <div class="help-section"><h3>🆕 创建存档</h3><p>点<b>＋创建新存档</b>，填写设定。选择<b>风格标签</b>和<b>游戏长度</b>（短篇/标准/长篇/沉浸，决定结局回合门槛）。AI自动生成提示词、字段、成就、场景类型。生成后可<b>手动编辑</b>任何内容——字段、成就、提示词都可后续修改。</p></div>
         <div class="help-section"><h3>⌨ 快捷键</h3><p><b>1-4</b>选择选项。弹窗打开时自动禁用快捷键防误操作。</p></div>
       </div>
@@ -406,7 +406,19 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- JS 模块（按依赖顺序加载） -->
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/dialogs.js"></script>
+  <script src="js/saves.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/achievements.js"></script>
+  <script src="js/prompts.js"></script>
+  <script src="js/templates.js"></script>
+  <script src="js/tavern.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/init.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
