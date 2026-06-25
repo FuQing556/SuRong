@@ -127,9 +127,6 @@ function startAmbient(themeName) {
       case 'xianxia': {
         // 五声音阶随机风铃 — C D E G A
         const penta = [523, 587, 659, 784, 880];
-        setInterval(() => {
-          if (!_audioOn || !document.hidden) return;
-        }, 4000);
         const note = () => {
           if (!_audioOn) return;
           const o = ctx.createOscillator(); o.type = 'sine';

@@ -179,6 +179,7 @@ async function sendMessage(userContent) {
   // 创建可取消的请求控制器（60秒超时 + 手动取消）
   _abortController = new AbortController();
   const timeoutId = setTimeout(() => _abortController.abort(), 60000);
+  let liveEl = null;  // 流式预览元素（catch中需要清理）
 
   try {
     // AI 实时指令注入（先剥离已有指令块，防止重试时重复叠加）
@@ -233,7 +234,7 @@ async function sendMessage(userContent) {
     let streamBuffer = '';
     let fullContent = '';
     // 创建实时预览元素
-    const liveEl = document.createElement('div');
+    liveEl = document.createElement('div');
     liveEl.className = 'story-entry story-fade-in';
     liveEl.style.cssText = 'opacity:.85;white-space:pre-wrap;';
     dom.storyContent.appendChild(liveEl);
@@ -275,6 +276,8 @@ async function sendMessage(userContent) {
 
   } catch (err) {
     clearTimeout(timeoutId);
+    // 清理流式预览元素（如果还在DOM中）
+    if (liveEl && liveEl.parentNode) liveEl.remove();
     console.error('请求失败:', err);
     if (err.name === 'AbortError') {
       // 区分手动取消和超时——手动取消不显示错误
