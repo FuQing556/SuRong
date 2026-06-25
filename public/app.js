@@ -203,12 +203,13 @@ function getActiveTemplate() {
 }
 
 // ── 从 outputSections 生成系统提示词格式段 ──
-function generateOutputFormat(sections) {
+function generateOutputFormat(sections, sceneTypes) {
   if (!sections || Object.keys(sections).length === 0) return '';
   const lines = [];
   lines.push('【强制输出格式】');
   lines.push('你每次回复，必须严格使用以下模板，不得添加、不得遗漏、不得发挥：');
-  lines.push('[场景类型：类型名] [事件大小：大/小]');
+  const sceneTypeList = (sceneTypes || []).join('、');
+  lines.push('[场景类型：' + sceneTypeList + ' — 只能从以上' + (sceneTypes?.length || 0) + '个类型中选择] [事件大小：大/小]');
   lines.push('上回合： [1-2句话，结算玩家上一回合选择的直接后果。做了什么、结果如何。这是因果结算，不写感受。]');
   lines.push('现状： [1-3句话，纯陈述。这是全新的场景。新的时间、新的地点、新的事件。不承接上回合的场景。]');
   lines.push('可选行动：');
@@ -239,7 +240,7 @@ function generateOutputFormat(sections) {
 // ── 构建完整系统提示词 ──
 function buildSystemPrompt(template) {
   if (!template) return gameState.originalPrompt || '';
-  const format = generateOutputFormat(template.outputSections);
+  const format = generateOutputFormat(template.outputSections, template.sceneTypes);
   const body = template.promptBody || '';
   // 格式放最前，铁律放最后——AI读到最后的就是最重要的
   return format + '\n' + body + '\n\n════════════════════════\n【最终提醒·优先级最高】\n你必须在本次回复的末尾，原样输出以上所有状态字段及其当前数值。\n格式：字段名：值 | 字段名：值\n每个字段都必须有具体数值或状态文本，不得写\"[状态]\"\"[数值]\"等占位符，不得省略任何一行。\n这是你最重要的职责，比剧情描写更优先。\n════════════════════════';
@@ -410,6 +411,7 @@ function bindEvents() {
   // AI 聊天
   $('#btn-ai-send').addEventListener('click', sendAiInstruction);
   $('#btn-ai-clear').addEventListener('click', clearAiInstructions);
+  $('#btn-ai-save-prompt').addEventListener('click', mergeInstructionsToPrompt);
   $('#ai-chat-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendAiInstruction();
   });
@@ -428,6 +430,10 @@ function bindEvents() {
   });
 
   $('#btn-settings').addEventListener('click', openSettings);
+  $('#btn-undo').addEventListener('click', undoLastRound);
+  $('#btn-export-story').addEventListener('click', exportStory);
+  $('#btn-manual-save').addEventListener('click', manualSave);
+  $('#btn-history').addEventListener('click', renderHistoryModal);
   $('#btn-close-settings').addEventListener('click', closeSettings);
   $('#btn-save-prompt').addEventListener('click', savePrompt);
   $('#btn-reload-prompt').addEventListener('click', reloadPrompt);
@@ -455,6 +461,8 @@ function bindEvents() {
     if (dom.saveSelectorOverlay?.classList.contains("active")) return;
     if (dom.createSaveOverlay?.classList.contains("active")) return;
     if (document.querySelector('#prologue-overlay')?.classList.contains("active")) return;
+    if (document.querySelector('#ending-overlay')?.classList.contains("active")) return;
+    if (document.querySelector('#help-overlay')?.classList.contains("active")) return;
     if (gameState.isLoading) return;
     const key = parseInt(e.key);
     if (key >= 1 && key <= 4 && gameState.currentOptions[key - 1]) {
@@ -524,7 +532,8 @@ async function startNewGame() {
   gameState.gameStarted = false;
   gameState.isLoading = false;
   // 重置旧存档引用
-  localStorage.removeItem(getSaveKey(gameState.activeSaveId || 'default'));
+  const tplIdCl = gameState.activeSaveId || "default"; localStorage.removeItem(getSaveKey(tplIdCl, 0));
+  gameState.fieldHistory = {}; gameState.achievementFlags = { gambitChosen: false, gambitSucceeded: false, gambitSuccessCount: 0, endingTriggered: false, endingType: "", counterAttack: false, tradeCompleted: false, choiceCounts: {}, responseMatches: {} };
 
   if (!dom.storyContent) { console.error('storyContent missing'); return; }
   dom.storyContent.innerHTML = '<div id="initial-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 0;gap:20px;"><p class="placeholder-text">命运之轮重新转动...</p></div>';
@@ -919,9 +928,9 @@ async function savePrompt() {
   try {
     await fetch('/api/prompt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
   } catch (e) { /* Vercel 上忽略 */ }
-  dom.settingsMsg.textContent = '✅ 提示词已保存！开始新游戏后生效。';
+  dom.settingsMsg.textContent = '✅ 提示词已保存！新游戏和继续游戏均生效。';
   dom.settingsMsg.style.color = 'var(--green)';
-  dom.promptLength.textContent = `字数: ${prompt.length} (本地版本)`;
+  dom.promptLength.textContent = '字数: ' + prompt.length;
 }
 
 async function reloadPrompt() {
@@ -1073,6 +1082,7 @@ function renderMySavesPanel() {
       </div>
       ${hasProgress
         ? `<button class="btn btn-primary save-card-btn save-continue-btn" data-save-id="${s.id}">▶ 继续</button>
+           <button class="save-card-delete save-clear-btn" data-save-id="${s.id}" style="position:absolute;bottom:8px;right:8px;font-size:10px;opacity:.4;" title="清除所有存档槽位">🗑 清档</button>
            <button class="btn btn-secondary save-card-btn save-new-btn" data-save-id="${s.id}" style="margin-top:4px;">🔄 新游戏</button>`
         : `<button class="btn btn-primary save-card-btn save-new-btn" data-save-id="${s.id}">▶ 开始</button>`}
       ${s.type !== 'default' ? `<button class="save-card-upload tavern-upload-btn" data-save-id="${s.id}">☁ 分享到酒馆</button>
@@ -1807,7 +1817,8 @@ const origOpenSettings = openSettings;
 openSettings = async function() {
   await origOpenSettings();
   // 加载编辑过的模板
-  const savedTpl = localStorage.getItem('xixi_edited_template');
+  const editKeyO = 'xixi_edited_template_' + (gameState.activeSaveId || 'default');
+  const savedTpl = localStorage.getItem(editKeyO);
   if (savedTpl) {
     try {
       gameState.activeTemplate = JSON.parse(savedTpl);
@@ -1932,3 +1943,19 @@ window.addEventListener('unhandledrejection', (e) => {
 init();
 console.log('🎮 模板驱动互动叙事游戏前端已就绪');
 console.log('   点击"开始游戏"按钮开始');
+
+function escapeHtml(str) { const div = document.createElement("div"); div.textContent = str; return div.innerHTML; }
+function updateFieldHistoryFromParsed(parsed) { if (!parsed.fields) return; for (const [fieldId, value] of Object.entries(parsed.fields)) { if (!gameState.fieldHistory[fieldId]) gameState.fieldHistory[fieldId] = {}; const hist = gameState.fieldHistory[fieldId]; const num = parseInt(value); if (!isNaN(num)) { hist.current = num; hist.max = Math.max(hist.max || 0, num); } else { hist.currentText = value; } } }
+function updateAllDynamicFieldsFromHistory() { const tpl = getActiveTemplate(); const fieldValues = {}; for (const [fieldId, hist] of Object.entries(gameState.fieldHistory || {})) { fieldValues[fieldId] = hist.currentText || (hist.current != null ? String(hist.current) : "—"); } updateAllDynamicFields(fieldValues, tpl); }
+function checkAchievementsFromState(parsed) { const tpl = getActiveTemplate(); const achievements = getAchievements(); if (!achievements || Object.keys(achievements).length === 0) return; updateFieldHistoryFromParsed(parsed); function findFieldId(lp) { const sections = tpl.outputSections || {}; for (const sec of Object.values(sections)) for (const f of (sec.fields||[])) if (f.label && f.label.includes(lp)) return f.id; for (const sec of Object.values(sections)) for (const f of (sec.fields||[])) if (f.id && f.id.toLowerCase().includes(lp.toLowerCase())) return f.id; const idMap = {"轮次":"round","回合":"round","压力":"stress","暴露":"exposure","好感":"favor","态度":"attitude","进度":"progress","情报":"intel"}; for (const [kw, tid] of Object.entries(idMap)) if (lp.includes(kw)) for (const sec of Object.values(sections)) for (const f of (sec.fields||[])) if (f.id && f.id.toLowerCase().includes(tid)) return f.id; return null; } function fieldVal(pattern, useMax) { const id = findFieldId(pattern); if (!id || !gameState.fieldHistory[id]) return 0; return useMax ? (gameState.fieldHistory[id].max||0) : (gameState.fieldHistory[id].current||0); } for (const [name, ach] of Object.entries(achievements)) { if (getUnlockedAchievements()[name]) continue; const desc = ach.desc || ""; let triggered = false; if (/结局/.test(desc) && !/未触发/.test(desc) && !/\d/.test(desc)) triggered = !!gameState.achievementFlags.endingTriggered; else if (/孤注/.test(desc)) triggered = !!gameState.achievementFlags.gambitSucceeded; else if (/反杀|设局/.test(desc)) triggered = !!gameState.achievementFlags.counterAttack; else if (/情报.*交易|情报.*交换/.test(desc)) triggered = !!gameState.achievementFlags.tradeCompleted; else { const nm = desc.match(/(\d+)/); const threshold = nm ? parseInt(nm[1]) : 70; const useMax = /曾达|最高/.test(desc); const hasGate = /未触发|未被|但未|且未/.test(desc); const allLabels = []; for (const sec of Object.values(tpl.outputSections||{})) for (const f of (sec.fields||[])) allLabels.push(f.label); allLabels.sort((a,b)=>b.length-a.length); let matched = null; for (const l of allLabels) if (desc.includes(l)) { matched = l; break; } if (matched) { const val = fieldVal(matched, useMax); triggered = val >= threshold; if (triggered && hasGate) triggered = !gameState.achievementFlags.endingTriggered; } } if (triggered) unlockAchievement(name); } checkHiddenAchievements(parsed); }
+function checkHiddenAchievements(parsed) { const tpl = getActiveTemplate(); const hidden = tpl.hiddenAchievements || {}; if (Object.keys(hidden).length === 0) return; function findFieldId(lp) { for (const sec of Object.values(tpl.outputSections||{})) for (const f of (sec.fields||[])) { if (f.label&&f.label.includes(lp)) return f.id; if (f.id&&f.id.toLowerCase().includes(lp.toLowerCase())) return f.id; } return null; } function fieldVal(lp,um) { const id=findFieldId(lp); if(!id||!gameState.fieldHistory[id]) return 0; return um?(gameState.fieldHistory[id].max||0):(gameState.fieldHistory[id].current||0); } for (const [name, ha] of Object.entries(hidden)) { if (getUnlockedAchievements()[name]) continue; const trigger = ha.trigger || {}; let triggered = false; switch (trigger.type) { case "choice": triggered = (gameState.achievementFlags.choiceCounts[trigger.pattern]||0) >= (trigger.count||1); break; case "gambit": triggered = gameState.achievementFlags.gambitSuccessCount >= (trigger.count||1); break; case "rounds_under": if (gameState.achievementFlags.endingTriggered) { const r = fieldVal("轮次"); triggered = r>0 && r<=(trigger.round||10); } break; case "field_zero": { const fid=findFieldId(trigger.fieldLabel||""); if(fid&&gameState.fieldHistory[fid]) triggered=(gameState.fieldHistory[fid].current||0)===0; } break; case "field_max_under": if(gameState.achievementFlags.endingTriggered){const v=fieldVal(trigger.fieldLabel||"",true); triggered=v>0&&v<=(trigger.threshold||50);} break; case "response_match": triggered=(gameState.achievementFlags.responseMatches[trigger.pattern]||0)>=(trigger.count||1); break; } if (triggered) unlockAchievement(name); } }
+function getAchievementProgress(name) { const tpl = getActiveTemplate(); const ach = getAchievements()[name]; if (!ach) return null; const desc = ach.desc || ""; function ffd(desc) { const all=[]; for(const sec of Object.values(tpl.outputSections||{})) for(const f of (sec.fields||[])) all.push(f.label); all.sort((a,b)=>b.length-a.length); for(const l of all) if(desc.includes(l)) return l; return null; } function fv(lp,um) { let id=null; for(const sec of Object.values(tpl.outputSections||{})) for(const f of (sec.fields||[])) if(f.label&&f.label.includes(lp)) id=f.id; if(!id||!gameState.fieldHistory[id]) return 0; return um?(gameState.fieldHistory[id].max||0):(gameState.fieldHistory[id].current||0); } if (/结局/.test(desc)&&!/未触发/.test(desc)&&!/\d/.test(desc)) return {current:gameState.achievementFlags.endingTriggered?1:0,target:1,text:"触发任一结局"}; if (/孤注/.test(desc)) return {current:gameState.achievementFlags.gambitSucceeded?1:0,target:1,text:"孤注一掷成功"}; if (/反杀|设局/.test(desc)) return {current:gameState.achievementFlags.counterAttack?1:0,target:1,text:desc}; const matched = ffd(desc); if (matched) { const nm=desc.match(/(\d+)/); const target=nm?parseInt(nm[1]):70; const useMax=/曾达|最高/.test(desc); const v=fv(matched,useMax); return {current:Math.min(v,target),target,text:matched+"达到"+target}; } const nm=desc.match(/(\d+)/); return {current:0,target:nm?parseInt(nm[1]):1,text:desc}; }
+function detectEnding(text) { const em = text.match(/【游戏结束[：:·]\s*(.+?)】/); if (em) { gameState.achievementFlags.endingTriggered = true; gameState.achievementFlags.endingType = em[1].trim(); return em[1].trim(); } return null; }
+function showEndingOverlay(endingType, parsed) { const tpl = getActiveTemplate(); const ei = {"精神崩溃":"💔","身份暴露":"🚨","成功撤离":"🏃","快速撤离":"💨","反向渗透":"👑","魂师大赛":"⚔"}; $("#ending-icon").textContent = ei[endingType] || "🎭"; $("#ending-title").textContent = "结局：" + endingType; $("#ending-narrative").textContent = (parsed.situation || parsed.raw || "故事到此结束。").substring(0, 600); const rn = gameState.fieldHistory["round"]?.current || gameState.fullHistory.filter(m=>m.role==="user").length; const uc = Object.keys(getUnlockedAchievements()).length; const ta = Object.keys(getAchievements()).length + Object.keys(tpl.hiddenAchievements||{}).length; let sh = "<div class=\"ending-stat\"><span class=\"ending-stat-label\">🔄 总回合数</span><span class=\"ending-stat-value\">"+rn+"</span></div>"; sh += "<div class=\"ending-stat\"><span class=\"ending-stat-label\">🏆 成就解锁</span><span class=\"ending-stat-value\">"+uc+"/"+ta+"</span></div>"; sh += "<div class=\"ending-stat\"><span class=\"ending-stat-label\">📋 模板</span><span class=\"ending-stat-value\">"+escapeHtml(tpl.name||"")+"</span></div>"; sh += "<div class=\"ending-stat\"><span class=\"ending-stat-label\">⚡ 结局类型</span><span class=\"ending-stat-value\">"+endingType+"</span></div>"; const sf = [...(tpl.outputSections?.statusTop?.fields||[]),...(tpl.outputSections?.taskLine?.fields||[])]; sf.forEach(f=>{if(f.type==="number"){const h=gameState.fieldHistory[f.id];sh+="<div class=\"ending-stat\"><span class=\"ending-stat-label\">"+(f.icon||"")+" "+f.label+"</span><span class=\"ending-stat-value\">"+(h?(h.current||h.currentText||"—"):"—")+"</span></div>";}}); $("#ending-stats").innerHTML = sh; $("#ending-overlay").classList.add("active"); const ea = Object.entries(getAchievements()).find(([n,a])=>/(结局|命运|崩坏|尘埃)/.test(a.desc||"")); if (ea) unlockAchievement(ea[0]); }
+function closeEndingOverlay() { $("#ending-overlay").classList.remove("active"); }
+function manualSave() { if (!gameState.gameStarted) return; const tplId = gameState.activeSaveId || getActiveTemplate().id || "default"; let slot = 1; while (slot < 10 && localStorage.getItem(getSaveKey(tplId, slot))) slot++; if (slot >= 10) slot = 1; saveGameState(slot); alert("💾 已存档到槽位 "+slot+"（第"+gameState.fullHistory.filter(m=>m.role==="user").length+"回合）"); }
+async function clearAllSaves(saveId) { const info = getSaveInfo(saveId); const count = info?.slotCount || 0; if (count === 0) { alert("没有存档可清除"); return; } if (!confirm("确定清除「"+saveId+"」的全部 "+count+" 个存档槽位？\n模板和成就保留，仅删除游戏进度。")) return; for (let s = 0; s < 10; s++) localStorage.removeItem(getSaveKey(saveId, s)); renderMySavesPanel(); }
+function exportStory() { if (gameState.fullHistory.length === 0) { alert("还没有游戏内容可导出"); return; } const tpl = getActiveTemplate(); let txt = "《"+tpl.name+"》· 游戏记录\n导出时间："+new Date().toLocaleString("zh-CN")+"\n"+"═".repeat(40)+"\n\n"; let roundN = 0; for (let i = 0; i < gameState.fullHistory.length; i++) { const msg = gameState.fullHistory[i]; if (msg.role === "user") { if(msg.content.startsWith("开始游戏")) continue; roundN++; const prevAi=i>0?gameState.fullHistory[i-1]:null; let chosen=msg.content.replace(/^选择\s*/,""); if(prevAi&&prevAi.role==="assistant"){const opts=parseAIResponse(prevAi.content,tpl).options;const idx=parseInt(chosen)-1;if(opts[idx])chosen=(opts[idx].action||chosen).replace(/^\d+[\.\、\s]+/,"");} txt += "\n"+"─".repeat(30)+"\n第"+roundN+"回合 · "+chosen+"\n"; } else { const parsed=parseAIResponse(msg.content,tpl); if(parsed.settlement&&parsed.settlement!=="游戏开始。"&&parsed.settlement!=="游戏开始") txt+="  结算："+parsed.settlement+"\n"; if(parsed.situation) txt+="  现状："+parsed.situation+"\n"; const nfs=Object.entries(parsed.fields).filter(([id,v])=>!isNaN(parseInt(v))&&v.trim()); if(nfs.length>0){const fl={};for(const sec of Object.values(tpl.outputSections||{}))for(const f of sec.fields||[])fl[f.id]=f.label;txt+="  📊 "+nfs.map(([id,v])=>fl[id]||id+":"+v).join(" | ")+"\n";} } } const blob=new Blob([txt],{type:"text/plain;charset=utf-8"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url;a.download=(tpl.name||"story")+"_"+new Date().toISOString().slice(0,10)+".txt";a.click();URL.revokeObjectURL(url); }
+async function undoLastRound() { if (gameState.isLoading) return; if (gameState.fullHistory.length < 2) { alert("没有可撤销的步骤"); return; } if (!confirm("撤销上一步操作，回到上一回合？")) return; const lui = gameState.fullHistory.map((m,i)=>m.role==="user"?i:-1).filter(i=>i>=0).pop(); if (lui===undefined||lui>=gameState.fullHistory.length-1) return; gameState.fullHistory.splice(lui); gameState.currentOptions=[]; gameState.isLoading=false; const lastAi=[...gameState.fullHistory].reverse().find(m=>m.role==="assistant"); if (lastAi) { const tpl=getActiveTemplate(); const parsed=parseAIResponse(lastAi.content,tpl); renderGameState(parsed,tpl); } else { dom.storyContent.innerHTML="<div id=\"initial-placeholder\"><p class=\"placeholder-text\">命运之轮重新转动...</p></div>"; updateOptionButtons([]); updateAllDynamicFields({},getActiveTemplate()); } saveGameState(); }
+function renderHistoryModal() { if (gameState.fullHistory.length===0) { alert("还没有游戏内容"); return; } const tpl=getActiveTemplate(); const body=$("#history-body"); if(!body) return; const fl={}; for(const sec of Object.values(tpl.outputSections||{})) for(const f of sec.fields||[]) fl[f.id]=f.label; let html="", rn=0; for(let i=0;i<gameState.fullHistory.length;i++){const msg=gameState.fullHistory[i]; if(msg.role==="user"){if(msg.content.startsWith("开始游戏"))continue;rn++;const pa=i>0?gameState.fullHistory[i-1]:null;let c=msg.content.replace(/^选择\s*/,"");if(pa&&pa.role==="assistant"){const opts=parseAIResponse(pa.content,tpl).options;const idx=parseInt(c)-1;if(opts[idx])c=(opts[idx].action||c).replace(/^\d+[\.\、\s]+/,"");}html+="<div class=\"hist-round\"><span class=\"hist-round-num\">第"+rn+"回合</span> <span class=\"hist-choice\">▸ "+escapeHtml(c)+"</span></div>";} else{const parsed=parseAIResponse(msg.content,tpl);if(parsed.settlement&&parsed.settlement!=="游戏开始。"&&parsed.settlement!=="游戏开始")html+="<div class=\"hist-settlement\">"+escapeHtml(parsed.settlement)+"</div>";if(parsed.situation)html+="<div class=\"hist-situation\">"+escapeHtml(parsed.situation)+"</div>";const ns=Object.entries(parsed.fields).filter(([id,v])=>!isNaN(parseInt(v))&&v.trim());if(ns.length>0)html+="<div class=\"hist-fields\">"+ns.map(([id,v])=>fl[id]||id+":<b>"+v+"</b>").join(" · ")+"</div>";}} body.innerHTML=html||"<p style=\"color:var(--text-dim);\">暂无记录</p>"; $("#history-overlay").classList.add("active"); }
+async function mergeInstructionsToPrompt() { const instructions = getAiInstructions(); if (instructions.length===0) { alert("没有可合并的指令。请先在AI聊天框中输入指令并发送。"); return; } if (!confirm("将 "+instructions.length+" 条AI指令合并到提示词末尾？\n合并后新游戏将包含这些规则。")) return; const tpl=getActiveTemplate(); const saveId=gameState.activeSaveId||tpl.id||"default"; const oldRules=[]; const oi=tpl.promptBody.indexOf("【玩家补充规则"); if(oi>=0){const os=tpl.promptBody.substring(oi);const ois=os.match(/\d+\.\s+(.+)/g);if(ois)ois.forEach(item=>oldRules.push(item.replace(/^\d+\.\s+/,"")));tpl.promptBody=tpl.promptBody.substring(0,oi).trimEnd();} const allRules=[...oldRules]; instructions.forEach(i=>{if(!allRules.includes(i.text))allRules.push(i.text);}); tpl.promptBody=tpl.promptBody+"\n\n【玩家补充规则——以下规则由玩家在游戏过程中添加，优先级高于原有规则】\n"+allRules.map((r,idx)=>(idx+1)+". "+r).join("\n"); gameState.activeTemplate.promptBody=tpl.promptBody; localStorage.setItem("xixi_edited_template_"+saveId, JSON.stringify(tpl)); refreshSystemPrompt(); clearAiInstructions(); alert("✅ 已将 "+instructions.length+" 条指令合并到提示词！\n新游戏和继续游戏均生效。"); }

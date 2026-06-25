@@ -75,6 +75,9 @@
       <!-- 酒馆面板 -->
       <div class="tab-panel" id="panel-tavern">
         <p class="settings-hint">🍻 浏览其他玩家分享的故事设定，下载导入即可游玩。</p>
+        <div style="margin-bottom:10px;">
+          <input id="tavern-search" placeholder="🔍 搜索名称、主角、世界观..." style="width:100%;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;font-family:inherit;">
+        </div>
         <div class="save-grid" id="tavern-grid">
           <div class="tavern-loading">加载中...</div>
         </div>
@@ -231,6 +234,7 @@
           <input id="ai-chat-input" placeholder="输入指令..." maxlength="200">
           <button id="btn-ai-send" class="btn btn-small">发送</button>
           <button id="btn-ai-clear" class="btn btn-ghost btn-tiny" title="清除所有指令">清除</button>
+          <button id="btn-ai-save-prompt" class="btn btn-ghost btn-tiny" title="将当前所有指令合并到提示词">📝 合并</button>
         </div>
       </div>
     </aside>
@@ -241,8 +245,13 @@
         <button id="btn-back-saves" class="btn btn-ghost btn-tiny" title="返回存档选择">📂 存档</button>
         <h1 class="game-title">互动叙事</h1>
         <div class="top-actions">
-          <button id="btn-achievements" class="btn btn-small" title="成就记录">🏆 成就</button>
-          <button id="btn-settings" class="btn btn-small" title="编辑提示词">⚙️ 设置</button>
+          <button id="btn-manual-save" class="btn btn-small" title="手动存档到额外槽位">💾 存档</button>
+          <button id="btn-history" class="btn btn-small" title="查看完整游戏历程">📜 历程</button>
+          <button id="btn-export-story" class="btn btn-small" title="导出故事为txt文件">📄 导出</button>
+          <button id="btn-undo" class="btn btn-small" title="撤销上一步操作">↩️ 撤销</button>
+          <button id="btn-achievements" class="btn btn-small" title="查看和编辑成就">🏆 成就</button>
+          <button id="btn-help" class="btn btn-small" title="查看完整使用说明">❓ 帮助</button>
+          <button id="btn-settings" class="btn btn-small" title="编辑提示词、字段和主题">⚙️ 设置</button>
         </div>
       </header>
 
@@ -274,6 +283,7 @@
 
       <!-- 选项按钮 -->
       <section id="options-container">
+        <div class="options-hint">💡 键盘 1-4 快速选择</div>
         <div class="options-grid">
           <button class="option-btn" data-index="0">
             <span class="option-num">1</span>
@@ -318,6 +328,72 @@
   <div id="achievement-toast" class="achievement-toast hidden">
     <span class="ach-toast-icon">🏆</span>
     <span id="ach-toast-text"></span>
+  </div>
+
+  <!-- 历程回顾弹窗 -->
+  <div id="history-overlay" class="overlay">
+    <div class="modal history-modal">
+      <h2>📜 历程回顾</h2>
+      <div class="history-body" id="history-body">
+        <!-- 动态填充 -->
+      </div>
+      <br>
+      <button id="btn-close-history" class="btn btn-secondary">关闭</button>
+    </div>
+  </div>
+
+  <!-- 自定义对话框（替代原生prompt/confirm/alert） -->
+  <div id="dialog-overlay" class="overlay">
+    <div class="modal dialog-modal">
+      <p id="dialog-message"></p>
+      <div id="dialog-input-row" style="display:none;margin:10px 0;">
+        <input id="dialog-input" style="width:100%;padding:8px 12px;font-size:14px;">
+      </div>
+      <div class="dialog-buttons" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+        <button id="dialog-cancel" class="btn btn-ghost">取消</button>
+        <button id="dialog-ok" class="btn btn-primary">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 帮助弹窗 -->
+  <div id="help-overlay" class="overlay">
+    <div class="modal help-modal">
+      <h2>❓ 使用说明</h2>
+      <div class="help-body">
+        <div class="help-section"><h3>🎮 基础玩法</h3><p>选择一个存档开始游戏。AI每回合呈现场景和<b>4个选项</b>。<b>点击选项</b>或按<b>键盘1-4</b>选择。你的选择影响故事走向、角色关系和资源数值。故事框<b>累积显示</b>所有回合（最多20回合），可往上翻。</p></div>
+        <div class="help-section"><h3>📊 状态面板</h3><p>底部显示<b>生命线</b>（压力/风险）、<b>资源</b>（消耗品）、<b>关系</b>（NPC好感度）。<b>点击数值</b>可手动修改。颜色：<span style="color:#3fb950;">绿安全</span>/<span style="color:#f0c040;">黄警告</span>/<span style="color:#f85149;">红危险</span>。<b>资源不足</b>的选项自动灰色禁用，不可点击。</p></div>
+        <div class="help-section"><h3>💬 实时调整AI</h3><p>左侧输入框给AI发指令：<i>"增加笑红尘出场""降低难度"</i>。下回合生效。满意后点<b>📝合并</b>将指令写入提示词末尾【玩家补充规则】段。重复合并会<b>累加保留</b>旧指令（自动去重）。新游戏和继续游戏均生效。</p></div>
+        <div class="help-section"><h3>🏆 成就系统</h3><p><b>可见成就</b>显示进度条，数值达标自动解锁弹出提示。<b>隐藏成就</b>（❓）条件未知，达成时惊喜弹出。悬停成就出现<b>✏️编辑</b>（改名/图标/描述）和<b>✕删除</b>。底部可<b>＋添加</b>可见或隐藏成就，可<b>📦另存为新存档</b>导出当前模板。</p></div>
+        <div class="help-section"><h3>⚙️ 设置</h3><p>设置页可编辑<b>提示词正文</b>（仅promptBody，不含格式模板）。<b>字段编辑器</b>可增删改字段（标签/图标/类型/格式提示），支持<b>emoji下拉选择</b>和<b>自动生成英文ID</b>。<b>主题选择器</b>切换11套主题。<b>场景图片管理</b>可为每个场景类型替换本地图片。修改后点<b>💾保存</b>生效，新游戏和继续游戏均保留。</p></div>
+        <div class="help-section"><h3>📂 存档与回溯</h3><p><b>自动存档</b>到槽位0。点<b>💾存档</b>手动保存到额外槽位（最多10个）。继续游戏时多槽位弹出选择框，输入<b>槽位号</b>读取，输入<b>删X</b>删除指定槽位。点<b>↩️撤销</b>回退上一回合。点<b>🗑清档</b>清除所有进度（保留模板和成就），点<b>✕</b>删除整个存档模板。</p></div>
+        <div class="help-section"><h3>📜 历程与导出</h3><p>点<b>📜历程</b>打开完整回顾弹窗，含每回合选择、结算、现状和资源数值。点<b>📄导出</b>下载整局故事为txt文件（含选择/结算/现状/每回合资源变动）。</p></div>
+        <div class="help-section"><h3>🍻 酒馆</h3><p>在存档卡点<b>☁分享到酒馆</b>发布。酒馆支持<b>🔍搜索</b>（名称/主角/世界观/风格/作者）。管理员（密码<b>admin123</b>）可删除不当内容、<b>📥备份</b>下载全部酒馆数据、<b>📤恢复</b>上传备份。</p></div>
+        <div class="help-section"><h3>🆕 创建存档</h3><p>点<b>＋创建新存档</b>，填写设定。选择<b>风格标签</b>和<b>游戏长度</b>（短篇/标准/长篇/沉浸，决定结局回合门槛）。AI自动生成提示词、字段、成就、场景类型。生成后可<b>手动编辑</b>任何内容——字段、成就、提示词都可后续修改。</p></div>
+        <div class="help-section"><h3>⌨ 快捷键</h3><p><b>1-4</b>选择选项。弹窗打开时自动禁用快捷键防误操作。</p></div>
+      </div>
+      <br>
+      <button id="btn-close-help" class="btn btn-secondary">关闭</button>
+    </div>
+  </div>
+
+  <!-- 结局弹窗 -->
+  <div id="ending-overlay" class="overlay">
+    <div class="modal ending-modal">
+      <div class="ending-header">
+        <span class="ending-icon" id="ending-icon">🎭</span>
+        <h2 id="ending-title">结局</h2>
+      </div>
+      <div class="ending-body" id="ending-body">
+        <p id="ending-narrative"></p>
+        <div class="ending-stats" id="ending-stats"></div>
+      </div>
+      <div class="ending-footer">
+        <button id="btn-ending-restart" class="btn btn-primary">🔄 重新开始</button>
+        <button id="btn-ending-saves" class="btn btn-secondary">📂 返回存档</button>
+        <button id="btn-ending-continue" class="btn btn-ghost">↩ 继续游戏</button>
+      </div>
+    </div>
   </div>
 
   <!-- 成就面板 -->

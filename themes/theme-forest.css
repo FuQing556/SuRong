@@ -1,10 +1,38 @@
-/* 🌿 森林 — 有机圆角、衬线体、自然呼吸感 */
-:root{--bg:#0d140d;--bg-panel:#111a11;--bg-card:#182418;--bg-hover:#1e3020;--border:#263826;--border-focus:#4caf50;--text:#c0d0c0;--text-dim:#5a7a5a;--text-bright:#e0f0e0;--gold:#8bc34a;--gold-dim:#4a7030;--purple:#7cb342;--red:#e57373;--green:#66bb6a;--option-1:#558b2f;--option-2:#33691e;--option-3:#1b5e20;--option-4:#bf5a3a;--radius:10px}
-body{font-family:Georgia,'Times New Roman',serif}
-.game-title{font-family:Georgia,serif;font-style:italic;letter-spacing:4px;color:var(--gold)}
-.option-btn{border-radius:20px 8px 20px 8px;border-left:4px solid var(--gold);transition:all .3s}
-.option-btn:hover{border-left-width:8px;background:var(--bg-hover)}
-.image-frame{border-radius:50% 50% 10px 10px;border:3px solid var(--gold-dim)}
-.status-item{border-radius:20px 8px 20px 8px;border-left:2px solid var(--gold-dim)}
-.overlay-panel{border-radius:20px 8px 20px 8px}
-.settlement-box{border-left:4px solid var(--gold)}
+/* 🌿 森林 — 高对比度自然色、有机圆角 */
+:root {
+  --bg:#0a1a0a;--bg-panel:#0f200f;--bg-card:#152815;--bg-hover:#1c351c;
+  --border:#2a4a2a;--border-focus:#5cb85c;
+  --text:#d8ecd8;--text-dim:#80a080;--text-bright:#f0fff0;
+  --gold:#7ccd7c;--gold-dim:#4a8040;--purple:#5cb85c;
+  --red:#e57373;--green:#66bb6a;
+  --option-1:#3a7d3a;--option-2:#2d6b2d;--option-3:#1f5a1f;--option-4:#8b5e3c;
+  --radius:12px;--shadow:0 4px 24px rgba(0,30,0,.5);
+}
+body{font-family:Georgia,'Times New Roman','Microsoft YaHei',serif}
+.game-title{font-family:Georgia,serif;letter-spacing:4px;color:var(--gold);text-shadow:0 0 12px rgba(124,205,124,.2)}
+/* 卡片与面板 */
+.option-btn{border-radius:20px 8px 20px 8px;border-left:3px solid var(--gold);transition:all .3s}
+.option-btn:hover{border-left-width:8px;background:var(--bg-hover);box-shadow:0 0 16px rgba(124,205,124,.1)}
+.image-frame{border-radius:50% 50% 12px 12px;border:2px solid var(--gold-dim)}
+.settlement-box,.save-card,.ach-item{border-left:3px solid var(--gold)}
+.overlay .modal{border-radius:18px;border:1px solid var(--border-focus)}
+/* 输入框 */
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 8px rgba(124,205,124,.15)}
+/* 标签与状态 */
+#story-box::before,.settlement-box::before{color:var(--gold);background:var(--bg-panel)}
+.story-round-badge{background:rgba(124,205,124,.12);color:var(--gold)}
+.status-value{color:var(--text-bright)}.status-label{color:var(--gold-dim)}
+.pressure-danger{color:#ff6666!important}.pressure-warn{color:#ffcc44!important}.pressure-safe{color:#7ccd7c!important}
+/* 按钮 */
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#0a1a0a;font-weight:600}
+.btn-primary:hover{background:#8de08d}
+.btn-ghost:hover{color:var(--text-bright)}
+.chip.selected{background:var(--gold);color:#0a1a0a;font-weight:600}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+/* 成就面板 */
+.ach-item{border-left:3px solid transparent}.ach-item:not(.locked){border-left-color:var(--gold)}
+.ach-progress-fill{background:var(--gold)}
+/* 滚动条 */
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-track{background:transparent}

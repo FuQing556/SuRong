@@ -1,11 +1,23 @@
-/* ⬜ 黑白 — 极细线条、无圆角、报纸感 */
-:root{--bg:#0a0a0a;--bg-panel:#0f0f0f;--bg-card:#161616;--bg-hover:#1e1e1e;--border:#2a2a2a;--border-focus:#888;--text:#aaa;--text-dim:#555;--text-bright:#ddd;--gold:#ccc;--gold-dim:#555;--purple:#888;--red:#c55;--green:#5a5;--option-1:#666;--option-2:#555;--option-3:#777;--option-4:#955;--radius:0px}
-body{font-family:'Courier New',monospace;font-size:13px;line-height:1.6}
-.game-title{font-weight:700;letter-spacing:3px;text-transform:uppercase;border-bottom:2px solid var(--text-dim);display:inline-block;padding-bottom:4px}
-.option-btn{border:1px solid var(--border);font-family:'Courier New',monospace;transition:all .15s}
+/* ⬜ 黑白 — 极简、灰阶、干净利落 */
+:root {
+  --bg:#121212;--bg-panel:#1a1a1a;--bg-card:#222;--bg-hover:#2a2a2a;
+  --border:#333;--border-focus:#888;
+  --text:#ccc;--text-dim:#777;--text-bright:#fff;
+  --gold:#aaa;--gold-dim:#666;--purple:#888;
+  --red:#e06c6c;--green:#6cbf6c;
+  --option-1:#666;--option-2:#777;--option-3:#888;--option-4:#999;
+  --radius:4px;--shadow:0 2px 16px rgba(0,0,0,.5);
+}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;letter-spacing:.5px}
+.game-title{color:var(--text-bright);letter-spacing:8px;font-weight:200;text-transform:uppercase}
+.option-btn{border-radius:4px;border:1px solid var(--border)}
 .option-btn:hover{border-color:var(--text);background:var(--bg-hover)}
-.image-frame{border:1px solid var(--border)}
-.status-item{border:1px solid var(--border);padding:4px 8px}
-.overlay-panel{border:1px solid var(--text-dim)}
-.settlement-box{border-left:1px solid var(--text-dim);font-style:italic}
-#top-bar{border-bottom:1px solid var(--text-dim)}
+.image-frame{border-radius:4px;filter:grayscale(30%)}
+.settlement-box{border-left:3px solid var(--text-dim)}
+.overlay .modal{border:1px solid var(--border)}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important}
+.chip.selected{background:var(--text-dim);color:var(--bg);font-weight:600}
+.tab-btn.active{color:var(--text-bright);border-bottom-color:var(--text)}
+.btn-primary{background:var(--text-dim);border-color:var(--text-dim);color:var(--bg)}
+.ach-progress-fill{background:var(--text-dim)}
+.story-round-badge{background:rgba(255,255,255,.06);color:var(--text-dim)}

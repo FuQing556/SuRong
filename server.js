@@ -82,13 +82,14 @@ function loadTemplate(id) {
 }
 
 // ── 从 outputSections 生成 AI 输出格式模板 ──
-function generateOutputFormat(sections) {
+function generateOutputFormat(sections, sceneTypes) {
   if (!sections || Object.keys(sections).length === 0) return '';
 
   const lines = [];
+  const sceneTypeList = (sceneTypes || []).join('、');
   lines.push('【强制输出格式】');
   lines.push('你每次回复，必须严格使用以下模板，不得添加、不得遗漏、不得发挥：');
-  lines.push('[场景类型：类型名] [事件大小：大/小]');
+  lines.push(`[场景类型：${sceneTypeList || '类型名'} — 只能从以上${sceneTypes?.length || 0}个类型中选择] [事件大小：大/小]`);
   lines.push('上回合： [1-2句话，结算玩家上一回合选择的直接后果。做了什么、结果如何。这是因果结算，不写感受。]');
   lines.push('现状： [1-3句话，纯陈述。这是全新的场景。新的时间、新的地点、新的事件。不承接上回合的场景。]');
   lines.push('可选行动：');
@@ -119,7 +120,7 @@ function generateOutputFormat(sections) {
 function buildSystemPrompt(template) {
   if (!template) return gamePrompt || '';
 
-  const format = generateOutputFormat(template.outputSections);
+  const format = generateOutputFormat(template.outputSections, template.sceneTypes);
   const body = template.promptBody || '';
   // 格式放最前，铁律放最后——AI读到最后的就是最重要的
   return format + '\n' + body + '\n\n════════════════════════\n【最终提醒·优先级最高】\n你必须在本次回复的末尾，原样输出以上所有状态字段及其当前数值。\n格式：字段名：值 | 字段名：值\n每个字段都必须有具体数值或状态文本，不得写"[状态]""[数值]"等占位符，不得省略任何一行。\n这是你最重要的职责，比剧情描写更优先。\n════════════════════════';
@@ -290,43 +291,134 @@ app.post('/api/generate-prompt', async (req, res) => {
     immersive:{ early:'10-15', mid:'20-30', late:'35-50', epic:'50+' },
   }[length];
 
-  const metaPrompt = `根据以下设定生成一个互动叙事游戏的系统提示词。严格输出JSON，不要输出任何其他文字。
+  const metaPrompt = `你是一个互动叙事游戏的设计AI。根据以下设定生成完整的游戏模板JSON。严格输出合法JSON对象，不要markdown包裹，不要任何额外文字。
 
-【设定】
+【玩家设定】
 名称：${name}
 世界观：${world}
 主角：${protagonist}
-冲突：${conflict || '自由发挥'}
-风格：${styleText}
-游戏长度：${length}（预期回合：早期${lengthGuide.early} | 中期${lengthGuide.mid} | 后期${lengthGuide.late} | 大后期${lengthGuide.epic}）
+核心冲突：${conflict || '自由发挥'}
+风格倾向：${styleText}
+游戏长度：${length}
+结局回合门槛：早期${lengthGuide.early}回合 | 中期${lengthGuide.mid}回合 | 后期${lengthGuide.late}回合 | 大后期${lengthGuide.epic}回合
 
-【生成内容】
-1. outputSections — 必须包含四个固定key：statusTop(5-6字段)、taskLine(label为null,含round字段)、resources(3-4字段,至少2个可消耗资源)、variables(4-5字段)。每个字段是完整对象：{"id":"englishId","label":"中文标签","icon":"emoji","formatHint":"[状态]","type":"text"}。不要省略任何属性。
-2. promptBody — 核心提示词正文(3000-6000字)，必须包含以下章节（用【】标记）：
-   【你的身份】AI的行为准则
-   【主角设定】外貌/能力/身世/处境
-   【世界观】势力格局/当前局势
-   【结局系统】★关键★ 必须设计四层结局，每层明确写出触发条件：
-       早期结局(回合${lengthGuide.early})：低门槛达成即可触发，有代价、不完美。触发时AI输出【可结束】标记，但必须保留至少2个继续游戏的选项让玩家选择不结束。
-       中期结局(回合${lengthGuide.mid})：标准胜利条件，主要结局。条件达成时AI主动推送结局选项。
-       后期结局(回合${lengthGuide.late})：高门槛完美结局，需要额外条件（特殊道具/NPC关系/隐藏flag）。
-       大后期结局(回合${lengthGuide.epic})：传奇结局，需要多条件同时满足。玩家已成为世界不可忽视的存在。
-       ★铁律：任何结局触发时，AI绝不能替玩家结束。必须在选项中保留至少1个「继续走下去」的选项。★
-   【核心驱动】故事的核心冲突和推动力
-   【叙事铁律】写作规则
-   【场景切换机制】每回合必须换场景
-   【选项设计】每回合4选项，必须有代价
-   【资源管理】★关键★ 列出可消耗资源及其获取/消耗方式。资源必须是选项代价的核心要素——大部分选项都应有资源代价或收益。资源不足时选项必须标注【资源不足】并触发负面后果。玩家需要管理资源来推进游戏。
-   【开局系统】游戏开始时的初始场景
-3. achievements — 6-8个成就对象，每个必须是：{"成就名":{"icon":"emoji","desc":"描述"}}。icon和desc缺一不可。
-4. sceneTypes — 5-7个中文场景类型
-5. description — 20字简介
-6. worldSetting — 世界观详细介绍（200-400字，3-4段\\n\\n分隔）
-7. protagonist — 主角详细介绍（200-400字，3-4段\\n\\n分隔）
-8. conflict — 核心冲突介绍（200-400字，多段\\n\\n分隔，必须列出四层结局的简述）
+══════════════════════════════════
+【第一部分：outputSections — 字段架构】
+══════════════════════════════════
 
-【输出格式】输出一个完整JSON对象，promptBody/worldSetting/protagonist/conflict中的换行用\\n，引号用\\"。不要markdown：
-{"name":"${name}","description":"20字简介","outputSections":{"statusTop":{"label":"状态栏","display":"inline","fields":[{完整字段对象}]},"taskLine":{"label":null,"display":"inline","fields":[{含round}]},"resources":{"label":"资源","display":"inline","fields":[{含可消耗资源}]},"variables":{"label":"变量追踪","display":"grid","fields":[{含追踪变量}]}},"promptBody":"正文","achievements":{"成就名":{"icon":"emoji","desc":"描述"}},"sceneTypes":["类型1","类型2"],"sceneImages":{"类型1":"日常.png"},"theme":"dark","styles":["风格1"],"worldSetting":"世界观","protagonist":"主角","conflict":"冲突"}`;
+字段是游戏唯一的数值系统。以下规则是强制性的：
+
+§1 四段式固定结构（key名称不可变）：
+{
+  "statusTop":  { "label":"状态栏", "display":"inline", "fields":[...] },
+  "taskLine":   { "label":null,       "display":"inline", "fields":[...] },
+  "resources":  { "label":"资源",     "display":"inline", "fields":[...] },
+  "variables":  { "label":"关系",     "display":"grid",   "fields":[...] }
+}
+
+§2 字段数量硬性限制：
+  statusTop：恰好3个 —— 主角的"生命线"。建议：压力/理智/体力值(0-100数字) + 威胁/暴露/危险值(0-100数字) + 一个定性状态(文本，如"健康/受伤/濒死")
+  taskLine：恰好2个 —— 必须包含"round"(轮次,type:"number") + 主线进度(0-5数字，如潜伏进度/复仇进度/修为等级)
+  resources：恰好2个 —— 可消耗资源(数字)。每个资源必须在选项代价/收益中被使用。如：金钱+弹药、灵石+丹药、情报+把柄
+  variables：恰好2个 —— 关键NPC或阵营的关系值(数字，范围-100~100)。每个变量必须在至少一个结局条件中被引用
+
+§3 每个字段对象5属性：
+  {"id":"englishCamelCase","label":"中文标签(2-4字)","icon":"单个emoji","formatHint":"[范围如0-100]","type":"number或text"}
+
+§4 铁律：每个字段必须在选项代价或结局条件中被使用。不满足则删除。
+
+══════════════════════════════════
+【第二部分：promptBody — 系统提示词正文】
+══════════════════════════════════
+
+AI主持游戏时收到的系统提示词。必须紧凑可执行。字数2000-4000字。用【】标记章节。
+
+必须包含的章节（顺序固定）：
+
+【你的身份】
+AI行为准则。核心：你是因果结算机+选项生成器。每次回复 = 结算上轮后果 → 呈现全新场景 → 4个选项 → 输出状态字段。永远不替玩家做选择。
+
+【场景跳跃铁律】★最高优先级★
+每一回合必须是全新事件。强制切换时间+地点+事件类型(三者至少切换其二)。禁止连续两回合在同一场景。只有轮次10/20/30的关键事件允许延续2回合。给出1个正确示例和1个错误示例。
+
+【主角设定】
+外貌/能力/身世/当前处境。100-200字，只写对选项设计有影响的信息。
+
+【世界观】
+势力格局/关键NPC。150-300字。每个NPC或势力必须在选项设计中被使用。
+
+【结局系统】★最关键★
+设计4层结局，每层引用§1中的字段和具体数值：
+  早期结局(约${lengthGuide.early}回合)：低门槛，有代价。触发条件示例：压力=100 / 暴露=100 / 某资源归零。触发时AI输出【游戏结束·结局名】，但保留至少1个"继续"选项。
+  中期结局(约${lengthGuide.mid}回合)：标准胜利。触发条件示例：主线进度≥4 且 风险≤50 且 轮次≥${lengthGuide.early}。
+  后期结局(约${lengthGuide.late}回合)：完美结局。触发条件示例：主线进度≥5 且 关系≥70 且 资源≥3。
+  大后期结局(约${lengthGuide.epic}回合)：传奇结局。多条件全部满足。
+★铁律：每个结局条件必须引用具体的字段标签和数值。禁止"足够多""很高"等模糊词。轮次≥20时大幅增加结局推送。结局触发时保留"继续"选项。
+
+【资源管理】
+列出2个可消耗资源的获取/消耗方式。至少3种获取+3种消耗。选项代价与资源联动。资源不足标注【资源不足】并触发负面后果。
+
+【选项设计】
+每回合4个选项 = 动作 + 代价 + 风险等级【低风险/中风险/高风险/孤注一掷】。至少3个选项带玩家离开当前场景。禁止无代价选项。禁止"等待/观察"等停留型选项。提供至少2条不同路线。
+
+【开局系统】
+设计3个开局场景（编号1-3），每个有不同初始场景和略微不同的初始数值，增加重玩性。每个开局的初始变量值不同。第一回合写"上回合：游戏开始。"
+同时在JSON中输出openingMessages数组：["开始游戏。【开局编号：1】","开始游戏。【开局编号：2】","开始游戏。【开局编号：3】"]
+
+══════════════════════════════════
+【第三部分：achievements — 可见成就】
+══════════════════════════════════
+
+6-8个可见成就。命名必须根据世界观创意，禁止公式化命名（如"{字段}大师""{字段}达人"）。好例子：修仙→"元婴大成""渡劫成功"；谍战→"影子之王""双重间谍"。
+
+每个成就必须能被字段数值检测：§1中的数字字段+阈值。如：压力曾≥90→"淬火成钢"；主线≥5→"真相大白"。
+
+必须包含3个通用成就（名字创意化）：
+  1. 轮次≥30且未结局 —— 如"长路漫漫""不死鸟"
+  2. 触发任一结局 —— 如"尘埃落定""命运之轮"
+  3. 孤注一掷成功 —— 如"赌徒""天选之人"
+
+格式：{"创意成就名":{"icon":"单个emoji","desc":"简述(含检测条件)"}}
+
+══════════════════════════════════
+【第四部分：hiddenAchievements — 隐藏成就】
+══════════════════════════════════
+
+3-5个隐藏成就。解锁前不可见。每个必须包含trigger。
+
+trigger类型：
+  {"type":"choice","pattern":"匹配文本","count":N} —— 累计选N次匹配选项
+  {"type":"gambit","count":N} —— 孤注一掷成功N次
+  {"type":"rounds_under","round":N} —— N回合内触发结局
+  {"type":"field_zero","fieldLabel":"字段标签"} —— 某字段归零
+  {"type":"field_max_under","fieldLabel":"字段标签","threshold":N} —— 某字段全程未超阈值且通关
+  {"type":"response_match","pattern":"匹配文本","count":N} —— AI回复N次匹配
+
+格式：{"创意隐藏成就名":{"icon":"emoji","desc":"隐藏描述","trigger":{触发规则}}}
+
+示例：
+"近朱者赤":{"icon":"🌸","desc":"三度主动靠近危险的庇护者","trigger":{"type":"choice","pattern":"梦红尘|梦学姐|去找她","count":3}}
+"赌徒":{"icon":"🎰","desc":"孤注一掷成功3次","trigger":{"type":"gambit","count":3}}
+"速战速决":{"icon":"⚡","desc":"8回合内结束游戏","trigger":{"type":"rounds_under","round":8}}
+
+══════════════════════════════════
+【第五部分：其他】
+══════════════════════════════════
+
+sceneTypes：5-7个中文场景类型
+description：20字以内简介
+worldSetting：200-400字，\\n\\n分段
+protagonist：200-400字，\\n\\n分段
+conflict：200-400字，\\n\\n分段，简述四层结局
+theme："dark"
+styles：风格标签数组
+
+══════════════════════════════════
+【最终JSON模板】
+══════════════════════════════════
+换行用\\n，引号用\\"。输出纯JSON：
+
+{"name":"${name}","description":"简介","outputSections":{"statusTop":{"label":"状态栏","display":"inline","fields":[{"id":"...","label":"...","icon":"...","formatHint":"...","type":"number"}]},"taskLine":{"label":null,"display":"inline","fields":[{"id":"round","label":"轮次","icon":"🔄","formatHint":"[数字]","type":"number"},{}]},"resources":{"label":"资源","display":"inline","fields":[{},{}]},"variables":{"label":"关系","display":"grid","fields":[{},{}]}},"promptBody":"正文","achievements":{"成就名":{"icon":"emoji","desc":"描述"}},"hiddenAchievements":{"成就名":{"icon":"emoji","desc":"描述","trigger":{}}},"sceneTypes":["类型"],"sceneImages":{"类型":"日常.png"},"theme":"dark","styles":[],"openingMessages":["开始游戏。【开局编号：1】","开始游戏。【开局编号：2】","开始游戏。【开局编号：3】"],"worldSetting":"世界观","protagonist":"主角","conflict":"冲突"}`;
 
     try {
       const apiKey = getApiKey(req.body);
@@ -341,7 +433,9 @@ app.post('/api/generate-prompt', async (req, res) => {
       template.author = 'AI生成';
       template.version = '1.0.0';
       template.defaultSceneImage = '日常.png';
-      template.openingMessages = ['开始游戏。'];
+      template.openingMessages = template.openingMessages?.length > 0
+        ? template.openingMessages
+        : ['开始游戏。【开局编号：1】', '开始游戏。【开局编号：2】', '开始游戏。【开局编号：3】'];
       template.promptBody = template.promptBody || '';
       template.worldSetting = template.worldSetting || world;
       template.protagonist = template.protagonist || protagonist;
@@ -349,22 +443,29 @@ app.post('/api/generate-prompt', async (req, res) => {
       template.styles = template.styles && template.styles.length > 0 ? template.styles : (styles || []);
       template.extra = template.extra || extra || '';
 
-      // 规范化 outputSections
+      // 规范化 outputSections（新架构：statusTop=3, taskLine=2, resources=2, variables=2）
+      const SECTION_KEYS = ['statusTop', 'taskLine', 'resources', 'variables'];
       if (template.outputSections) {
-        for (const key of Object.keys(template.outputSections)) {
+        for (const key of SECTION_KEYS) {
+          if (!template.outputSections[key] || typeof template.outputSections[key] !== 'object') {
+            template.outputSections[key] = {
+              label: key === 'taskLine' ? null : (key === 'variables' ? '关系' : key),
+              display: key === 'variables' ? 'grid' : 'inline',
+              fields: []
+            };
+          }
           const sec = template.outputSections[key];
-          if (!sec || typeof sec !== 'object') {
-            template.outputSections[key] = { label: key, fields: [] };
-          } else {
-            if (!Array.isArray(sec.fields)) sec.fields = [];
-            // 补齐每个字段的缺失属性
-            sec.fields = sec.fields.filter(f => f && typeof f === 'object').map(f => ({
-              id: f.id || ('field_' + Math.random().toString(36).slice(2,8)),
-              label: f.label || f.id || '未命名字段',
-              icon: f.icon || '📌',
-              formatHint: f.formatHint || '[状态]',
-              type: f.type || 'text',
-            }));
+          if (!Array.isArray(sec.fields)) sec.fields = [];
+          sec.fields = sec.fields.filter(f => f && typeof f === 'object').map(f => ({
+            id: f.id || ('field_' + Math.random().toString(36).slice(2,8)),
+            label: f.label || f.id || '未命名字段',
+            icon: f.icon || '📌',
+            formatHint: f.formatHint || '[状态]',
+            type: f.type || (f.id === 'round' ? 'number' : 'text'),
+          }));
+          // 确保 taskLine 含 round 字段
+          if (key === 'taskLine' && !sec.fields.some(f => f.id === 'round' || f.label === '轮次')) {
+            sec.fields.push({ id: 'round', label: '轮次', icon: '🔄', formatHint: '[数字]', type: 'number' });
           }
         }
       }
@@ -380,6 +481,20 @@ app.post('/api/generate-prompt', async (req, res) => {
         }
       } else {
         template.achievements = {};
+      }
+      // 规范化 hiddenAchievements
+      if (!template.hiddenAchievements || typeof template.hiddenAchievements !== 'object') {
+        template.hiddenAchievements = {};
+      } else {
+        for (const [name, ha] of Object.entries(template.hiddenAchievements)) {
+          if (!ha || typeof ha !== 'object') {
+            template.hiddenAchievements[name] = { icon: '🎭', desc: name, trigger: { type: 'gambit', count: 1 } };
+          } else {
+            ha.icon = ha.icon || '🎭';
+            ha.desc = ha.desc || name;
+            if (!ha.trigger || typeof ha.trigger !== 'object') ha.trigger = { type: 'gambit', count: 1 };
+          }
+        }
       }
       template.sceneImages = {};
       if (template.sceneTypes) template.sceneTypes.forEach(t => { template.sceneImages[t] = '日常.png'; });
@@ -515,6 +630,46 @@ app.delete('/api/shared/:id', (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: '删除分享失败: ' + err.message });
+  }
+});
+
+// API: 备份酒馆（导出全部共享数据为JSON下载）
+app.get('/api/tavern/backup', (_req, res) => {
+  ensureSharedDir();
+  try {
+    const files = fs.readdirSync(SHARED_DIR).filter(f => f.endsWith('.json'));
+    const data = files.map(f => {
+      try {
+        return JSON.parse(fs.readFileSync(path.join(SHARED_DIR, f), 'utf-8'));
+      } catch (e) { return null; }
+    }).filter(Boolean);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="tavern_backup.json"');
+    res.json({ exportedAt: new Date().toISOString(), count: data.length, shared: data });
+  } catch (err) {
+    res.status(500).json({ error: '备份失败: ' + err.message });
+  }
+});
+
+// API: 恢复酒馆（上传JSON文件导入共享数据）
+app.post('/api/tavern/restore', (req, res) => {
+  const { shared, overwrite } = req.body;
+  if (!shared || !Array.isArray(shared)) {
+    return res.status(400).json({ error: '无效的备份数据，需要 { shared: [...] }' });
+  }
+  try {
+    ensureSharedDir();
+    let imported = 0;
+    for (const tpl of shared) {
+      if (!tpl || !tpl.id || !tpl.name) continue;
+      const filePath = path.join(SHARED_DIR, `${tpl.id}.json`);
+      if (!overwrite && fs.existsSync(filePath)) continue; // 不覆盖已存在的
+      fs.writeFileSync(filePath, JSON.stringify(tpl, null, 2), 'utf-8');
+      imported++;
+    }
+    res.json({ success: true, imported, total: shared.length });
+  } catch (err) {
+    res.status(500).json({ error: '恢复失败: ' + err.message });
   }
 });
 

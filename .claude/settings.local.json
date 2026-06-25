@@ -49,7 +49,30 @@
       "Bash(grep -n '\\\\$.*Overlay.*classList' public/app.js)",
       "Bash(node scripts/patch-switchscene.js)",
       "Bash(node -e 'require\\('\\\\''fs'\\\\''\\).writeFileSync\\('\\\\''scripts/patch-switchscene.js'\\\\'', ` *)",
-      "Bash(grep -n \"\\\\$\\('#.*'\\).*addEventListener\" public/app.js)"
+      "Bash(grep -n \"\\\\$\\('#.*'\\).*addEventListener\" public/app.js)",
+      "Bash(node -e \"const t=JSON.parse\\(require\\('fs'\\).readFileSync\\('templates/surongrong.json','utf8'\\)\\); console.log\\('promptBody length:', t.promptBody.length\\); console.log\\('lines:', t.promptBody.split\\('\\\\\\\\n'\\).length\\)\")",
+      "Bash(rm -f metaPrompt_new.txt)",
+      "Bash(node test_achieve.js)",
+      "Bash(node test_fields.js)",
+      "Bash(node test_savefields.js)",
+      "Bash(node test_manual_edit.js)",
+      "Bash(node test_ending.js)",
+      "Bash(node test_full.js)",
+      "Bash(node write_themes.js)",
+      "Bash(node test_resource.js)",
+      "Bash(node test_resource2.js)",
+      "Bash(node test_all.js)",
+      "Bash(node --check test_all.js)",
+      "Bash(grep -v \"//\\\\|function \\\\|dlPrompt\\\\|dlConfirm\\\\|dlAlert\\\\|showDialog\\\\|\\\\.prompt\\\\|xixi_\")",
+      "Bash(git checkout *)",
+      "Bash(node rebuild.js)",
+      "Bash(node rebuild_full.js)",
+      "Bash(\\\\\"#ending-icon\\\\\")",
+      "Bash(\\\\\"#ending-title\\\\\")",
+      "Bash(\\\\\"#ending-narrative\\\\\")",
+      "Bash(\\\\\"#ending-stats\\\\\")",
+      "Bash(\\\\\"#ending-overlay\\\\\")",
+      "Bash(node patch2.js)"
     ]
   }
 }

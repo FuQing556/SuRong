@@ -1,11 +1,25 @@
-/* ✨ 鎏金 — 双层边框、华丽装饰、衬线体 */
-:root{--bg:#0d0a04;--bg-panel:#141008;--bg-card:#1c160c;--bg-hover:#282014;--border:#3a2e18;--border-focus:#d4a853;--text:#d0c8b0;--text-dim:#7a6a40;--text-bright:#f8f0d8;--gold:#d4a853;--gold-dim:#8a6a28;--purple:#b8963c;--red:#c05040;--green:#6a9a40;--option-1:#9a7830;--option-2:#7a5a20;--option-3:#8a6a30;--option-4:#b85a3a;--radius:2px}
-body{font-family:Georgia,'Times New Roman',serif;font-size:14px}
-.game-title{font-family:Georgia,serif;font-weight:700;letter-spacing:6px;text-transform:uppercase;color:var(--gold);border-top:2px solid var(--gold-dim);border-bottom:2px solid var(--gold-dim);padding:8px 0;display:inline-block}
-.option-btn{border:2px solid var(--border);outline:1px solid var(--gold-dim);outline-offset:-4px;transition:all .3s}
-.option-btn:hover{outline-color:var(--gold);border-color:var(--gold);box-shadow:0 0 20px rgba(212,168,83,.15)}
-.image-frame{border:3px double var(--gold-dim);padding:4px}
-.status-item{border:1px solid var(--gold-dim)}
-.overlay-panel{border:2px solid var(--gold-dim);outline:1px solid var(--border);outline-offset:-6px}
-.settlement-box{border-left:4px double var(--gold)}
-#top-bar{border-bottom:2px solid var(--gold-dim)}
+/* ✨ 鎏金 — 奢华金调、深棕底色 */
+:root {
+  --bg:#100a02;--bg-panel:#1a1206;--bg-card:#241a0a;--bg-hover:#2e220e;
+  --border:#4a3a1a;--border-focus:#d4a030;
+  --text:#d8ccb0;--text-dim:#8a7a50;--text-bright:#f8e8c8;
+  --gold:#d4a030;--gold-dim:#8a6018;--purple:#9a7b3a;
+  --red:#d9443a;--green:#5a9a3a;
+  --option-1:#9a7018;--option-2:#7a5a14;--option-3:#b8860b;--option-4:#8b4513;
+  --radius:6px;--shadow:0 4px 24px rgba(0,0,0,.5);
+}
+body{font-family:'Georgia','Times New Roman','Microsoft YaHei',serif}
+.game-title{color:var(--gold);text-shadow:0 0 16px rgba(212,160,48,.3),0 2px 4px rgba(0,0,0,.5);letter-spacing:8px;font-size:22px}
+.option-btn{border:2px solid var(--border);border-radius:6px;background:linear-gradient(135deg,var(--bg-card),rgba(212,160,48,.03))}
+.option-btn:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(212,160,48,.2),inset 0 0 20px rgba(212,160,48,.03)}
+.image-frame{border:2px solid var(--gold-dim);box-shadow:0 0 30px rgba(212,160,48,.1);border-radius:6px}
+.settlement-box{border-left:4px solid var(--gold)}
+.overlay .modal{border:2px solid var(--gold-dim);box-shadow:0 0 40px rgba(0,0,0,.6)}
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 10px rgba(212,160,48,.1)}
+.chip.selected{background:var(--gold);color:#100a02;font-weight:600}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-dim));border-color:var(--gold);color:#100a02;font-weight:700}
+.ach-progress-fill{background:var(--gold)}
+.story-round-badge{background:rgba(212,160,48,.12);color:var(--gold)}
+.status-value{color:var(--text-bright)}
