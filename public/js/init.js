@@ -211,7 +211,9 @@ function bindEvents() {
   if (dom.varsToggle && dom.varsGrid) {
     dom.varsToggle.addEventListener('click', () => {
       dom.varsGrid.classList.toggle('collapsed');
-      const label = getActiveTemplate().outputSections?.variables?.label || '变量追踪';
+      var vp = document.getElementById('variables-panel');
+      if (vp) vp.classList.toggle('var-collapsed', dom.varsGrid.classList.contains('collapsed'));
+      var label = getActiveTemplate().outputSections?.variables?.label || '变量追踪';
       dom.varsToggle.textContent = dom.varsGrid.classList.contains('collapsed')
         ? label + ' ▶' : label + ' ▼';
     });

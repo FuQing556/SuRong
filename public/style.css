@@ -556,6 +556,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   margin-top: 6px;
 }
 .vars-grid.collapsed { display: none; }
+.variables-panel.var-collapsed { border-top-color: transparent; padding-top: 2px; }
 .var-item .status-label { font-size: 10px; color: var(--text-dim); }
 .var-item .status-value { font-size: 12px; }
 
