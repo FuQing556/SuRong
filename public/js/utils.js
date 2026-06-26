@@ -240,8 +240,8 @@ function collectEligibleEndings(template) {
   var idx = 0;
   while ((mm = markerRe.exec(body)) !== null) {
     var name = mm[1].trim();
-    // 向前搜索最近的括号条件（500字符窗口）
-    var before = body.substring(Math.max(0, mm.index - 500), mm.index);
+    // 向前搜索最近的括号条件（200字符窗口）
+    var before = body.substring(Math.max(0, mm.index - 200), mm.index);
 	    var parenM = before.match(/[（(]([^）)]+)[）)]/g);
 	    if (!parenM || parenM.length === 0) continue;
 	    // 从后往前试所有括号，取第一个能解析为条件的（避免误取叙事文本中的括号）
