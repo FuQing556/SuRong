@@ -188,12 +188,18 @@ function _prepareMessages(userContent) {
     enhancedContent = enhancedContent + '\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：' + instrText + '。请在本次回复中直接体现这些指令的效果，不要只是说"收到"——用剧情和选项来展示变化。】';
   }
 
-  // 客户端掷骰结果注入（高风险/孤注一掷）
+  // 客户端掷骰结果注入（高风险/孤注一掷）— 强制要求AI改数值
   if (gameState._pendingDiceRoll) {
     var dr = gameState._pendingDiceRoll;
     var riskName = dr.risk === 'gambit' ? '孤注一掷' : '高风险';
-    var resultText = dr.success ? '成功（骰值' + dr.roll + '≥' + (dr.risk === 'gambit' ? '71' : '51') + '）' : '失败（骰值' + dr.roll + '<' + (dr.risk === 'gambit' ? '71' : '51') + '）';
-    enhancedContent = enhancedContent + '\n\n【骰子判定·' + riskName + '】客户端掷骰结果：' + resultText + '。请在现状中明确体现此结果——成功则写胜利/逆转/得手，失败则写代价/连锁后果。如有赌注，按此结果结算。';
+    var diceRoll = dr.roll;
+    if (dr.success) {
+      // 成功：要求AI大幅改善数值
+      var boostAmt = dr.risk === 'gambit' ? '20-40' : '10-20';
+      enhancedContent = enhancedContent + '\n\n【骰子判定·' + riskName + '成功！骰值' + diceRoll + '】你必须在本回合结算中体现重大成功：①情报碎片或把柄+2~4 ②暴露风险-10~20 ③压力值-10~20 ④关联NPC好感+10~20（至少实现其中2项，具体数值写入状态字段）。现状写胜利/逆转/得手。';
+    } else {
+      enhancedContent = enhancedContent + '\n\n【骰子判定·' + riskName + '失败！骰值' + diceRoll + '】你必须在本回合结算中体现失败代价：①暴露风险+10~25 或 压力值+15~30 ②情报碎片或把柄可能损失1~2 ③现状写连锁负面后果（受伤/被抓/被勒索/被围堵等），数值如实扣减。';
+    }
     gameState._lastDiceResult = dr;
     gameState._pendingDiceRoll = null;
   }

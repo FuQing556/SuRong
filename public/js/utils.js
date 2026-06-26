@@ -345,12 +345,16 @@ function buildEndingInjection(endingName, template) {
     descText = endingName;
   }
 
+  var endingNarrative = descText && descText !== endingName ? descText : endingName;
   // 构建注入消息
-  return '【★ 结局回合 ★】'
-    + '本回合触发结局「' + endingName + '」。'
-    + '叙事要点：' + descText + '。'
-    + '请写结局叙事（8-12句），末尾输出【游戏结束·' + endingName + '】，然后照常给4选项（含1个"继续"）。'
-    + '格式规则本回合放宽——优先写好结局，场景切换和选项格式容后。';
+  return '【★ 结局回合 ★ 最高优先级 ★】'
+    + '本回合必须触发结局「' + endingName + '」。'
+    + '结局主题：' + endingNarrative + '。'
+    + '请围绕此主题写8-12句结局叙事场景。'
+    + '末尾必须输出【游戏结束·' + endingName + '】。'
+    + '然后照常给4选项（至少含1个"继续走下去"选项）。'
+    + '格式规则本回合放宽——优先写好结局。'
+    + '不要在结局叙事中提及魂师大赛——除非本结局就是魂师大赛。';
 }
 
 // ── 更新系统提示词（模板变化时调用）──
