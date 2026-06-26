@@ -282,7 +282,7 @@ function _handleParsedResponse(fullContent, tpl, parsed) {
   parsed = parsed || parseAIResponse(fullContent, tpl);
   let endingType = detectEnding(fullContent);
 
-  // 硬兜底：AI未触发但客户端检测到条件满足
+  // 硬兜底：AI未触发但客户端检测到条件满足 → 注入标记，由renderGameState统一弹窗
   if (!endingType && typeof checkEndingClientSide === 'function') {
     const clientEnding = checkEndingClientSide(tpl);
     if (clientEnding) {
@@ -290,10 +290,7 @@ function _handleParsedResponse(fullContent, tpl, parsed) {
       endingType = clientEnding;
       gameState.achievementFlags.endingTriggered = true;
       gameState.achievementFlags.endingType = clientEnding;
-      if (!gameState.achievementFlags.triggeredEndings) gameState.achievementFlags.triggeredEndings = [];
-      if (gameState.achievementFlags.triggeredEndings.indexOf(clientEnding) === -1) {
-        gameState.achievementFlags.triggeredEndings.push(clientEnding);
-      }
+      // 注意：不要在这里 push triggeredEndings，交由 renderGameState 统一处理弹窗+记录
       parsed.raw = parsed.raw + '\n【游戏结束·' + clientEnding + '】';
       fullContent = fullContent + '\n【游戏结束·' + clientEnding + '】';
       gameState.fullHistory[gameState.fullHistory.length - 1].content = fullContent;
