@@ -230,7 +230,8 @@ function updateAllDynamicFieldsFromHistory() {
 // ── 场景图片切换 ──
 function switchSceneImage(sceneType, template) {
   // 先检查自定义图片
-  const customImages = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}');
+  var customImages = {};
+  try { customImages = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}'); } catch (e) { /* corrupt */ }
   if (customImages[sceneType]) {
     const img = dom.characterImage;
     if (!img) return;
@@ -506,7 +507,11 @@ function initSaveTabs() {
 async function selectSave(saveId) {
   try {
     const template = await loadAndMergeTemplate(saveId);
-    if (!template) { console.error('Template not found for save:', saveId); return; }
+    if (!template) {
+      console.error('Template not found for save:', saveId);
+      dlAlert('❌ 无法加载存档「' + saveId + '」，模板数据可能已损坏。').catch(function(){});
+      return;
+    }
 
     const ov = $('#save-selector-overlay');
     if (ov) ov.classList.remove('active');

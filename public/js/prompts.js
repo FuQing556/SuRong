@@ -276,7 +276,8 @@ function renderImageManager() {
   const images = tpl.sceneImages || {};
   const defaultImg = tpl.defaultSceneImage || '日常.png';
   const sceneTypes = tpl.sceneTypes || Object.keys(images);
-  const customImages = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}');
+  var customImages = {};
+  try { customImages = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}'); } catch (e) { /* corrupt */ }
 
   container.innerHTML = sceneTypes.map(type => {
     const currentSrc = customImages[type] || images[type] || defaultImg;
@@ -301,7 +302,7 @@ function renderImageManager() {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = () => {
-          const imgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}');
+          var imgs = {}; try { imgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}'); } catch (e) {}
           imgs[sceneType] = reader.result;
           if (!safeSetItem(LS_KEYS.customImages, imgs)) {
             delete imgs[sceneType];
@@ -321,7 +322,7 @@ function renderImageManager() {
 
   container.querySelectorAll('.btn-reset-img').forEach(btn => {
     btn.addEventListener('click', () => {
-      const imgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}');
+      var imgs = {}; try { imgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}'); } catch (e) {}
       delete imgs[btn.dataset.scene];
       localStorage.setItem(LS_KEYS.customImages, JSON.stringify(imgs));
       renderImageManager();
