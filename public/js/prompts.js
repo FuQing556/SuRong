@@ -35,6 +35,20 @@ async function openSettings() {
       if (ed.hiddenAchievements) tpl.hiddenAchievements = ed.hiddenAchievements;
       refreshSystemPrompt();
       renderStatusContainers(tpl);
+      // 重建DOM后立即回填当前值 + 为新字段ID补fieldHistory默认值
+      if (gameState.gameStarted) {
+        // 确保所有outputSections中的字段在fieldHistory中有条目
+        for (const sec of Object.values(tpl.outputSections || {})) {
+          for (const f of (sec.fields || [])) {
+            if (!gameState.fieldHistory[f.id]) {
+              gameState.fieldHistory[f.id] = f.type === 'number'
+                ? { current: 0, max: 0 }
+                : { currentText: '—' };
+            }
+          }
+        }
+        updateAllDynamicFieldsFromHistory();
+      }
     } catch (e) { /* corrupt */ }
   }
 
@@ -86,6 +100,27 @@ async function savePrompt() {
     dom.settingsMsg.style.color = 'var(--red)';
     return;
   }
+
+  // ── v2: 检查结局标记是否完整 ──
+  const origBody = gameState._originalTemplate?.promptBody || '';
+  if (origBody) {
+    const endingMarkerRe = /【游戏结束[：:·\s]*([^】]+)】/g;
+    const missingEndings = [];
+    let m;
+    while ((m = endingMarkerRe.exec(origBody)) !== null) {
+      if (prompt.indexOf(m[0]) === -1) {
+        missingEndings.push(m[0]);
+      }
+    }
+    if (missingEndings.length > 0) {
+      const warning = '⚠ 警告：以下结局标记在编辑后的提示词中缺失，将导致这些结局无法触发：\n\n'
+        + missingEndings.join('\n')
+        + '\n\n建议取消后从原始模板复制结局章节。\n确定继续保存？（不完整结局的游戏体验将受影响）';
+      const proceed = await dlConfirm(warning);
+      if (!proceed) return;
+    }
+  }
+
   gameState.customPrompt = prompt;
   gameState.activeSystemPrompt = prompt;
 

@@ -15,8 +15,10 @@ function bindEvents() {
       btnEnter.textContent = '正在进入...';
       btnEnter.disabled = true;
       localStorage.setItem('xixi_age_verified', 'true');
+      // 立即隐藏警告层，让用户看到响应
       if (dom.warningOverlay) dom.warningOverlay.classList.remove('active');
-      showSaveSelector();
+      // 延迟加载存档面板，避免DOM操作阻塞点击反馈
+      setTimeout(() => showSaveSelector(), 50);
     });
   }
   const btnLeave = $('#btn-leave');
@@ -130,6 +132,7 @@ function bindEvents() {
     const key = parseInt(e.key);
     if (key >= 1 && key <= 4 && gameState.currentOptions[key - 1]) {
       e.preventDefault();
+      if (typeof playClick === 'function') playClick();
       handleChoice(key);
     }
   });
@@ -230,6 +233,15 @@ function bindEvents() {
       if (gameState.gameStarted) saveGameState();
     });
   });
+
+  // ── 全局UI按钮音效：一个委托覆盖所有按钮（自动包含动态创建的）──
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('button');
+    if (!btn || btn.disabled) return;
+    if (btn.classList.contains('option-btn')) return;  // 选项按钮有自己的 playClick
+    if (btn.id === 'btn-audio') return;                 // 音效开关不自响
+    if (typeof playUIClick === 'function') playUIClick();
+  });
 }
 
 // ── 初始化 ──
@@ -253,6 +265,8 @@ async function init() {
     const defaultTemplate = await loadTemplate('surongrong');
     if (defaultTemplate) {
       gameState.activeTemplate = defaultTemplate;
+      // 保存原始模板副本（用于结局章节修复 + 恢复默认）
+      gameState._originalTemplate = JSON.parse(JSON.stringify(defaultTemplate));
       const lastSaveId = localStorage.getItem('xixi_last_save_id') || 'surongrong';
       gameState.activeSaveId = lastSaveId;
       const savedTheme = localStorage.getItem('xixi_theme_' + lastSaveId);

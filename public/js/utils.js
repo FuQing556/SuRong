@@ -53,22 +53,287 @@ function generateOutputFormat(sections, sceneTypes) {
   return lines.join('\n');
 }
 
-// ── 构建完整系统提示词（格式 + 叙事指南 + 正文）──
+// ── 构建状态快照（注入提示词，帮助AI对账结局条件）──
+function buildStatusSnapshot(template) {
+  if (!template) return '';
+  const sections = template.outputSections || {};
+  const allFields = [];
+  for (const sec of Object.values(sections)) {
+    for (const f of sec.fields || []) allFields.push(f);
+  }
+  const parts = [];
+  for (const f of allFields) {
+    const hist = gameState.fieldHistory[f.id];
+    if (!hist) continue;
+    const val = (hist.current != null) ? hist.current : (hist.currentText || null);
+    if (val === null || val === '—') continue;
+    parts.push(f.label + '=' + val);
+  }
+  if (parts.length === 0) return '';
+  return '\n\n【当前状态快照 — 用于结局条件检查】\n' + parts.join(' | ') + '\n★ 请逐一对照【结局系统】中的每个条件。如果当前数值满足任一结局条件，必须在本次回复末尾输出【游戏结束·结局名】。不要推迟，不要等待更高轮次。';
+}
+
+// ── 检测并修复被截断的结局章节 ──
+// v2: 逐标记验证替代简单长度检查，防止个别结局（如快速撤离）被截断后遗漏
+function repairEndingSection(body, originalTemplate) {
+  if (!body || !originalTemplate) return body;
+
+  var origBody = originalTemplate.promptBody || '';
+  var origEm = origBody.match(/【结局系统】([\s\S]*?)(?=【[^】]+】|$)/);
+  if (!origEm) return body;  // 原始模板也没有结局章节，无法修复
+
+  var em = body.match(/【结局系统】([\s\S]*?)(?=【[^】]+】|$)/);
+  if (!em) {
+    // 完全缺失：在正文末尾追加结局章节
+    console.log('🔧 repairEndingSection: 结局章节完全缺失，从原始模板恢复');
+    return body + '\n\n' + origEm[0];
+  }
+
+  // ── v2: 提取原始模板中所有结局标记，逐一核对 ──
+  var endingMarkerRe = /【游戏结束[：:·\s]*([^】]+)】/g;
+  var origMarkers = [];
+  var m;
+  while ((m = endingMarkerRe.exec(origEm[0])) !== null) {
+    origMarkers.push(m[0]);
+  }
+  endingMarkerRe.lastIndex = 0;
+
+  if (origMarkers.length === 0) return body;  // 原始模板无结局标记，无需修复
+
+  // 检查每个结局标记是否在编辑版中存在
+  var missingMarkers = [];
+  for (var i = 0; i < origMarkers.length; i++) {
+    if (body.indexOf(origMarkers[i]) === -1) {
+      missingMarkers.push(origMarkers[i]);
+    }
+  }
+
+  if (missingMarkers.length === 0) return body;  // 所有结局标记都在，无需修复
+
+  console.warn('🔧 repairEndingSection: 检测到 ' + missingMarkers.length + ' 个结局标记缺失：',
+    missingMarkers.join(', '), '— 从原始模板恢复结局章节');
+
+  // 替换结局章节 — 用原始模板的完整版本
+  return body.replace(em[0], origEm[0]);
+}
+
+// ── 构建完整系统提示词（格式 + 叙事指南 + 正文 + 状态快照）──
 function buildSystemPrompt(template) {
   if (!template) return gameState.originalPrompt || '';
-  const format = generateOutputFormat(template.outputSections, template.sceneTypes);
-  const body = template.promptBody || '';
+  var format = generateOutputFormat(template.outputSections, template.sceneTypes);
+  // 自动修复被意外截断的结局章节
+  var body = repairEndingSection(template.promptBody || '', gameState._originalTemplate);
 
-  const narrativeGuide = `【叙事法则】
-· 每个选项必须推动剧情——不能让玩家选择后原地踏步。至少3个选项带玩家离开当前场景。
-· 代价必须真实：标注【资源不足】的选项被选后，现状中必须体现失败后果，不得让选项正常成功。
-· 结算时如实更新所有字段数值。消耗扣减，获得增加。数值变化要合理——不要凭空增减。
-· 选项之间要有路线分歧：提供至少2条不同的策略方向（如战斗vs谈判、信任vs怀疑、冒险vs保守）。
-· 结局推送：当关键数值达到极端（≥90或≤10）或轮次≥15时，积极考虑触发结局。触发时输出【游戏结束·结局名】。`;
+  var narrativeGuide = '【叙事法则】\n' +
+    '· 每个选项必须推动剧情——不能让玩家选择后原地踏步。至少3个选项带玩家离开当前场景。\n' +
+    '· 代价必须真实：标注【资源不足】的选项被选后，现状中必须体现失败后果，不得让选项正常成功。\n' +
+    '· 结算时如实更新所有字段数值。消耗扣减，获得增加。数值变化要合理——不要凭空增减。\n' +
+    '· 选项之间要有路线分歧：提供至少2条不同的策略方向（如战斗vs谈判、信任vs怀疑、冒险vs保守）。\n' +
+    '· 结局推送：严格按照下方【结局系统】中定义的条件判断。一旦数值达标立即触发结局——不要因轮次不够、剧情未完等理由推迟。触发时输出【游戏结束·结局名】。';
 
-  const outputRule = `【回复格式】\n每次回复严格按以下顺序，末尾完整输出所有状态字段（数值无变化也照写，不得省略）。第一回合上回合写"游戏开始。"`;
+  var outputRule = '【回复格式】\n' +
+    '每次回复严格按以下顺序，末尾完整输出所有状态字段（数值无变化也照写，不得省略）。第一回合上回合写"游戏开始。"';
 
-  return outputRule + '\n\n' + format + '\n\n' + narrativeGuide + '\n\n' + body;
+  // 状态快照：把当前字段数值注入提示词，让AI对账结局条件
+  var snapshot = buildStatusSnapshot(template);
+
+  return outputRule + '\n\n' + format + '\n\n' + narrativeGuide + '\n\n' + body + snapshot;
+}
+
+// ── 客户端结局条件检查（通用，适配任何模板）──
+// v3: 拆分为收集+择优；已触发结局不再重复；多结局同时满足选最严格的
+
+// 收集所有条件达标的结局 → [{name, condText, roundReq, hasRelation, index}]
+function collectEligibleEndings(template) {
+  if (!template) return [];
+  var body = template.promptBody || '';
+  var fh = gameState.fieldHistory || {};
+
+  // 1. 构建 字段label → 当前数值 的映射
+  var vals = {};
+  var allSecs = template.outputSections || {};
+  for (var sk in allSecs) {
+    if (!allSecs.hasOwnProperty(sk)) continue;
+    var fs = allSecs[sk].fields || [];
+    for (var i = 0; i < fs.length; i++) {
+      var f = fs[i];
+      var h = fh[f.id];
+      if (!h) continue;
+      var v = (h.current != null) ? Number(h.current) : NaN;
+      if (isNaN(v) && h.currentText && h.currentText !== '—') v = Number(h.currentText);
+      if (!isNaN(v)) vals[f.label] = v;
+      else if (h.currentText && h.currentText !== '—') vals[f.label] = h.currentText;
+    }
+  }
+  var roundNum = gameState.fullHistory.filter(function(m){return m.role==='user';}).length;
+  vals['轮次'] = roundNum;
+
+  // 提取关系字段的 label 列表（用于判断条件中是否含关系条件）
+  var relLabels = [];
+  var varFields = (template.outputSections && template.outputSections.variables)
+    ? (template.outputSections.variables.fields || []) : [];
+  for (var rl = 0; rl < varFields.length; rl++) {
+    relLabels.push(varFields[rl].label);
+  }
+
+  // 辅助：解析条件文本并检查是否满足
+  function parseAndCheck(condText) {
+    var parts = condText.split(/[且，,、]/);
+    var checks = [];
+    for (var p = 0; p < parts.length; p++) {
+      var part = parts[p].trim();
+      if (!part) continue;
+      var m = part.match(/([一-龥\w]{1,8})\s*([≥≤=])\s*(\d+)/);
+      if (!m) continue;
+      checks.push({ label: m[1], op: m[2], threshold: Number(m[3]) });
+    }
+    if (checks.length === 0) return { ok: false };
+    var roundReq = 0;
+    var hasRel = false;
+    for (var c = 0; c < checks.length; c++) {
+      var chk = checks[c];
+      // 检查是否引用轮次
+      if (chk.label === '轮次' || chk.label.indexOf('轮') >= 0) {
+        roundReq = chk.threshold;
+      }
+      // 检查是否引用关系字段
+      for (var rl2 = 0; rl2 < relLabels.length; rl2++) {
+        if (chk.label === relLabels[rl2] || chk.label.indexOf(relLabels[rl2]) >= 0 || relLabels[rl2].indexOf(chk.label) >= 0) {
+          hasRel = true; break;
+        }
+      }
+      var actual = null;
+      for (var vk in vals) {
+        if (!vals.hasOwnProperty(vk)) continue;
+        if (vk === chk.label || vk.indexOf(chk.label) >= 0 || chk.label.indexOf(vk) >= 0) {
+          actual = vals[vk]; break;
+        }
+      }
+      if (actual === null || actual === undefined || isNaN(Number(actual))) return { ok: false };
+      actual = Number(actual);
+      if ((chk.op === '≥' && actual < chk.threshold) ||
+          (chk.op === '≤' && actual > chk.threshold) ||
+          (chk.op === '=' && actual !== chk.threshold)) return { ok: false };
+    }
+    return { ok: true, roundReq: roundReq, hasRelation: hasRel };
+  }
+
+  // 2. 遍历所有【游戏结束·XXX】标记，收集满足条件的
+  var markerRe = /【游戏结束[·：:\s]*([^】]+)】/g;
+  var mm;
+  var results = [];
+  var idx = 0;
+  while ((mm = markerRe.exec(body)) !== null) {
+    var name = mm[1].trim();
+    // 向前搜索最近的括号条件（500字符窗口）
+    var before = body.substring(Math.max(0, mm.index - 500), mm.index);
+    var parenM = before.match(/[（(]([^）)]+)[）)]/g);
+    if (!parenM || parenM.length === 0) continue;
+    var condText = parenM[parenM.length - 1];
+    condText = condText.replace(/^[（(]/, '').replace(/[）)]$/, '');
+    var result = parseAndCheck(condText);
+    if (result.ok) {
+      results.push({
+        name: name,
+        condText: condText,
+        roundReq: result.roundReq,
+        hasRelation: result.hasRelation,
+        index: idx,
+      });
+    }
+    idx++;
+  }
+  return results;
+}
+
+// 从达标结局列表中选出最优（已触发过滤 + 严格度排序）
+function selectBestEnding(eligible, template) {
+  if (!eligible || eligible.length === 0) return null;
+
+  // 过滤已触发过的结局
+  var triggered = gameState.achievementFlags.triggeredEndings || [];
+  var fresh = eligible.filter(function(e) { return triggered.indexOf(e.name) === -1; });
+  if (fresh.length === 0) return null;
+
+  // 排序：轮次要求高优先 → 有关系条件优先 → 模板出现顺序
+  fresh.sort(function(a, b) {
+    if (a.roundReq !== b.roundReq) return b.roundReq - a.roundReq;  // 轮次高优先
+    if (a.hasRelation !== b.hasRelation) return b.hasRelation - a.hasRelation;  // 有关系优先
+    return a.index - b.index;  // 模板顺序
+  });
+
+  return fresh[0].name;
+}
+
+// 主入口：返回应触发的最佳结局（null=无）
+function checkEndingClientSide(template) {
+  if (!template) return null;
+  var eligible = collectEligibleEndings(template);
+  if (eligible.length === 0) { console.log('🔍 checkEndingClientSide: 无结局条件满足'); return null; }
+  console.log('🔍 checkEndingClientSide: ' + eligible.length + ' 个结局条件满足:',
+    eligible.map(function(e){return e.name + '(轮次≥' + e.roundReq + (e.hasRelation ? ',含关系' : '') + ')';}).join(', '));
+  var best = selectBestEnding(eligible, template);
+  if (best) {
+    console.log('🔔 客户端结局兜底选中: 「' + best + '」');
+  } else {
+    console.log('🔍 checkEndingClientSide: 所有达标结局均已触发过，跳过');
+  }
+  return best;
+}
+
+// ── 构建结局注入指令（从模板提取结局描述，生成具体叙事指令）──
+function buildEndingInjection(endingName, template) {
+  if (!template || !endingName) return '';
+
+  var body = template.promptBody || '';
+  // 在模板正文中找结局描述：从结局名向前后各扩展一些上下文
+  var escapeName = endingName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // 尝试多种模式匹配结局描述文本
+  var descText = '';
+
+  // 模式1: "结局X·名称...描述...标注【游戏结束·名称】"
+  var re1 = new RegExp('(?:结局[^。：:]*' + escapeName + '[^。\\n]{0,200})\\s*(?:。|：|:)', 'g');
+  var m1;
+  while ((m1 = re1.exec(body)) !== null) {
+    var found = m1[0];
+    // 提取"：描述"部分
+    var descM = found.match(/[：:]([^。，]+)/);
+    if (descM) { descText = descM[1].trim(); break; }
+    // 或取括号后的内容
+    descM = found.match(/[)）]\s*(.+)/);
+    if (descM) { descText = descM[1].trim().replace(/标注.*$/, '').replace(/【游戏结束.*$/, ''); break; }
+  }
+
+  // 模式2: 直接搜"名称"附近的描述文本
+  if (!descText) {
+    var idx = body.indexOf(endingName);
+    if (idx >= 0) {
+      var snippet = body.substring(Math.max(0, idx - 100), Math.min(body.length, idx + 200));
+      // 尝试匹配 "名称）：描述" 或 "名称）：描述。"
+      var descM2 = snippet.match(new RegExp(escapeName + '[^)]*[)）]\\s*[：:]\\s*([^。]+)'));
+      if (descM2) descText = descM2[1].trim();
+      else {
+        descM2 = snippet.match(new RegExp(escapeName + '[^)]*[)）]\\s*([^。]+)'));
+        if (descM2) descText = descM2[1].trim().replace(/标注.*$/, '');
+      }
+      if (!descText && snippet.indexOf('：') >= 0) {
+        var parts = snippet.split(/[：:]/);
+        if (parts.length > 1) descText = parts[1].replace(/标注.*$/, '').replace(/【游戏结束.*$/, '').trim().substring(0, 100);
+      }
+    }
+  }
+
+  // 后备：通用描述
+  if (!descText) {
+    descText = endingName;
+  }
+
+  // 构建注入消息
+  return '【★ 结局回合 ★】'
+    + '本回合触发结局「' + endingName + '」。'
+    + '叙事要点：' + descText + '。'
+    + '请写结局叙事（8-12句），末尾输出【游戏结束·' + endingName + '】，然后照常给4选项（含1个"继续"）。'
+    + '格式规则本回合放宽——优先写好结局，场景切换和选项格式容后。';
 }
 
 // ── 更新系统提示词（模板变化时调用）──
@@ -82,7 +347,10 @@ function refreshSystemPrompt() {
 
 // ── 检测结局标记 ──
 function detectEnding(text) {
-  const em = text.match(/【游戏结束[：:·]\s*(.+?)】/);
+  // 主匹配：全角【】括号 — 分隔符可选，兼容「游戏结束·XXX」「游戏结束：XXX」「游戏结束 XXX」
+  let em = text.match(/【游戏结束\s*[：:·—\-–]?\s*(.+?)】/);
+  // 副匹配：半角 [] 括号（AI 偶尔混淆括号格式）
+  if (!em) em = text.match(/\[游戏结束\s*[：:·—\-–]?\s*(.+?)\]/);
   if (em) {
     gameState.achievementFlags.endingTriggered = true;
     gameState.achievementFlags.endingType = em[1].trim();

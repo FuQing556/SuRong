@@ -201,7 +201,7 @@ function updateAllDynamicFields(fieldValues, template) {
   for (const field of allFields) {
     const el = document.getElementById('field-' + field.id);
     if (!el) continue;
-    const value = fieldValues[field.id] || '—';
+    const value = fieldValues[field.id] ?? '—';
     el.textContent = value;
 
     // 数值高亮

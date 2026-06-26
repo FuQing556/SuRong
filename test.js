@@ -89,7 +89,7 @@ check('autocomplete=off', acMissing === 0, acOff + '/' + inputTags.length + ' in
 console.log('\n═══ Service Worker ═══');
 const sw = fs.readFileSync(path.join(__dirname, 'public', 'sw.js'), 'utf8');
 check('sw.js filters POST', sw.includes("method !== 'GET'"));
-check('sw.js cache v5', sw.includes('xixi-v5'));
+check('sw.js cache v6', sw.includes('xixi-v6'));
 
 // ═══════════ 7. 关键 bug 修复验证 ═══════════
 console.log('\n═══ Bug 修复验证 ═══');
@@ -132,6 +132,43 @@ check('option resource NaN guard', uiCode2.includes('typeof cur !== \'number\' |
 const tavernCode = fs.readFileSync(path.join(JS_DIR, 'tavern.js'), 'utf8');
 check('tavern upload merges edited template', tavernCode.includes('xixi_edited_template_'));
 check('tavern upload uses uploadTemplate', tavernCode.includes('uploadTemplate'));
+
+// ── v3 新增: 音效函数检查 ──
+const audioCode = fs.readFileSync(path.join(JS_DIR, 'audio.js'), 'utf8');
+check('audio playUIClick defined', audioCode.includes('function playUIClick'));
+check('audio playClick defined', audioCode.includes('function playClick'));
+check('audio playAchievement defined', audioCode.includes('function playAchievement'));
+check('audio _safeCtx used', audioCode.includes('_safeCtx()'));
+
+// ── v3 新增: 结局系统检查 ──
+const utilsCode2 = fs.readFileSync(path.join(JS_DIR, 'utils.js'), 'utf8');
+check('utils buildEndingInjection', utilsCode2.includes('function buildEndingInjection'));
+check('utils collectEligibleEndings', utilsCode2.includes('function collectEligibleEndings'));
+check('utils selectBestEnding', utilsCode2.includes('function selectBestEnding'));
+check('utils repairEndingSection v2', utilsCode2.includes('missingMarkers'));
+check('core uses buildEndingInjection', coreCode.includes('buildEndingInjection'));
+check('core has triggeredEndings', coreCode.includes('triggeredEndings'));
+check('state has triggeredEndings', stateCode.includes('triggeredEndings'));
+
+// ── v3 新增: 模板结局完整性 ──
+const surongrongRaw = fs.readFileSync(path.join(__dirname, 'templates', 'surongrong.json'), 'utf8');
+const srTpl = JSON.parse(surongrongRaw);
+const srBody = srTpl.promptBody || '';
+const endingMarkers = srBody.match(/【游戏结束[^】]+】/g) || [];
+check('surongrong has 6 ending markers', endingMarkers.length === 6, endingMarkers.length + ' endings found');
+let endingsWithDesc = 0;
+for (const marker of endingMarkers) {
+  const idx = srBody.indexOf(marker);
+  const before = srBody.substring(Math.max(0, idx - 50), idx);
+  if (before.trim().length > 5) endingsWithDesc++;
+}
+check('surongrong ending descriptions', endingsWithDesc >= 5, endingsWithDesc + ' endings have descriptions');
+
+// ── v3 新增: openSettings fieldHistory 初始化 ──
+check('openSettings init fieldHistory', promptsCode.includes("gameState.fieldHistory[f.id]") && promptsCode.includes("f.type === 'number'"));
+
+// ── v3 新增: ui.js 使用 nullish coalescing ──
+check('ui use nullish coalescing', uiCode.includes("?? '—'"));
 
 // ═══════════ 8. 服务器 HTTP 检查 ═══════════
 console.log('\n═══ 服务器 ═══');

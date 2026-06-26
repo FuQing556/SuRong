@@ -65,6 +65,7 @@ let gameState = {
     gambitSuccessCount: 0,
     endingTriggered: false,
     endingType: '',
+    triggeredEndings: [],  // 已触发过的结局名列表，防止同结局重复弹窗
     counterAttack: false,
     tradeCompleted: false,
     choiceCounts: {},

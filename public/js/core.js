@@ -114,6 +114,11 @@ function renderGameState(parsed, template) {
   if (endingType) {
     gameState.achievementFlags.endingTriggered = true;
     gameState.achievementFlags.endingType = endingType;
+    // 记录已触发，防止同结局重复弹窗
+    if (!gameState.achievementFlags.triggeredEndings) gameState.achievementFlags.triggeredEndings = [];
+    if (gameState.achievementFlags.triggeredEndings.indexOf(endingType) === -1) {
+      gameState.achievementFlags.triggeredEndings.push(endingType);
+    }
     setTimeout(() => showEndingOverlay(endingType, parsed), 800);
   }
 
@@ -149,8 +154,8 @@ function renderGameState(parsed, template) {
   // 成就检测
   if (gameState.gameStarted) checkAchievementsFromState(parsed);
 
-  // 无situation且无选项时回退显示原始文本
-  if (!parsed.situation && parsed.options.length === 0) {
+  // 无situation且无选项时回退显示原始文本（但结局时有自己的弹窗，不覆盖故事框）
+  if (!parsed.situation && parsed.options.length === 0 && !endingType) {
     dom.storyContent.innerHTML = '';
     const p = document.createElement('p');
     p.textContent = parsed.raw;
@@ -200,6 +205,12 @@ async function sendMessage(userContent) {
     refreshSystemPrompt();
     const tpl = getActiveTemplate();
 
+    // ── 结局预检：发请求前先跑客户端兜底，条件满足则提前注入结局指令给AI ──
+    let preEndingType = null;
+    if (typeof checkEndingClientSide === 'function') {
+      preEndingType = checkEndingClientSide(tpl);
+    }
+
     const allMessages = [
       { role: 'system', content: gameState.activeSystemPrompt },
     ];
@@ -207,6 +218,15 @@ async function sendMessage(userContent) {
       allMessages.push({ role: 'system', content: '【历史摘要】' + gameState.summary });
     }
     allMessages.push(...recentMessages);
+
+    // 结局指令放在消息数组最后，确保AI注意到
+    if (preEndingType) {
+      console.log('🔔 结局预检触发: 「' + preEndingType + '」— 在消息末尾注入结局指令');
+      var injection = typeof buildEndingInjection === 'function'
+        ? buildEndingInjection(preEndingType, tpl)
+        : '触发结局「' + preEndingType + '」，写结局叙事+输出标记+4选项';
+      allMessages.push({ role: 'system', content: injection });
+    }
 
     const resp = await fetch('/api/chat', {
       method: 'POST',
@@ -254,8 +274,14 @@ async function sendMessage(userContent) {
               fullContent += delta;
               // 只显示叙事部分（场景+上回合+现状），隐藏格式化的选项和字段
               let displayText = fullContent;
+              // 剥离格式标记，让流式文字更干净
+              displayText = displayText.replace(/\[场景类型[：:][^\]]*\]/g, '');
+              displayText = displayText.replace(/\[事件大小[：:][^\]]*\]/g, '');
+              displayText = displayText.replace(/【事件大小[：:][^】]*】/g, '');
               const optIdx = displayText.search(/可选行动[：:]/);
               if (optIdx >= 0) displayText = displayText.substring(0, optIdx) + '\n\n▌ 正在生成选项...';
+              // 截断过长的流式预览（>800字符截断，防手机端卡顿）
+              if (displayText.length > 800) displayText = displayText.substring(0, 800) + '…';
               liveEl.textContent = displayText;
               $('#story-box').scrollTop = $('#story-box').scrollHeight;
             }
@@ -269,8 +295,35 @@ async function sendMessage(userContent) {
     gameState.fullHistory.push({ role: 'assistant', content: fullContent });
 
     const parsed = parseAIResponse(fullContent, tpl);
-    // AI返回了故事但漏了选项 → 视为格式异常，触发重试
-    if (parsed.options.length === 0) {
+    // 先检测结局 — 结局回复可能不含完整4选项格式
+    let endingType = detectEnding(fullContent);
+    // 硬兜底：AI未触发但客户端检测到条件满足 → 强制注入结局标记
+    if (!endingType && typeof checkEndingClientSide === 'function') {
+      const clientEnding = checkEndingClientSide(tpl);
+      if (clientEnding) {
+        console.log('🔔 客户端结局兜底触发: ' + clientEnding);
+        endingType = clientEnding;
+        gameState.achievementFlags.endingTriggered = true;
+        gameState.achievementFlags.endingType = clientEnding;
+        if (!gameState.achievementFlags.triggeredEndings) gameState.achievementFlags.triggeredEndings = [];
+        if (gameState.achievementFlags.triggeredEndings.indexOf(clientEnding) === -1) {
+          gameState.achievementFlags.triggeredEndings.push(clientEnding);
+        }
+        // 注入标记
+        parsed.raw = parsed.raw + '\n【游戏结束·' + clientEnding + '】';
+        fullContent = fullContent + '\n【游戏结束·' + clientEnding + '】';
+        gameState.fullHistory[gameState.fullHistory.length - 1].content = fullContent;
+        // 兜底叙事：如果AI没写结局场景，用模板中的结局描述作为叙事显示
+        if (!parsed.situation || parsed.situation.length < 20) {
+          var inj = typeof buildEndingInjection === 'function'
+            ? buildEndingInjection(clientEnding, tpl) : '';
+          var descM = inj.match(/叙事要点[：:]\s*(.+?)[。\n]/);
+          parsed.situation = '【' + clientEnding + '】\n' + (descM ? descM[1] : '命运之轮停转，故事暂告一段落。');
+        }
+      }
+    }
+    // AI返回了故事但漏了选项 且 非结局 → 视为格式异常，触发重试
+    if (parsed.options.length === 0 && !endingType) {
       gameState.fullHistory.pop();
       throw new Error('AI 返回格式异常：未包含可选行动。请点击重试。');
     }
@@ -388,7 +441,8 @@ async function startNewGame() {
     gameState.fieldHistory = {};
     gameState.achievementFlags = {
       gambitChosen: false, gambitSucceeded: false, gambitSuccessCount: 0,
-      endingTriggered: false, endingType: '', counterAttack: false, tradeCompleted: false,
+      endingTriggered: false, endingType: '', triggeredEndings: [],
+      counterAttack: false, tradeCompleted: false,
       choiceCounts: {}, responseMatches: {},
     };
 
@@ -508,9 +562,14 @@ async function continueGame(saveId) {
   gameState.fieldHistory = saveData.fieldHistory || {};
   gameState.achievementFlags = saveData.achievementFlags || {
     gambitChosen: false, gambitSucceeded: false, gambitSuccessCount: 0,
-    endingTriggered: false, endingType: '', counterAttack: false, tradeCompleted: false,
+    endingTriggered: false, endingType: '', triggeredEndings: [],
+    counterAttack: false, tradeCompleted: false,
     choiceCounts: {}, responseMatches: {},
   };
+  // 兼容旧存档无 triggeredEndings 字段
+  if (!gameState.achievementFlags.triggeredEndings) {
+    gameState.achievementFlags.triggeredEndings = [];
+  }
   gameState.gameStarted = true;
   gameState.isLoading = false;
 

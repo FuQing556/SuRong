@@ -108,7 +108,8 @@ function buildSystemPrompt(template) {
   if (!template) return gamePrompt || '';
 
   const format = generateOutputFormat(template.outputSections, template.sceneTypes);
-  const body = template.promptBody || '';
+  // v2: 自动修复被意外截断的结局章节（逐标记验证）
+  const body = repairEndingSection(template.promptBody || '', template);
 
   const outputRule = `【回复格式】\n每次回复严格按以下顺序，末尾完整输出所有状态字段（数值无变化也照写，不得省略）。第一回合上回合写"游戏开始。"`;
 
@@ -117,9 +118,61 @@ function buildSystemPrompt(template) {
 · 代价必须真实：标注【资源不足】的选项被选后，现状中必须体现失败后果，不得让选项正常成功。
 · 结算时如实更新所有字段数值。消耗扣减，获得增加。数值变化要合理——不要凭空增减。
 · 选项之间要有路线分歧：提供至少2条不同的策略方向（如战斗vs谈判、信任vs怀疑、冒险vs保守）。
-· 结局推送：当关键数值达到极端（≥90或≤10）或轮次≥15时，积极考虑触发结局。触发时输出【游戏结束·结局名】。`;
+· 结局推送：严格按照下方【结局系统】中定义的条件判断。一旦数值达标立即触发结局——不要因轮次不够、剧情未完等理由推迟。触发时输出【游戏结束·结局名】。`;
 
   return outputRule + '\n\n' + format + '\n\n' + narrativeGuide + '\n\n' + body;
+}
+
+// ── 服务端结局章节修复 ──
+// 需要从磁盘加载原始模板（template参数可能是客户端传来的编辑版，不能和自己比）
+function repairEndingSection(body, template) {
+  if (!body || !template) return body;
+
+  // 尝试从磁盘加载原始模板获取完整的结局章节
+  let origBody = '';
+  if (template.id && typeof loadTemplate === 'function') {
+    const diskTpl = loadTemplate(template.id);
+    if (diskTpl) origBody = diskTpl.promptBody || '';
+  }
+  // 回退：如果当前template有自己的promptBody且比body长，用它
+  if (!origBody && template.promptBody && template.promptBody.length > body.length) {
+    origBody = template.promptBody;
+  }
+  if (!origBody) return body;
+
+  const origEm = origBody.match(/【结局系统】([\s\S]*?)(?=【[^】]+】|$)/);
+  if (!origEm) return body;
+
+  const em = body.match(/【结局系统】([\s\S]*?)(?=【[^】]+】|$)/);
+  if (!em) {
+    console.log('🔧 [server] repairEndingSection: 结局章节完全缺失，从磁盘模板恢复');
+    return body + '\n\n' + origEm[0];
+  }
+
+  // 逐标记验证
+  const endingMarkerRe = /【游戏结束[：:·\s]*([^】]+)】/g;
+  const origMarkers = [];
+  let m;
+  while ((m = endingMarkerRe.exec(origEm[0])) !== null) {
+    origMarkers.push(m[0]);
+  }
+  endingMarkerRe.lastIndex = 0;
+
+  if (origMarkers.length === 0) return body;
+
+  const missingMarkers = [];
+  for (let i = 0; i < origMarkers.length; i++) {
+    if (body.indexOf(origMarkers[i]) === -1) {
+      missingMarkers.push(origMarkers[i]);
+    }
+  }
+
+  if (missingMarkers.length === 0) return body;
+
+  console.warn('🔧 [server] repairEndingSection: 检测到 ' + missingMarkers.length + ' 个结局标记缺失：',
+    missingMarkers.join(', '), '— 从磁盘模板恢复结局章节');
+
+  return body.replace(em[0], origEm[0]);
 }
 
 // ── API: 获取提示词 ──
@@ -343,7 +396,7 @@ variables: 2个关系值(-100~100)，每个必须被至少1个结局引用
   中期(${lengthGuide.mid}回): 条件 — 结局名
   后期(${lengthGuide.late}回): 条件 — 结局名
   大后期(${lengthGuide.epic}回): 多条件 — 结局名
-★ 条件必须引用具体字段标签和数值。"轮次≥15后积极推结局。结局触发后保留继续选项。
+★ 条件必须引用具体字段标签和数值。每个结局必须附带1-2句具体叙事描述（如"苏蓉蓉发现守卫换岗空隙，当机立断孤身越过边界"），使AI能据此展开8-12句完整结局场景。"轮次≥15后积极推结局。结局触发后保留继续选项。
 【资源系统】2个资源各列3种获取+3种消耗方式。资源不足→标的【资源不足】→下回合体现失败后果。
 【选项设计】每回合4选项 = 动作+代价+风险(低/中/高/孤注)。≥3个带玩家离开当前场景。≥2条不同策略路线。禁止无代价、禁止"等待/观察"。选项之间形成真正的两难——没有明显最优解。
 【开局系统】3个开局(编号1-3)，不同场景+初始数值。openingMessages:["开始游戏。【开局编号：1】",...]

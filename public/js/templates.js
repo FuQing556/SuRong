@@ -46,6 +46,7 @@ async function initTemplateSelector() {
       applyTheme(tpl.theme);
       refreshSystemPrompt();
       renderStatusContainers(tpl);
+      if (gameState.gameStarted) updateAllDynamicFieldsFromHistory();
       localStorage.setItem('xixi_active_template_id', tpl.id);
     }
   });
@@ -222,6 +223,8 @@ async function confirmCreateSave() {
 function renderFieldEditor() {
   const tpl = getActiveTemplate();
   const sections = tpl.outputSections || {};
+  // 快照当前字段ID列表，供 saveFields 检测重命名迁移
+  tpl._preEditFields = JSON.parse(JSON.stringify(sections));
   const container = $('#field-editor-container');
   if (!container) return;
 
@@ -360,6 +363,20 @@ function saveFields() {
 
   tpl.outputSections = newSections;
   refreshSystemPrompt();
+
+  // ── 字段ID迁移：检测重命名的字段，迁移fieldHistory数据 ──
+  for (const [sKey, newSec] of Object.entries(newSections)) {
+    const oldFields = (tpl._preEditFields && tpl._preEditFields[sKey]) || [];
+    const newFields = newSec.fields || [];
+    for (let i = 0; i < Math.min(oldFields.length, newFields.length); i++) {
+      const oldId = oldFields[i].id;
+      const newId = newFields[i].id;
+      if (oldId !== newId && gameState.fieldHistory[oldId] && !gameState.fieldHistory[newId]) {
+        gameState.fieldHistory[newId] = gameState.fieldHistory[oldId];
+        delete gameState.fieldHistory[oldId];
+      }
+    }
+  }
 
   // 为新增字段初始化 fieldHistory 默认值，避免全显"—"
   for (const section of Object.values(newSections)) {
