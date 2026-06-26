@@ -47,7 +47,7 @@ function showLoading(show) {
 
 function _updateLoadingText() {
   const elapsed = Math.floor((Date.now() - _loadingStart) / 1000);
-  const roundNum = gameState.fullHistory.filter(m => m.role === 'user').length + 1;
+  const roundNum = Math.max(1, gameState.fullHistory.filter(m => m.role === 'user').length);
   const textEl = dom.loadingIndicator.querySelector('.spinner')?.nextSibling;
   if (textEl) textEl.textContent = '第' + roundNum + '回合 · 已等待' + elapsed + '秒';
 }

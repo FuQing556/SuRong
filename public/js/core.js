@@ -67,7 +67,7 @@ function renderGameState(parsed, template) {
   if (parsed.settlement) {
     dom.settlementContent.textContent = parsed.settlement;
     dom.settlementBox.style.display = '';
-  } else if (!parsed.settlement && !parsed.situation) {
+  } else {
     dom.settlementBox.style.display = 'none';
   }
 
@@ -120,8 +120,8 @@ function renderGameState(parsed, template) {
       if (!gameState.achievementFlags.triggeredEndings) gameState.achievementFlags.triggeredEndings = [];
       if (gameState.achievementFlags.triggeredEndings.indexOf(endingType) === -1) {
         gameState.achievementFlags.triggeredEndings.push(endingType);
+        setTimeout(function() { showEndingOverlay(endingType, parsed); }, 800);
       }
-      setTimeout(function() { showEndingOverlay(endingType, parsed); }, 800);
     }
   }
 
@@ -265,7 +265,8 @@ async function _streamResponse(resp, liveEl) {
             if (optIdx >= 0) displayText = displayText.substring(0, optIdx) + '\n\n▌ 正在生成选项...';
             if (displayText.length > 800) displayText = displayText.substring(0, 800) + '…';
             liveEl.textContent = displayText;
-            $('#story-box').scrollTop = $('#story-box').scrollHeight;
+            var sb3 = $('#story-box');
+            if (sb3.scrollHeight - sb3.scrollTop - sb3.clientHeight < 50) sb3.scrollTop = sb3.scrollHeight;
           }
         } catch (e) { /* 跳过非JSON行 */ }
       }
@@ -631,9 +632,12 @@ async function continueGame(saveId) {
   const lastAiMsg = [...gameState.fullHistory].reverse().find(m => m.role === 'assistant');
   if (lastAiMsg) {
     gameState._loadingSave = true;
-    const parsed = parseAIResponse(lastAiMsg.content, template);
-    renderGameState(parsed, template);
-    gameState._loadingSave = false;
+    try {
+      const parsed = parseAIResponse(lastAiMsg.content, template);
+      renderGameState(parsed, template);
+    } finally {
+      gameState._loadingSave = false;
+    }
   } else {
     updateOptionButtons([]);
     updateAllDynamicFields({}, template);
@@ -754,9 +758,13 @@ function showEndingOverlay(endingType, parsed) {
   $('#ending-stats').innerHTML = sh;
   $('#ending-overlay').classList.add('active');
 
-  // 自动解锁"崩坏"类成就
-  const ea = Object.entries(getAchievements()).find(([n, a]) => /(结局|命运|崩坏|尘埃)/.test(a.desc || ''));
-  if (ea) unlockAchievement(ea[0]);
+  // 自动解锁所有"结局触发"类成就
+  var allAch = getAchievements();
+  for (var ak in allAch) {
+    if (allAch.hasOwnProperty(ak) && /(结局|命运|崩坏|尘埃)/.test(allAch[ak].desc || '')) {
+      unlockAchievement(ak);
+    }
+  }
 }
 
 function closeEndingOverlay() {

@@ -306,9 +306,9 @@ async function init() {
 
 // ── 页面离开警告（游戏进行中关闭/刷新标签页时确认）──
 window.addEventListener('beforeunload', (e) => {
-  if (gameState.gameStarted && gameState.isLoading) {
+  if (gameState.gameStarted) {
     e.preventDefault();
-    e.returnValue = 'AI正在生成回复，离开将丢失当前回合进度。';
+    e.returnValue = '游戏正在进行中，确定离开？';
     return e.returnValue;
   }
 });
