@@ -1,5 +1,5 @@
 // Service Worker — 离线缓存（网络优先，回退缓存）
-const CACHE = 'xixi-v6';
+const CACHE = 'xixi-v7';
 const FILES = [
   '/', '/index.html', '/style.css',
   '/js/state.js', '/js/utils.js', '/js/dialogs.js', '/js/saves.js',
@@ -33,8 +33,15 @@ self.addEventListener('activate', e => {
       keys.filter(k => k !== CACHE).map(k => caches.delete(k))
     ))
   );
-  // 立即接管所有页面
+  // 立即接管所有页面，并通知刷新
   e.waitUntil(clients.claim());
+  e.waitUntil(
+    clients.matchAll({ type: 'window' }).then(clients => {
+      clients.forEach(client => {
+        client.postMessage({ type: 'SW_UPDATED', version: CACHE });
+      });
+    })
+  );
 });
 
 self.addEventListener('fetch', e => {

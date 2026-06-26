@@ -341,6 +341,23 @@ window.addEventListener('unhandledrejection', (e) => {
   console.error('🔴 UNHANDLED REJECTION:', e.reason?.message || e.reason);
 });
 
+// ── SW 更新通知 ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'SW_UPDATED') {
+      var banner = document.getElementById('pwa-install-banner');
+      if (banner) {
+        banner.innerHTML = '<span class="pwa-banner-icon">🔄</span><span class="pwa-banner-text">有新版本可用</span><button id="btn-sw-refresh" class="btn btn-small btn-primary">刷新</button><button id="btn-sw-dismiss" class="btn btn-ghost btn-tiny">✕</button>';
+        banner.classList.remove('hidden');
+        var refreshBtn = document.getElementById('btn-sw-refresh');
+        if (refreshBtn) refreshBtn.addEventListener('click', function() { window.location.reload(); });
+        var dismissBtn = document.getElementById('btn-sw-dismiss');
+        if (dismissBtn) dismissBtn.addEventListener('click', function() { banner.classList.add('hidden'); });
+      }
+    }
+  });
+}
+
 // ── PWA 安装引导 ──
 var _pwaInstallPrompt = null;
 
