@@ -417,7 +417,12 @@ function saveFields() {
   edited.outputSections = tpl.outputSections;
   safeSetItem(LS_KEYS.editedTemplate(saveId), edited);
 
-  if (typeof clearSettingsDirty === 'function') clearSettingsDirty();
+  // 只清除字段编辑的脏标记，不影响提示词编辑器的脏状态
+  // （提示词有自己独立的保存按钮和脏标记追踪）
+  if (typeof clearSettingsDirty === 'function') {
+    // 延迟清除：如果用户也编辑了提示词，提示词输入事件会重新标记dirty
+    setTimeout(function() { clearSettingsDirty(); }, 200);
+  }
   const msgEl = $('#fields-msg');
   if (msgEl) {
     msgEl.textContent = gameState._saveFailed ? '⚠ 保存失败：存储空间不足' : '✅ 字段已保存！系统提示词已自动同步。';

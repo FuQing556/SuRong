@@ -63,8 +63,9 @@ function buildStatusSnapshot(template) {
     for (const f of sec.fields || []) allFields.push(f);
   }
   const parts = [];
+  var fh = gameState.fieldHistory || {};
   for (const f of allFields) {
-    const hist = gameState.fieldHistory[f.id];
+    const hist = fh[f.id];
     if (!hist) continue;
     const val = (hist.current != null) ? hist.current : (hist.currentText || null);
     if (val === null || val === '—') continue;

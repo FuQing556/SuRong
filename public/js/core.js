@@ -249,6 +249,10 @@ async function _streamResponse(resp, liveEl) {
       if (line.startsWith('data: ') && line.length > 6) {
         try {
           const json = JSON.parse(line.slice(6));
+          // 检测 API 错误（如余额不足、key无效等）
+          if (json.error) {
+            throw new Error('API 错误: ' + (json.error.message || JSON.stringify(json.error)));
+          }
           const delta = json.choices?.[0]?.delta?.content;
           if (delta) {
             fullContent += delta;
@@ -270,7 +274,7 @@ async function _streamResponse(resp, liveEl) {
 }
 
 // 结局检测 + 渲染 + 存档
-function _handleParsedResponse(fullContent, tpl, parsed, preEndingType) {
+function _handleParsedResponse(fullContent, tpl, parsed) {
   gameState.fullHistory.push({ role: 'assistant', content: fullContent });
 
   parsed = parsed || parseAIResponse(fullContent, tpl);
@@ -359,7 +363,7 @@ async function sendMessage(userContent) {
     liveEl.remove();
     showLoading(false);
 
-    _handleParsedResponse(fullContent, prep.tpl, null, prep.preEndingType);
+    _handleParsedResponse(fullContent, prep.tpl, null);
 
   } catch (err) {
     clearTimeout(timeoutId);
@@ -504,8 +508,11 @@ async function startNewGame() {
     clearAiInstructions();
     renderAiChatMessages();
 
-    const openings = tpl.openingMessages || ['开始游戏。【开局编号：1】'];
-    const openingMsg = openings[Math.floor(Math.random() * openings.length)];
+    var openings = tpl.openingMessages;
+    if (!openings || !Array.isArray(openings) || openings.length === 0) {
+      openings = ['开始游戏。【开局编号：1】'];
+    }
+    var openingMsg = openings[Math.floor(Math.random() * openings.length)] || '开始游戏。';
     console.log('startNewGame: sending', openingMsg.substring(0, 30));
     showLoading(true);
     await sendMessage(openingMsg);
