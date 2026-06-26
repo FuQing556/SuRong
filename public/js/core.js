@@ -431,11 +431,15 @@ async function handleChoice(num) {
 
 // ── 重试上次请求 ──
 async function retryLastRequest() {
+  // 清理上次失败的assistant回复（如果有）
   if (gameState.fullHistory.length > 0 &&
       gameState.fullHistory[gameState.fullHistory.length - 1].role === 'assistant') {
     gameState.fullHistory.pop();
   }
-  const lastUserMsg = [...gameState.fullHistory].reverse().find(m => m.role === 'user');
+  var lastUserMsg = null;
+  for (var ri = gameState.fullHistory.length - 1; ri >= 0; ri--) {
+    if (gameState.fullHistory[ri].role === 'user') { lastUserMsg = gameState.fullHistory[ri]; break; }
+  }
   if (lastUserMsg) {
     const idx = gameState.fullHistory.lastIndexOf(lastUserMsg);
     if (idx >= 0) gameState.fullHistory.splice(idx, 1);
@@ -672,7 +676,7 @@ async function undoLastRound() {
 
 // ── 手动存档 ──
 async function manualSave() {
-  if (!gameState.gameStarted) return;
+  if (!gameState.gameStarted || gameState.isLoading) return;
   const tplId = gameState.activeSaveId || getActiveTemplate().id || 'default';
   // 从上一次使用的槽位之后轮转，避免总覆写槽位1
   const lastSlotKey = LS_KEYS.lastManualSlot(tplId);

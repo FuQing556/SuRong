@@ -365,12 +365,20 @@ function showSaveSelector() {
   // 加载中不自动存档，防止保存缺AI回复的半截状态
   if (gameState.gameStarted && !gameState.isLoading) saveGameState();
 
+  // 如果设置有未保存修改，先提示
+  if (typeof _settingsDirty !== 'undefined' && _settingsDirty) {
+    var setOv = $('#settings-overlay');
+    if (setOv && setOv.classList.contains('active')) {
+      if (!confirm('设置有未保存的修改，确定离开？')) return;
+    }
+  }
+
   const ov = $('#save-selector-overlay');
   if (ov) ov.classList.add('active');
-  const setOv = $('#settings-overlay');
-  if (setOv) setOv.classList.remove('active');
-  const csOv = $('#create-save-overlay');
-  if (csOv) csOv.classList.remove('active');
+  var setOv2 = $('#settings-overlay');
+  if (setOv2) setOv2.classList.remove('active');
+  var csOv2 = $('#create-save-overlay');
+  if (csOv2) csOv2.classList.remove('active');
 
   initSaveTabs();
   renderMySavesPanel();
