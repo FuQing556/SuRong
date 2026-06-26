@@ -5,7 +5,7 @@ const FILES = [
   '/js/state.js', '/js/utils.js', '/js/dialogs.js', '/js/saves.js',
   '/js/ui.js', '/js/achievements.js', '/js/prompts.js', '/js/templates.js',
   '/js/tavern.js', '/js/ai.js', '/js/core.js', '/js/init.js', '/js/audio.js',
-  '/manifest.json', '/icon-192.png', '/icon-512.png',
+  '/manifest.json', '/icon.svg', '/icon-192.png', '/icon-512.png',
   '/日常.png', '/对峙.png', '/调查.png', '/潜伏.png', '/社交.png',
   '/战斗.png', '/研究.png', '/交易.png', '/崩溃.png',
 ];

@@ -68,8 +68,10 @@ function updateFieldHistoryFromParsed(parsed) {
     if (!isNaN(num)) {
       hist.current = num;
       hist.max = Math.max(hist.max || 0, num);
+      delete hist.currentText;  // 清理旧文本值，防类型切换残留
     } else {
       hist.currentText = value;
+      delete hist.current;      // 清理旧数值，防类型切换残留
     }
   }
 }
@@ -185,7 +187,7 @@ function checkHiddenAchievements(parsed) {
         break;
       case 'field_zero': {
         const fid = _findFieldId(trigger.fieldLabel || '');
-        if (fid && gameState.fieldHistory[fid]) {
+        if (fid && gameState.fieldHistory[fid] && gameState.fieldHistory[fid].hasOwnProperty('current')) {
           triggered = (gameState.fieldHistory[fid].current || 0) === 0;
         }
         break;
@@ -326,11 +328,22 @@ async function editAchievement(name) {
 
   const saveId = gameState.activeSaveId || tpl.id || 'default';
   if (isHidden) {
-    if (fn !== name) { tpl.hiddenAchievements[fn] = tpl.hiddenAchievements[name]; delete tpl.hiddenAchievements[name]; }
+    if (fn !== name) {
+      // 检查重名
+      if (tpl.hiddenAchievements[fn] && tpl.hiddenAchievements[fn] !== tpl.hiddenAchievements[name]) {
+        dlAlert('⚠ 已存在同名隐藏成就「' + fn + '」，请使用不同名称。');
+        return;
+      }
+      tpl.hiddenAchievements[fn] = tpl.hiddenAchievements[name]; delete tpl.hiddenAchievements[name];
+    }
     tpl.hiddenAchievements[fn].icon = fi;
     tpl.hiddenAchievements[fn].desc = fd;
   } else {
     if (fn !== name) {
+      if (tpl.achievements[fn] && tpl.achievements[fn] !== tpl.achievements[name]) {
+        dlAlert('⚠ 已存在同名可见成就「' + fn + '」，请使用不同名称。');
+        return;
+      }
       tpl.achievements[fn] = tpl.achievements[name]; delete tpl.achievements[name];
       const allA = getUnlockedAchievements();
       if (allA[name]) { allA[fn] = allA[name]; delete allA[name]; saveAchievements(allA); }
@@ -339,12 +352,12 @@ async function editAchievement(name) {
     tpl.achievements[fn].desc = fd;
   }
   // 只持久化成就部分，不覆盖字段/提示词等其他编辑
-  const editKey = 'xixi_edited_template_' + saveId;
+  const editKey = LS_KEYS.editedTemplate(saveId);
   let edited = {};
   try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
   edited.achievements = tpl.achievements;
   edited.hiddenAchievements = tpl.hiddenAchievements;
-  localStorage.setItem(editKey, JSON.stringify(edited));
+  safeSetItem(editKey, edited);
   renderAchievementsPanelV2();
 }
 
@@ -356,12 +369,12 @@ async function deleteAchievement(name) {
   if (tpl.hiddenAchievements && tpl.hiddenAchievements[name]) delete tpl.hiddenAchievements[name];
   else delete tpl.achievements[name];
   const saveId = gameState.activeSaveId || tpl.id || 'default';
-  const editKey = 'xixi_edited_template_' + saveId;
+  const editKey = LS_KEYS.editedTemplate(saveId);
   let edited = {};
   try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
   edited.achievements = tpl.achievements;
   edited.hiddenAchievements = tpl.hiddenAchievements;
-  localStorage.setItem(editKey, JSON.stringify(edited));
+  safeSetItem(editKey, edited);
   renderAchievementsPanelV2();
 }
 
@@ -387,12 +400,12 @@ async function addNewAchievement(isHidden) {
     tpl.achievements[name.trim()] = { icon: icon.trim() || '🏆', desc: desc.trim() || name.trim() };
   }
   const saveId = gameState.activeSaveId || tpl.id || 'default';
-  const editKey = 'xixi_edited_template_' + saveId;
+  const editKey = LS_KEYS.editedTemplate(saveId);
   let edited = {};
   try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
   edited.achievements = tpl.achievements;
   edited.hiddenAchievements = tpl.hiddenAchievements;
-  localStorage.setItem(editKey, JSON.stringify(edited));
+  safeSetItem(editKey, edited);
   renderAchievementsPanelV2();
 }
 
@@ -419,3 +432,4 @@ async function exportTemplateAsNewSave() {
 }
 
 console.log('📦 achievements.js 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('achievements');

@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════ */
 
 // ── 表单自动保存 Key ──
-const FORM_SAVE_KEY = 'xixi_create_save_form';
+const FORM_SAVE_KEY = LS_KEYS.createForm;
 
 // ── 已生成的模板缓存 ──
 let generatedTemplate = null;
@@ -47,7 +47,7 @@ async function initTemplateSelector() {
       refreshSystemPrompt();
       renderStatusContainers(tpl);
       if (gameState.gameStarted) updateAllDynamicFieldsFromHistory();
-      localStorage.setItem('xixi_active_template_id', tpl.id);
+      localStorage.setItem(LS_KEYS.activeTemplateId, tpl.id);
     }
   });
 }
@@ -97,7 +97,7 @@ function openCreateSave() {
 
   // 恢复已生成的模板
   try {
-    const savedTpl = localStorage.getItem('xixi_generated_template');
+    const savedTpl = localStorage.getItem(LS_KEYS.generatedTpl);
     if (savedTpl) {
       generatedTemplate = JSON.parse(savedTpl);
       const previewEl = document.querySelector('#generated-prompt-preview');
@@ -155,13 +155,13 @@ async function generatePrompt() {
       if (attempt > 1 && msgEl) { msgEl.textContent = '⏳ 第' + attempt + '次尝试生成...'; }
       const resp = await fetch('/api/generate-prompt', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, world, protagonist, conflict, extra, styles, gameLength, apiKey: localStorage.getItem('xixi_apikey') || '' }),
+        body: JSON.stringify({ name, world, protagonist, conflict, extra, styles, gameLength, apiKey: localStorage.getItem(LS_KEYS.apikey) || '' }),
         signal: AbortSignal.timeout(120000),
       });
       if (!resp.ok) throw new Error((await resp.json()).error || '生成失败');
       const data = await resp.json();
       generatedTemplate = data.template;
-      localStorage.setItem('xixi_generated_template', JSON.stringify(generatedTemplate));
+      localStorage.setItem(LS_KEYS.generatedTpl, JSON.stringify(generatedTemplate));
 
       const previewEl = $('#generated-prompt-preview');
       if (previewEl) previewEl.value = data.template.promptBody || '';
@@ -184,7 +184,7 @@ async function generatePrompt() {
 async function confirmCreateSave() {
   if (!generatedTemplate) {
     try {
-      const saved = localStorage.getItem('xixi_generated_template');
+      const saved = localStorage.getItem(LS_KEYS.generatedTpl);
       if (saved) { generatedTemplate = JSON.parse(saved); }
     } catch (e) { /* corrupt */ }
   }
@@ -210,7 +210,7 @@ async function confirmCreateSave() {
   // 保存引用后清除缓存，防止下次创建时恢复旧模板
   const savedTemplate = generatedTemplate;
   generatedTemplate = null;
-  localStorage.removeItem('xixi_generated_template');
+  localStorage.removeItem(LS_KEYS.generatedTpl);
 
   try { await fetch('/api/templates/' + newId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: savedTemplate }) }); } catch (e) { /* server optional */ }
 
@@ -397,7 +397,7 @@ function saveFields() {
 
   // 按存档隔离保存
   const saveId = gameState.activeSaveId || tpl.id || 'default';
-  localStorage.setItem('xixi_edited_template_' + saveId, JSON.stringify(tpl));
+  localStorage.setItem(LS_KEYS.editedTemplate(saveId), JSON.stringify(tpl));
 
   if (typeof clearSettingsDirty === 'function') clearSettingsDirty();
   const msgEl = $('#fields-msg');
@@ -408,3 +408,4 @@ function saveFields() {
 }
 
 console.log('📦 templates.js 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('templates');

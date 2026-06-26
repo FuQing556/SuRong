@@ -38,6 +38,7 @@ check('index.html no app.js', !indexHtml.includes('src="app.js"'));
 
 // ═══════════ 2. 括号平衡 ═══════════
 console.log('\n═══ 括号平衡 ═══');
+// 注: utils.js / core.js 的正则中含大量 [ ]，朴素计数会有误报（CLAUDE.md 已记录）
 for (const f of MODULES) {
   const code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   const braces = (code.match(/\{/g) || []).length === (code.match(/\}/g) || []).length;
@@ -95,7 +96,7 @@ check('sw.js cache v6', sw.includes('xixi-v6'));
 console.log('\n═══ Bug 修复验证 ═══');
 
 const uiCode = fs.readFileSync(path.join(JS_DIR, 'ui.js'), 'utf8');
-check('selectSave loads edited template', uiCode.includes('xixi_edited_template_'));
+check('selectSave uses loadAndMergeTemplate', uiCode.includes('loadAndMergeTemplate'));
 
 const promptsCode = fs.readFileSync(path.join(JS_DIR, 'prompts.js'), 'utf8');
 check('openSettings merges edits', promptsCode.includes('ed.promptBody') && promptsCode.includes('ed.outputSections'));
@@ -113,7 +114,7 @@ const stateCode = fs.readFileSync(path.join(JS_DIR, 'state.js'), 'utf8');
 check('state has _originalTemplate', stateCode.includes('_originalTemplate'));
 
 const coreCode = fs.readFileSync(path.join(JS_DIR, 'core.js'), 'utf8');
-check('continueGame saves _originalTemplate', coreCode.includes('_originalTemplate'));
+check('continueGame uses loadAndMergeTemplate', coreCode.includes('loadAndMergeTemplate'));
 check('continueGame sets _loadingSave', coreCode.includes('_loadingSave = true'));
 check('continueGame clears _loadingSave', coreCode.includes('_loadingSave = false'));
 
@@ -130,7 +131,7 @@ check('option resource NaN guard', uiCode2.includes('typeof cur !== \'number\' |
 
 // tavern upload merges edits
 const tavernCode = fs.readFileSync(path.join(JS_DIR, 'tavern.js'), 'utf8');
-check('tavern upload merges edited template', tavernCode.includes('xixi_edited_template_'));
+check('tavern upload merges edited template', tavernCode.includes('LS_KEYS.editedTemplate'));
 check('tavern upload uses uploadTemplate', tavernCode.includes('uploadTemplate'));
 
 // ── v3 新增: 音效函数检查 ──
@@ -170,6 +171,27 @@ check('openSettings init fieldHistory', promptsCode.includes("gameState.fieldHis
 // ── v3 新增: ui.js 使用 nullish coalescing ──
 check('ui use nullish coalescing', uiCode.includes("?? '—'"));
 
+// ── v4 新增: 全局函数命名冲突检查 ──
+console.log('\n═══ 全局函数命名 ═══');
+var allFuncs = [];
+for (var f = 0; f < MODULES.length; f++) {
+  var mcode = fs.readFileSync(path.join(JS_DIR, MODULES[f]), 'utf8');
+  var fns = [...mcode.matchAll(/^function\s+(\w+)/gm)].map(function(mm) { return mm[1]; });
+  for (var fn = 0; fn < fns.length; fn++) {
+    allFuncs.push({ name: fns[fn], module: MODULES[f] });
+  }
+}
+var nameMap = {};
+var conflicts = [];
+for (var n = 0; n < allFuncs.length; n++) {
+  var entry = allFuncs[n];
+  if (nameMap[entry.name] && nameMap[entry.name] !== entry.module) {
+    conflicts.push(entry.name + ' (in ' + nameMap[entry.name] + ' and ' + entry.module + ')');
+  }
+  nameMap[entry.name] = entry.module;
+}
+check('no cross-module function name conflicts', conflicts.length === 0, conflicts.length > 0 ? conflicts.join('; ') : '');
+
 // ═══════════ 8. 服务器 HTTP 检查 ═══════════
 console.log('\n═══ 服务器 ═══');
 try {
@@ -180,9 +202,13 @@ try {
     req.on('error', () => resolve(false));
     req.setTimeout(2000, () => { req.destroy(); resolve(false); });
   });
-  check('server :3000', serverReady, serverReady ? 'running' : 'not started');
+  if (serverReady) {
+    check('server :3000', true, 'running');
+  } else {
+    console.log('\x1b[33m⚠\x1b[0m server :3000 — not started (npm start 后重试)');
+  }
 } catch (e) {
-  console.log('  ℹ 服务器未启动，跳过（npm start 后重试）');
+  console.log('  \x1b[33m⚠\x1b[0m 服务器检查跳过: ' + e.message);
 }
 
 // ═══════════ 汇总 ═══════════

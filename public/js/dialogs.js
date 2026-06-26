@@ -119,3 +119,4 @@ function pickEmoji(current) {
 }
 
 console.log('📦 dialogs.js 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('dialogs');

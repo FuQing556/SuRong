@@ -610,6 +610,20 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .ach-edit-btn:hover { opacity: 1 !important; color: var(--gold); }
 .ach-del-btn:hover { opacity: 1 !important; color: var(--red); }
 
+/* ── PWA 安装引导 ── */
+.pwa-install-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(124,58,237,.15), rgba(201,169,110,.1));
+  border-bottom: 1px solid var(--gold-dim);
+  position: sticky; top: 0; z-index: 100;
+  animation: slideDown .3s ease;
+}
+.pwa-install-banner.hidden { display: none; }
+.pwa-banner-icon { font-size: 24px; }
+.pwa-banner-text { flex: 1; font-size: 13px; color: var(--gold); }
+@keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
 /* ═══════════ 响应式 (平板/手机) ═══════════ */
 @media (max-width: 900px) {
   /* 整体布局 — 竖排 */

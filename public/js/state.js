@@ -125,3 +125,24 @@ const FALLBACK_TEMPLATE = {
 };
 
 console.log('📦 state.js 已加载');
+window.XIXI = window.XIXI || {};
+window.XIXI.version = '1.0.0';
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('state');
+
+// ── localStorage Key 集中管理 ──
+const LS_KEYS = {
+  apikey: 'xixi_apikey',
+  save: function(id, slot) { return 'xixi_gamesave_' + id + (slot && slot > 0 ? '_' + slot : ''); },
+  editedTemplate: function(id) { return 'xixi_edited_template_' + id; },
+  achievements: function(id) { return 'xixi_achievements_' + id; },
+  theme: function(id) { return 'xixi_theme_' + id; },
+  saves: 'xixi_saves',
+  aiInstructions: 'xixi_ai_instructions',
+  customImages: 'xixi_custom_images',
+  createForm: 'xixi_create_save_form',
+  generatedTpl: 'xixi_generated_template',
+  ageVerified: 'xixi_age_verified',
+  lastSaveId: 'xixi_last_save_id',
+  activeTemplateId: 'xixi_active_template_id',
+  lastManualSlot: function(id) { return 'xixi_last_manual_slot_' + id; },
+};

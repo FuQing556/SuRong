@@ -8,14 +8,25 @@ let isTavernAdmin = false;
 
 // ── 管理员登录 ──
 function adminLogin() {
-  dlPrompt('请输入管理员密码：').then(pwd => {
-    if (pwd === 'admin123') {
-      isTavernAdmin = true;
-      const status = document.querySelector('#admin-status');
-      if (status) { status.textContent = '✅ 管理员'; status.style.color = 'var(--green)'; }
-      renderTavernPanel();
-    } else if (pwd !== null) {
-      dlAlert('密码错误');
+  dlPrompt('请输入管理员密码：').then(async (pwd) => {
+    if (!pwd) return;
+    try {
+      const resp = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd }),
+      });
+      const data = await resp.json();
+      if (data.valid) {
+        isTavernAdmin = true;
+        const status = document.querySelector('#admin-status');
+        if (status) { status.textContent = '✅ 管理员'; status.style.color = 'var(--green)'; }
+        renderTavernPanel();
+      } else {
+        dlAlert('密码错误');
+      }
+    } catch (e) {
+      dlAlert('验证失败: ' + e.message);
     }
   });
 }
@@ -53,7 +64,7 @@ async function uploadToTavern(saveId) {
 
   // 深克隆模板 + 合并编辑版（确保上传的是最新版本）
   const uploadTemplate = JSON.parse(JSON.stringify(save.template));
-  const editKey = 'xixi_edited_template_' + saveId;
+  const editKey = LS_KEYS.editedTemplate(saveId);
   const ej = localStorage.getItem(editKey);
   if (ej) {
     try {
@@ -239,3 +250,4 @@ function restoreTavern() {
 }
 
 console.log('📦 tavern.js 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('tavern');

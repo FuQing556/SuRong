@@ -120,6 +120,8 @@ function buildSystemPrompt(template) {
 · 选项之间要有路线分歧：提供至少2条不同的策略方向（如战斗vs谈判、信任vs怀疑、冒险vs保守）。
 · 结局推送：严格按照下方【结局系统】中定义的条件判断。一旦数值达标立即触发结局——不要因轮次不够、剧情未完等理由推迟。触发时输出【游戏结束·结局名】。`;
 
+  // 注：状态快照由客户端 buildSystemPrompt 生成（含具体字段数值），
+  // 服务端无法访问 gameState.fieldHistory，仅负责格式+叙事法则+正文+结局修复
   return outputRule + '\n\n' + format + '\n\n' + narrativeGuide + '\n\n' + body;
 }
 
@@ -140,10 +142,11 @@ function repairEndingSection(body, template) {
   }
   if (!origBody) return body;
 
-  const origEm = origBody.match(/【结局系统】([\s\S]*?)(?=【[^】]+】|$)/);
+  // 匹配到下一个非结局标记的【XXX】章节标题，跳过内部的【游戏结束·XXX】标记
+  const origEm = origBody.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束)[^】]+】|$)/);
   if (!origEm) return body;
 
-  const em = body.match(/【结局系统】([\s\S]*?)(?=【[^】]+】|$)/);
+  const em = body.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束)[^】]+】|$)/);
   if (!em) {
     console.log('🔧 [server] repairEndingSection: 结局章节完全缺失，从磁盘模板恢复');
     return body + '\n\n' + origEm[0];
@@ -224,6 +227,27 @@ app.post('/api/templates/:id', (req, res) => {
   }
 });
 
+// ── 管理员密码验证 ──
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+
+app.post('/api/admin/verify', (req, res) => {
+  const { password } = req.body || {};
+  if (!password) return res.status(400).json({ valid: false, error: '缺少密码' });
+
+  // 优先用环境变量，回退到 SHA-256 hash（默认密码 admin123 的 hash）
+  if (ADMIN_PASSWORD) {
+    return res.json({ valid: password === ADMIN_PASSWORD });
+  }
+
+  // 后备：SHA-256("admin123") → 硬编码 hash，避免明文泄露
+  const crypto = require('crypto');
+  const hash = crypto.createHash('sha256').update(password).digest('hex');
+  const knownHash = 'c1d066691ec82f3e7f75d1105e7a1b27b99c4d3a3a2b7b8f1b7e5b7d8d4d5e6f';
+  // 正确的 admin123 hash
+  const correctHash = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
+  return res.json({ valid: hash === correctHash });
+});
+
 // ── 调用 DeepSeek API ──
 function getApiKey(reqBody) {
   // 优先用请求里的 key，没有就用环境变量
@@ -267,32 +291,26 @@ async function callDeepSeek(messages, apiKey, temperature = 0.8, maxTokens = 102
 app.post('/api/chat', async (req, res) => {
   const { messages, summary, template, systemPrompt } = req.body;
 
-  // 构建消息数组
-  let fullMessages;
-  if (systemPrompt && systemPrompt.trim().length >= 100) {
-    fullMessages = [{ role: 'system', content: systemPrompt }];
-  } else if (messages && Array.isArray(messages) && messages.length > 0 && messages[0].role === 'system') {
-    fullMessages = [...messages];
+  // 构建消息数组 — 始终由服务端从磁盘模板构建权威提示词
+  // （客户端 systemPrompt/null 已废弃，服务端 buildSystemPrompt 是唯一权威来源）
+  let activeSystemPrompt;
+  if (template && template.outputSections) {
+    activeSystemPrompt = buildSystemPrompt(template);
+  } else if (template && template.id) {
+    const loaded = loadTemplate(template.id);
+    activeSystemPrompt = loaded ? buildSystemPrompt(loaded) : gamePrompt;
   } else {
-    let activeSystemPrompt;
-    if (template && template.outputSections) {
-      activeSystemPrompt = buildSystemPrompt(template);
-    } else if (template && template.id) {
-      const loaded = loadTemplate(template.id);
-      activeSystemPrompt = loaded ? buildSystemPrompt(loaded) : gamePrompt;
-    } else {
-      activeSystemPrompt = gamePrompt;
-    }
-    if (!activeSystemPrompt) {
-      return res.status(500).json({ error: '游戏提示词未加载' });
-    }
-    fullMessages = [{ role: 'system', content: activeSystemPrompt }];
-    if (summary && summary.trim()) {
-      fullMessages.push({ role: 'system', content: `【历史摘要】${summary}` });
-    }
-    if (messages && Array.isArray(messages)) {
-      fullMessages.push(...messages);
-    }
+    activeSystemPrompt = gamePrompt;
+  }
+  if (!activeSystemPrompt) {
+    return res.status(500).json({ error: '游戏提示词未加载' });
+  }
+  let fullMessages = [{ role: 'system', content: activeSystemPrompt }];
+  if (summary && summary.trim()) {
+    fullMessages.push({ role: 'system', content: `【历史摘要】${summary}` });
+  }
+  if (messages && Array.isArray(messages)) {
+    fullMessages.push(...messages);
   }
 
   try {

@@ -264,6 +264,11 @@ AI 回复后调用。如果 AI 未触发但条件满足：
 
 ## 维护说明
 
+### 命名规范
+- 新增全局函数尽量以模块名为前缀（如 `audio_xxx`、`save_xxx`），避免跨模块命名冲突
+- localStorage key 统一通过 `LS_KEYS` 常量访问（定义在 `state.js`），禁止硬编码 `'xixi_'` 字符串
+- `test.js` 会自动检查跨模块函数命名冲突
+
 ### 状态一致性（重要）
 
 `renderStatusContainers()` 重建状态DOM后**必须**调用 `updateAllDynamicFieldsFromHistory()` 恢复数值。已有配对：

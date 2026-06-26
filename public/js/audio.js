@@ -284,3 +284,4 @@ function toggleAudio() {
 function isAudioOn() { return _audioOn; }
 
 console.log('🔊 audio.js v2 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('audio');

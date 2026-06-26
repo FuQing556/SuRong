@@ -32,6 +32,7 @@ function extractField(text, fieldName) {
 }
 
 // ── 从 outputSections 生成输出格式模板 ──
+// NOTE: 此客户端版本仅供 UI 预览（refreshSystemPrompt）。权威构建在 server.js buildSystemPrompt()
 function generateOutputFormat(sections, sceneTypes) {
   if (!sections || Object.keys(sections).length === 0) return '';
   const lines = [];
@@ -79,10 +80,11 @@ function repairEndingSection(body, originalTemplate) {
   if (!body || !originalTemplate) return body;
 
   var origBody = originalTemplate.promptBody || '';
-  var origEm = origBody.match(/【结局系统】([\s\S]*?)(?=【[^】]+】|$)/);
-  if (!origEm) return body;  // 原始模板也没有结局章节，无法修复
+  // 匹配到下一个非结局标记的【XXX】章节标题，跳过内部的【游戏结束·XXX】标记
+  var origEm = origBody.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束)[^】]+】|$)/);
+  if (!origEm) return body;
 
-  var em = body.match(/【结局系统】([\s\S]*?)(?=【[^】]+】|$)/);
+  var em = body.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束)[^】]+】|$)/);
   if (!em) {
     // 完全缺失：在正文末尾追加结局章节
     console.log('🔧 repairEndingSection: 结局章节完全缺失，从原始模板恢复');
@@ -203,10 +205,22 @@ function collectEligibleEndings(template) {
         }
       }
       var actual = null;
-      for (var vk in vals) {
-        if (!vals.hasOwnProperty(vk)) continue;
-        if (vk === chk.label || vk.indexOf(chk.label) >= 0 || chk.label.indexOf(vk) >= 0) {
-          actual = vals[vk]; break;
+      // 精确匹配优先
+      if (vals.hasOwnProperty(chk.label)) {
+        actual = vals[chk.label];
+      } else {
+        // 模糊匹配（包含关系），打warning便于排查
+        var fuzzyKey = null;
+        for (var vk in vals) {
+          if (!vals.hasOwnProperty(vk)) continue;
+          if (vk.indexOf(chk.label) >= 0 || chk.label.indexOf(vk) >= 0) {
+            fuzzyKey = vk; actual = vals[vk]; break;
+          }
+        }
+        if (fuzzyKey) {
+          console.warn('⚠ 结局条件字段模糊匹配: "' + chk.label + '" → "' + fuzzyKey + '"');
+        } else {
+          console.warn('⚠ 结局条件引用未知字段: "' + chk.label + '"（模板中无匹配字段）');
         }
       }
       if (actual === null || actual === undefined || isNaN(Number(actual))) return { ok: false };
@@ -227,20 +241,25 @@ function collectEligibleEndings(template) {
     var name = mm[1].trim();
     // 向前搜索最近的括号条件（500字符窗口）
     var before = body.substring(Math.max(0, mm.index - 500), mm.index);
-    var parenM = before.match(/[（(]([^）)]+)[）)]/g);
-    if (!parenM || parenM.length === 0) continue;
-    var condText = parenM[parenM.length - 1];
-    condText = condText.replace(/^[（(]/, '').replace(/[）)]$/, '');
-    var result = parseAndCheck(condText);
-    if (result.ok) {
-      results.push({
-        name: name,
-        condText: condText,
-        roundReq: result.roundReq,
-        hasRelation: result.hasRelation,
-        index: idx,
-      });
-    }
+	    var parenM = before.match(/[（(]([^）)]+)[）)]/g);
+	    if (!parenM || parenM.length === 0) continue;
+	    // 从后往前试所有括号，取第一个能解析为条件的（避免误取叙事文本中的括号）
+	    var parsed = null;
+	    var condText = "";
+	    for (var pi = parenM.length - 1; pi >= 0; pi--) {
+	      var tryCond = parenM[pi].replace(/^[（(]/, "").replace(/[）)]$/, "");
+	      parsed = parseAndCheck(tryCond);
+	      if (parsed.ok) { condText = tryCond; break; }
+	    }
+	    if (!parsed || !parsed.ok) continue;
+	    results.push({
+	      name: name,
+	      condText: condText,
+	      roundReq: parsed.roundReq,
+	      hasRelation: parsed.hasRelation,
+	      index: idx,
+	    });
+	    idx++;
     idx++;
   }
   return results;
@@ -291,15 +310,13 @@ function buildEndingInjection(endingName, template) {
   // 尝试多种模式匹配结局描述文本
   var descText = '';
 
-  // 模式1: "结局X·名称...描述...标注【游戏结束·名称】"
-  var re1 = new RegExp('(?:结局[^。：:]*' + escapeName + '[^。\\n]{0,200})\\s*(?:。|：|:)', 'g');
+  // 模式1: "结局X·名称...描述" 或 "名称）...描述"（兼容快速撤离变体等不以"结局"开头的情况）
+  var re1 = new RegExp('(?:结局[^。：:]*)?' + escapeName + '[^。\\n]{0,200}\\s*(?:。|：|:)', 'g');
   var m1;
   while ((m1 = re1.exec(body)) !== null) {
     var found = m1[0];
-    // 提取"：描述"部分
     var descM = found.match(/[：:]([^。，]+)/);
     if (descM) { descText = descM[1].trim(); break; }
-    // 或取括号后的内容
     descM = found.match(/[)）]\s*(.+)/);
     if (descM) { descText = descM[1].trim().replace(/标注.*$/, '').replace(/【游戏结束.*$/, ''); break; }
   }
@@ -309,11 +326,11 @@ function buildEndingInjection(endingName, template) {
     var idx = body.indexOf(endingName);
     if (idx >= 0) {
       var snippet = body.substring(Math.max(0, idx - 100), Math.min(body.length, idx + 200));
-      // 尝试匹配 "名称）：描述" 或 "名称）：描述。"
-      var descM2 = snippet.match(new RegExp(escapeName + '[^)]*[)）]\\s*[：:]\\s*([^。]+)'));
+      // 使用 [^)）]* 同时排除 ASCII 和全角右括号
+      var descM2 = snippet.match(new RegExp(escapeName + '[^)）]*[)）]\\s*[：:]\\s*([^。]+)'));
       if (descM2) descText = descM2[1].trim();
       else {
-        descM2 = snippet.match(new RegExp(escapeName + '[^)]*[)）]\\s*([^。]+)'));
+        descM2 = snippet.match(new RegExp(escapeName + '[^)）]*[)）]\\s*([^。]+)'));
         if (descM2) descText = descM2[1].trim().replace(/标注.*$/, '');
       }
       if (!descText && snippet.indexOf('：') >= 0) {
@@ -359,4 +376,35 @@ function detectEnding(text) {
   return null;
 }
 
+// ── 加载模板并合并编辑版（selectSave 和 continueGame 共用）──
+async function loadAndMergeTemplate(saveId) {
+  let template;
+  if (saveId === 'surongrong') {
+    template = await loadTemplate('surongrong');
+  } else {
+    const saves = loadSaves();
+    const save = saves.find(function(s) { return s.id === saveId; });
+    template = save?.template || null;
+  }
+  if (!template) return null;
+
+  // 深克隆保存原始模板（用于结局章节修复 + 恢复默认）
+  gameState._originalTemplate = JSON.parse(JSON.stringify(template));
+
+  // 合并编辑版模板
+  const editKey = LS_KEYS.editedTemplate(saveId);
+  const ej = localStorage.getItem(editKey);
+  if (ej) {
+    try {
+      const ed = JSON.parse(ej);
+      if (ed.promptBody) template.promptBody = ed.promptBody;
+      if (ed.outputSections) template.outputSections = ed.outputSections;
+      if (ed.achievements) template.achievements = ed.achievements;
+      if (ed.hiddenAchievements) template.hiddenAchievements = ed.hiddenAchievements;
+    } catch (e) { /* corrupt */ }
+  }
+  return template;
+}
+
 console.log('📦 utils.js 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('utils');

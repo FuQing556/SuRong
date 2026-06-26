@@ -230,7 +230,7 @@ function updateAllDynamicFieldsFromHistory() {
 // ── 场景图片切换 ──
 function switchSceneImage(sceneType, template) {
   // 先检查自定义图片
-  const customImages = JSON.parse(localStorage.getItem('xixi_custom_images') || '{}');
+  const customImages = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}');
   if (customImages[sceneType]) {
     const img = dom.characterImage;
     if (!img) return;
@@ -497,45 +497,22 @@ function initSaveTabs() {
 // ── 选择存档开始新游戏 ──
 async function selectSave(saveId) {
   try {
-    const ov = $('#save-selector-overlay');
-    if (ov) ov.classList.remove('active');
-
-    let template;
-    if (saveId === 'surongrong') {
-      template = await loadTemplate('surongrong');
-    } else {
-      const saves = loadSaves();
-      const save = saves.find(s => s.id === saveId);
-      template = save?.template || null;
-    }
+    const template = await loadAndMergeTemplate(saveId);
     if (!template) { console.error('Template not found for save:', saveId); return; }
 
-    // 深克隆保存原始模板（用于恢复默认）
-    gameState._originalTemplate = JSON.parse(JSON.stringify(template));
-
-    // 加载编辑版模板
-    const editKey = 'xixi_edited_template_' + saveId;
-    const ej = localStorage.getItem(editKey);
-    if (ej) {
-      try {
-        const ed = JSON.parse(ej);
-        template.outputSections = ed.outputSections || template.outputSections;
-        template.achievements = ed.achievements || template.achievements;
-        template.hiddenAchievements = ed.hiddenAchievements || template.hiddenAchievements;
-        template.promptBody = ed.promptBody || template.promptBody;
-      } catch (e) { /* corrupt */ }
-    }
+    const ov = $('#save-selector-overlay');
+    if (ov) ov.classList.remove('active');
 
     // 清除所有槽位的旧存档（0-9）防止残留手动存档干扰
     for (let s = 0; s < 10; s++) localStorage.removeItem(getSaveKey(saveId, s));
     gameState.activeTemplate = template;
     gameState.activeSaveId = saveId;
-    localStorage.setItem('xixi_last_save_id', saveId);
-    const theme = localStorage.getItem('xixi_theme_' + saveId) || template.theme || 'dark';
+    localStorage.setItem(LS_KEYS.lastSaveId, saveId);
+    const theme = localStorage.getItem(LS_KEYS.theme(saveId)) || template.theme || 'dark';
     applyTheme(theme);
     refreshSystemPrompt();
     renderStatusContainers(template);
-    localStorage.setItem('xixi_active_template_id', saveId);
+    localStorage.setItem(LS_KEYS.activeTemplateId, saveId);
     showPrologue(template);
   } catch (e) {
     console.error('selectSave error:', e);
@@ -543,3 +520,4 @@ async function selectSave(saveId) {
 }
 
 console.log('📦 ui.js 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('ui');

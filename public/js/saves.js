@@ -5,8 +5,7 @@
 
 // ── 存档 Key 生成 ──
 function getSaveKey(templateId, slot) {
-  const suffix = (slot && slot > 0) ? '_' + slot : '';
-  return 'xixi_gamesave_' + (templateId || 'default') + suffix;
+  return LS_KEYS.save(templateId || 'default', slot);
 }
 
 // ── 自动/手动存档 ──
@@ -84,12 +83,12 @@ function loadSaves() {
     },
   ];
   try {
-    const raw = JSON.parse(localStorage.getItem('xixi_saves') || '[]');
+    const raw = JSON.parse(localStorage.getItem(LS_KEYS.saves) || '[]');
     const userSaves = Array.isArray(raw) ? raw : [];
     return [...saves, ...userSaves];
   } catch (e) {
     console.error('📂 存档列表损坏，已重置:', e.message);
-    localStorage.removeItem('xixi_saves');
+    localStorage.removeItem(LS_KEYS.saves);
     return saves;
   }
 }
@@ -97,7 +96,7 @@ function loadSaves() {
 function saveUserSaves(saves) {
   const userSaves = saves.filter(s => s.type !== 'default');
   try {
-    localStorage.setItem('xixi_saves', JSON.stringify(userSaves));
+    localStorage.setItem(LS_KEYS.saves, JSON.stringify(userSaves));
   } catch (e) {
     console.error('📂 保存存档列表失败（localStorage可能已满）:', e.message);
   }
@@ -112,10 +111,10 @@ function deleteSave(saveId) {
     // 清理所有相关存储
     try {
       localStorage.removeItem('xixi_template_' + saveId);
-      for (let s = 0; s < 10; s++) localStorage.removeItem(getSaveKey(saveId, s));
-      localStorage.removeItem('xixi_achievements_' + saveId);
-      localStorage.removeItem('xixi_theme_' + saveId);
-      localStorage.removeItem('xixi_edited_template_' + saveId);
+      for (let s = 0; s < 10; s++) localStorage.removeItem(LS_KEYS.save(saveId, s));
+      localStorage.removeItem(LS_KEYS.achievements(saveId));
+      localStorage.removeItem(LS_KEYS.theme(saveId));
+      localStorage.removeItem(LS_KEYS.editedTemplate(saveId));
     } catch (e) { /* cleanup best-effort */ }
     renderMySavesPanel();
   });
@@ -138,7 +137,7 @@ async function clearAllSaves(saveId) {
 // ── 成就隔离存储（按模板ID）──
 function getAchieveKey() {
   const tpl = getActiveTemplate();
-  return 'xixi_achievements_' + (tpl.id || 'default');
+  return LS_KEYS.achievements(tpl.id || 'default');
 }
 
 function getUnlockedAchievements() {
@@ -147,13 +146,22 @@ function getUnlockedAchievements() {
 }
 
 function saveAchievements(data) {
+  return safeSetItem(getAchieveKey(), data);
+}
+
+// ── 安全写入 localStorage（统一处理 QuotaExceededError）──
+function safeSetItem(key, value) {
   try {
-    localStorage.setItem(getAchieveKey(), JSON.stringify(data));
+    localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch (e) {
-    console.error('保存成就失败:', e.message);
+    console.error('💾 localStorage 写入失败 (' + key + '):', e.message);
+    if (typeof dlAlert === 'function') {
+      dlAlert('⚠ 存储空间不足，请清理浏览器数据或删除旧存档。\n操作未保存，游戏可继续但进度可能丢失。');
+    }
     return false;
   }
 }
 
 console.log('📦 saves.js 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('saves');

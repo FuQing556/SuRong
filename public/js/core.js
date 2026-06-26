@@ -104,31 +104,37 @@ function renderGameState(parsed, template) {
     if (atBottom) sb.scrollTop = sb.scrollHeight;
   }
 
-  updateFieldHistoryFromParsed(parsed);
+  // 读档时跳过字段更新，保留存档中的完整 fieldHistory（含手动修改的数值）
+  if (!gameState._loadingSave) updateFieldHistoryFromParsed(parsed);
   updateOptionButtons(parsed.options);
   gameState.currentOptions = parsed.options;
   updateAllDynamicFields(parsed.fields, template);
 
-  // 结局检测
-  const endingType = detectEnding(parsed.raw);
-  if (endingType) {
-    gameState.achievementFlags.endingTriggered = true;
-    gameState.achievementFlags.endingType = endingType;
-    // 记录已触发，防止同结局重复弹窗
-    if (!gameState.achievementFlags.triggeredEndings) gameState.achievementFlags.triggeredEndings = [];
-    if (gameState.achievementFlags.triggeredEndings.indexOf(endingType) === -1) {
-      gameState.achievementFlags.triggeredEndings.push(endingType);
+  // 结局检测（读档时跳过，避免重弹结局窗）
+  if (!gameState._loadingSave) {
+    const endingType = detectEnding(parsed.raw);
+    if (endingType) {
+      gameState.achievementFlags.endingTriggered = true;
+      gameState.achievementFlags.endingType = endingType;
+      if (!gameState.achievementFlags.triggeredEndings) gameState.achievementFlags.triggeredEndings = [];
+      if (gameState.achievementFlags.triggeredEndings.indexOf(endingType) === -1) {
+        gameState.achievementFlags.triggeredEndings.push(endingType);
+      }
+      setTimeout(() => showEndingOverlay(endingType, parsed), 800);
     }
-    setTimeout(() => showEndingOverlay(endingType, parsed), 800);
   }
 
   // 行为标记
   if (gameState.achievementFlags.gambitChosen) {
     gameState.achievementFlags.gambitChosen = false;
-    if (/赌对了|运气在|成了|如愿|得手|翻盘|逆转|成功|顺利|赢了|赌赢|押对/.test(parsed.raw)) {
+    // 优先用客户端真实骰子结果，回退到 AI 文本关键词检测
+    var diceResult = gameState._lastDiceResult;
+    var gambitSuccess = diceResult ? diceResult.success : /赌对了|运气在|成了|如愿|得手|翻盘|逆转|成功|顺利|赢了|赌赢|押对/.test(parsed.raw);
+    if (gambitSuccess) {
       gameState.achievementFlags.gambitSucceeded = true;
       gameState.achievementFlags.gambitSuccessCount = (gameState.achievementFlags.gambitSuccessCount || 0) + 1;
     }
+    gameState._lastDiceResult = null;
   }
   if (/反杀|设局成功|反制|翻盘|中计|落入.*陷阱/.test(parsed.raw)) {
     gameState.achievementFlags.counterAttack = true;
@@ -169,9 +175,145 @@ function renderGameState(parsed, template) {
 // ── 发送消息 ──
 let _abortController = null;  // 用于取消正在进行的请求
 
+// 构建消息数组（指令注入 + 摘要 + 结局预检）
+function _prepareMessages(userContent) {
+  const instructions = getAiInstructions();
+  let enhancedContent = userContent.replace(
+    /\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：[\s\S]*?】$/,
+    ''
+  );
+  if (instructions.length > 0) {
+    const instrText = instructions.map(function(i) { return i.text; }).join('；');
+    enhancedContent = enhancedContent + '\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：' + instrText + '。请在本次回复中直接体现这些指令的效果，不要只是说"收到"——用剧情和选项来展示变化。】';
+  }
+
+  // 客户端掷骰结果注入（高风险/孤注一掷）
+  if (gameState._pendingDiceRoll) {
+    var dr = gameState._pendingDiceRoll;
+    var riskName = dr.risk === 'gambit' ? '孤注一掷' : '高风险';
+    var resultText = dr.success ? '成功（骰值' + dr.roll + '≥' + (dr.risk === 'gambit' ? '71' : '51') + '）' : '失败（骰值' + dr.roll + '<' + (dr.risk === 'gambit' ? '71' : '51') + '）';
+    enhancedContent = enhancedContent + '\n\n【骰子判定·' + riskName + '】客户端掷骰结果：' + resultText + '。请在现状中明确体现此结果——成功则写胜利/逆转/得手，失败则写代价/连锁后果。如有赌注，按此结果结算。';
+    gameState._lastDiceResult = dr;
+    gameState._pendingDiceRoll = null;
+  }
+
+  gameState.fullHistory.push({ role: 'user', content: enhancedContent });
+
+  refreshSystemPrompt();
+  const tpl = getActiveTemplate();
+
+  // 结局预检：发请求前先跑客户端兜底
+  let preEndingType = null;
+  if (typeof checkEndingClientSide === 'function') {
+    preEndingType = checkEndingClientSide(tpl);
+  }
+
+  const allMessages = [
+    { role: 'system', content: gameState.activeSystemPrompt },
+  ];
+  if (gameState.summary && gameState.summary.trim()) {
+    allMessages.push({ role: 'system', content: '【历史摘要】' + gameState.summary });
+  }
+  const recentMessages = gameState.fullHistory.slice(-(KEEP_ROUNDS * 2));
+  allMessages.push.apply(allMessages, recentMessages);
+
+  // 结局指令放在消息数组最后
+  if (preEndingType) {
+    console.log('🔔 结局预检触发: 「' + preEndingType + '」— 在消息末尾注入结局指令');
+    var injection = typeof buildEndingInjection === 'function'
+      ? buildEndingInjection(preEndingType, tpl)
+      : '触发结局「' + preEndingType + '」，写结局叙事+输出标记+4选项';
+    allMessages.push({ role: 'system', content: injection });
+  }
+
+  return { allMessages: allMessages, tpl: tpl, preEndingType: preEndingType };
+}
+
+// SSE 流式读取 + 实时预览
+async function _streamResponse(resp, liveEl) {
+  dom.loadingIndicator.classList.add('hidden');
+  if (dom.optionsContainer) dom.optionsContainer.style.visibility = '';
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let streamBuffer = '';
+  let fullContent = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    streamBuffer += decoder.decode(value, { stream: true });
+    const lines = streamBuffer.split('\n');
+    streamBuffer = lines.pop() || '';
+    for (var i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('data: ') && line.length > 6) {
+        try {
+          const json = JSON.parse(line.slice(6));
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) {
+            fullContent += delta;
+            let displayText = fullContent;
+            displayText = displayText.replace(/\[场景类型[：:][^\]]*\]/g, '');
+            displayText = displayText.replace(/\[事件大小[：:][^\]]*\]/g, '');
+            displayText = displayText.replace(/【事件大小[：:][^】]*】/g, '');
+            const optIdx = displayText.search(/可选行动[：:]/);
+            if (optIdx >= 0) displayText = displayText.substring(0, optIdx) + '\n\n▌ 正在生成选项...';
+            if (displayText.length > 800) displayText = displayText.substring(0, 800) + '…';
+            liveEl.textContent = displayText;
+            $('#story-box').scrollTop = $('#story-box').scrollHeight;
+          }
+        } catch (e) { /* 跳过非JSON行 */ }
+      }
+    }
+  }
+  return fullContent;
+}
+
+// 结局检测 + 渲染 + 存档
+function _handleParsedResponse(fullContent, tpl, parsed, preEndingType) {
+  gameState.fullHistory.push({ role: 'assistant', content: fullContent });
+
+  parsed = parsed || parseAIResponse(fullContent, tpl);
+  let endingType = detectEnding(fullContent);
+
+  // 硬兜底：AI未触发但客户端检测到条件满足
+  if (!endingType && typeof checkEndingClientSide === 'function') {
+    const clientEnding = checkEndingClientSide(tpl);
+    if (clientEnding) {
+      console.log('🔔 客户端结局兜底触发: ' + clientEnding);
+      endingType = clientEnding;
+      gameState.achievementFlags.endingTriggered = true;
+      gameState.achievementFlags.endingType = clientEnding;
+      if (!gameState.achievementFlags.triggeredEndings) gameState.achievementFlags.triggeredEndings = [];
+      if (gameState.achievementFlags.triggeredEndings.indexOf(clientEnding) === -1) {
+        gameState.achievementFlags.triggeredEndings.push(clientEnding);
+      }
+      parsed.raw = parsed.raw + '\n【游戏结束·' + clientEnding + '】';
+      fullContent = fullContent + '\n【游戏结束·' + clientEnding + '】';
+      gameState.fullHistory[gameState.fullHistory.length - 1].content = fullContent;
+      if (!parsed.situation || parsed.situation.length < 20) {
+        var inj = typeof buildEndingInjection === 'function'
+          ? buildEndingInjection(clientEnding, tpl) : '';
+        var descM = inj.match(/叙事要点[：:]\s*(.+?)[。\n]/);
+        parsed.situation = '【' + clientEnding + '】\n' + (descM ? descM[1] : '命运之轮停转，故事暂告一段落。');
+      }
+    }
+  }
+
+  // AI返回了故事但漏了选项 且 非结局 → 视为格式异常
+  if (parsed.options.length === 0 && !endingType) {
+    gameState.fullHistory.pop();
+    throw new Error('AI 返回格式异常：未包含可选行动。请点击重试。');
+  }
+
+  renderGameState(parsed, tpl);
+  gameState.gameStarted = true;
+  saveGameState();
+}
+
 async function sendMessage(userContent) {
   if (gameState.isLoading) return;
-  // 清理上一次失败请求残留的user消息（用户可能点重试，也可能点了新选项）
+  // 清理上一次失败请求残留的user消息
   if (gameState.fullHistory.length > 0 &&
       gameState.fullHistory[gameState.fullHistory.length - 1].role === 'user') {
     gameState.fullHistory.pop();
@@ -181,163 +323,49 @@ async function sendMessage(userContent) {
   dom.errorBox.classList.add('hidden');
   updateOptionButtons([]);
 
-  // 创建可取消的请求控制器（60秒超时 + 手动取消）
   _abortController = new AbortController();
-  const timeoutId = setTimeout(() => _abortController.abort(), 60000);
-  let liveEl = null;  // 流式预览元素（catch中需要清理）
+  const timeoutId = setTimeout(function() { _abortController.abort(); }, 60000);
+  let liveEl = null;
 
   try {
-    // AI 实时指令注入（先剥离已有指令块，防止重试时重复叠加）
-    const instructions = getAiInstructions();
-    let enhancedContent = userContent.replace(
-      /\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：[\s\S]*?】$/,
-      ''
-    );
-    if (instructions.length > 0) {
-      const instrText = instructions.map(i => i.text).join('；');
-      enhancedContent = enhancedContent + '\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：' + instrText + '。请在本次回复中直接体现这些指令的效果，不要只是说"收到"——用剧情和选项来展示变化。】';
-    }
-
-    gameState.fullHistory.push({ role: 'user', content: enhancedContent });
+    var prep = _prepareMessages(userContent);
     await maybeSummarize();
-    const recentMessages = gameState.fullHistory.slice(-(KEEP_ROUNDS * 2));
-
-    refreshSystemPrompt();
-    const tpl = getActiveTemplate();
-
-    // ── 结局预检：发请求前先跑客户端兜底，条件满足则提前注入结局指令给AI ──
-    let preEndingType = null;
-    if (typeof checkEndingClientSide === 'function') {
-      preEndingType = checkEndingClientSide(tpl);
-    }
-
-    const allMessages = [
-      { role: 'system', content: gameState.activeSystemPrompt },
-    ];
-    if (gameState.summary && gameState.summary.trim()) {
-      allMessages.push({ role: 'system', content: '【历史摘要】' + gameState.summary });
-    }
-    allMessages.push(...recentMessages);
-
-    // 结局指令放在消息数组最后，确保AI注意到
-    if (preEndingType) {
-      console.log('🔔 结局预检触发: 「' + preEndingType + '」— 在消息末尾注入结局指令');
-      var injection = typeof buildEndingInjection === 'function'
-        ? buildEndingInjection(preEndingType, tpl)
-        : '触发结局「' + preEndingType + '」，写结局叙事+输出标记+4选项';
-      allMessages.push({ role: 'system', content: injection });
-    }
 
     const resp = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: allMessages,
+        messages: prep.allMessages,
         summary: null,
         systemPrompt: null,
-        template: { id: tpl.id, outputSections: tpl.outputSections, promptBody: tpl.promptBody },
-        apiKey: localStorage.getItem('xixi_apikey') || '',
+        template: { id: prep.tpl.id, outputSections: prep.tpl.outputSections, promptBody: prep.tpl.promptBody },
+        apiKey: localStorage.getItem(LS_KEYS.apikey) || '',
       }),
       signal: _abortController.signal,
     });
 
     if (!resp.ok) {
-      const errData = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
+      const errData = await resp.json().catch(function() { return { error: 'HTTP ' + resp.status }; });
       throw new Error(errData.error || '请求失败 (' + resp.status + ')');
     }
 
-    // ── 流式读取 SSE 响应 ──
-    dom.loadingIndicator.classList.add('hidden');
-    if (dom.optionsContainer) dom.optionsContainer.style.visibility = '';
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let streamBuffer = '';
-    let fullContent = '';
-    // 创建实时预览元素
+    // 创建流式预览元素
     liveEl = document.createElement('div');
     liveEl.className = 'story-entry story-streaming';
     liveEl.style.cssText = 'white-space:pre-wrap;';
     dom.storyContent.appendChild(liveEl);
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      streamBuffer += decoder.decode(value, { stream: true });
-      const lines = streamBuffer.split('\n');
-      streamBuffer = lines.pop() || '';
-      for (const line of lines) {
-        if (line.startsWith('data: ') && line.length > 6) {
-          try {
-            const json = JSON.parse(line.slice(6));
-            const delta = json.choices?.[0]?.delta?.content;
-            if (delta) {
-              fullContent += delta;
-              // 只显示叙事部分（场景+上回合+现状），隐藏格式化的选项和字段
-              let displayText = fullContent;
-              // 剥离格式标记，让流式文字更干净
-              displayText = displayText.replace(/\[场景类型[：:][^\]]*\]/g, '');
-              displayText = displayText.replace(/\[事件大小[：:][^\]]*\]/g, '');
-              displayText = displayText.replace(/【事件大小[：:][^】]*】/g, '');
-              const optIdx = displayText.search(/可选行动[：:]/);
-              if (optIdx >= 0) displayText = displayText.substring(0, optIdx) + '\n\n▌ 正在生成选项...';
-              // 截断过长的流式预览（>800字符截断，防手机端卡顿）
-              if (displayText.length > 800) displayText = displayText.substring(0, 800) + '…';
-              liveEl.textContent = displayText;
-              $('#story-box').scrollTop = $('#story-box').scrollHeight;
-            }
-          } catch (e) { /* 跳过非JSON行(如[DONE]) */ }
-        }
-      }
-    }
+    var fullContent = await _streamResponse(resp, liveEl);
     liveEl.remove();
     showLoading(false);
 
-    gameState.fullHistory.push({ role: 'assistant', content: fullContent });
-
-    const parsed = parseAIResponse(fullContent, tpl);
-    // 先检测结局 — 结局回复可能不含完整4选项格式
-    let endingType = detectEnding(fullContent);
-    // 硬兜底：AI未触发但客户端检测到条件满足 → 强制注入结局标记
-    if (!endingType && typeof checkEndingClientSide === 'function') {
-      const clientEnding = checkEndingClientSide(tpl);
-      if (clientEnding) {
-        console.log('🔔 客户端结局兜底触发: ' + clientEnding);
-        endingType = clientEnding;
-        gameState.achievementFlags.endingTriggered = true;
-        gameState.achievementFlags.endingType = clientEnding;
-        if (!gameState.achievementFlags.triggeredEndings) gameState.achievementFlags.triggeredEndings = [];
-        if (gameState.achievementFlags.triggeredEndings.indexOf(clientEnding) === -1) {
-          gameState.achievementFlags.triggeredEndings.push(clientEnding);
-        }
-        // 注入标记
-        parsed.raw = parsed.raw + '\n【游戏结束·' + clientEnding + '】';
-        fullContent = fullContent + '\n【游戏结束·' + clientEnding + '】';
-        gameState.fullHistory[gameState.fullHistory.length - 1].content = fullContent;
-        // 兜底叙事：如果AI没写结局场景，用模板中的结局描述作为叙事显示
-        if (!parsed.situation || parsed.situation.length < 20) {
-          var inj = typeof buildEndingInjection === 'function'
-            ? buildEndingInjection(clientEnding, tpl) : '';
-          var descM = inj.match(/叙事要点[：:]\s*(.+?)[。\n]/);
-          parsed.situation = '【' + clientEnding + '】\n' + (descM ? descM[1] : '命运之轮停转，故事暂告一段落。');
-        }
-      }
-    }
-    // AI返回了故事但漏了选项 且 非结局 → 视为格式异常，触发重试
-    if (parsed.options.length === 0 && !endingType) {
-      gameState.fullHistory.pop();
-      throw new Error('AI 返回格式异常：未包含可选行动。请点击重试。');
-    }
-    renderGameState(parsed, tpl);
-    gameState.gameStarted = true;
-    saveGameState();
+    _handleParsedResponse(fullContent, prep.tpl, null, prep.preEndingType);
 
   } catch (err) {
     clearTimeout(timeoutId);
-    // 清理流式预览元素（如果还在DOM中）
     if (liveEl && liveEl.parentNode) liveEl.remove();
     console.error('请求失败:', err);
     if (err.name === 'AbortError') {
-      // 区分手动取消和超时——手动取消不显示错误
       if (!gameState._cancelledByUser) {
         showError('请求超时（60秒）。请检查网络连接，或在设置页确认 API Key 有效。');
       }
@@ -345,7 +373,6 @@ async function sendMessage(userContent) {
     } else {
       showError(err.message);
     }
-    // 只移除已接收的assistant消息，保留user消息供retryLastRequest正确重试
     if (gameState.fullHistory.length > 0 &&
         gameState.fullHistory[gameState.fullHistory.length - 1].role === 'assistant') {
       gameState.fullHistory.pop();
@@ -368,6 +395,19 @@ async function handleChoice(num) {
     gameState._lastChoiceText = chosenOption.action || ('选项 ' + num);
     const fullText = (chosenOption.action || '') + ' ' + (chosenOption.cost || '');
     if (fullText.includes('孤注一掷')) gameState.achievementFlags.gambitChosen = true;
+
+    // 客户端掷骰（高风险/孤注一掷，替代 AI 幕后掷骰）
+    var riskLevel = null;
+    if (fullText.includes('孤注一掷')) riskLevel = 'gambit';
+    else if (fullText.includes('高风险')) riskLevel = 'high';
+    if (riskLevel) {
+      var roll = Math.floor(Math.random() * 100) + 1;
+      var success = riskLevel === 'gambit' ? (roll >= 71) : (roll >= 51);
+      gameState._pendingDiceRoll = { risk: riskLevel, roll: roll, success: success };
+    } else {
+      gameState._pendingDiceRoll = null;
+    }
+
     // 隐藏成就 choice 类型检测
     const tplC = getActiveTemplate();
     const hiddenC = tplC.hiddenAchievements || {};
@@ -439,6 +479,8 @@ async function startNewGame() {
     const tplIdCl = gameState.activeSaveId || 'default';
     localStorage.removeItem(getSaveKey(tplIdCl, 0));
     gameState.fieldHistory = {};
+    gameState._pendingDiceRoll = null;
+    gameState._lastDiceResult = null;
     gameState.achievementFlags = {
       gambitChosen: false, gambitSucceeded: false, gambitSuccessCount: 0,
       endingTriggered: false, endingType: '', triggeredEndings: [],
@@ -480,32 +522,8 @@ async function continueGame(saveId) {
   const ov = $('#save-selector-overlay');
   if (ov) ov.classList.remove('active');
 
-  // 加载模板
-  let template;
-  if (saveId === 'surongrong') {
-    template = await loadTemplate('surongrong');
-  } else {
-    const saves = loadSaves();
-    const save = saves.find(s => s.id === saveId);
-    template = save?.template || null;
-  }
+  const template = await loadAndMergeTemplate(saveId);
   if (!template) { console.error('Template not found'); return; }
-
-  // 深克隆保存原始模板（用于恢复默认）
-  gameState._originalTemplate = JSON.parse(JSON.stringify(template));
-
-  // 检查编辑过的模板
-  const editKey = 'xixi_edited_template_' + saveId;
-  const ej = localStorage.getItem(editKey);
-  if (ej) {
-    try {
-      const ed = JSON.parse(ej);
-      template.outputSections = ed.outputSections || template.outputSections;
-      template.achievements = ed.achievements || template.achievements;
-      template.hiddenAchievements = ed.hiddenAchievements || template.hiddenAchievements;
-      template.promptBody = ed.promptBody || template.promptBody;
-    } catch (e) { /* corrupt */ }
-  }
 
   // 多槽位扫描
   let savesAvail = [];
@@ -553,7 +571,7 @@ async function continueGame(saveId) {
 
   gameState.activeTemplate = template;
   gameState.activeSaveId = saveId;
-  localStorage.setItem('xixi_last_save_id', saveId);
+  localStorage.setItem(LS_KEYS.lastSaveId, saveId);
   gameState.fullHistory = saveData.fullHistory || [];
   gameState.summary = saveData.summary || '';
   gameState.summarisedCount = saveData.summarisedCount || 0;
@@ -574,11 +592,11 @@ async function continueGame(saveId) {
   gameState.isLoading = false;
 
   const savedTheme = saveData.theme || template.theme || 'dark';
-  localStorage.setItem('xixi_theme_' + saveId, savedTheme);
+  localStorage.setItem(LS_KEYS.theme(saveId), savedTheme);
   applyTheme(savedTheme);
   refreshSystemPrompt();
   renderStatusContainers(template);
-  localStorage.setItem('xixi_active_template_id', saveId);
+  localStorage.setItem(LS_KEYS.activeTemplateId, saveId);
 
   // 渲染最后一回合（跳过成就检测，避免读档时重复触发）
   // 清空故事面板，防止切换存档时旧存档故事残留累加
@@ -611,8 +629,12 @@ async function undoLastRound() {
   gameState.currentOptions = [];
   gameState.isLoading = false;
   // 撤销后清理摘要，防止AI看到已撤销事件的旧摘要
+  // 撤销后尝试从剩余历史重建摘要（而非全部丢弃）
   gameState.summary = '';
   gameState.summarisedCount = 0;
+  if (gameState.fullHistory.length > 8) {
+    maybeSummarize().catch(function(){});
+  }
   const lastAi = [...gameState.fullHistory].reverse().find(m => m.role === 'assistant');
   if (lastAi) {
     const tpl = getActiveTemplate();
@@ -633,7 +655,7 @@ async function manualSave() {
   if (!gameState.gameStarted) return;
   const tplId = gameState.activeSaveId || getActiveTemplate().id || 'default';
   // 从上一次使用的槽位之后轮转，避免总覆写槽位1
-  const lastSlotKey = 'xixi_last_manual_slot_' + tplId;
+  const lastSlotKey = LS_KEYS.lastManualSlot(tplId);
   let startSlot = parseInt(localStorage.getItem(lastSlotKey) || '0') || 0;
   let slot = startSlot + 1;
   if (slot > 9) slot = 1;
@@ -804,3 +826,4 @@ function exportStory() {
 }
 
 console.log('📦 core.js 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('core');

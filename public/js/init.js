@@ -3,6 +3,16 @@
    依赖：所有以上模块
    ═══════════════════════════════════════════ */
 
+// ── 工具：overlay 背景点击关闭 ──
+function bindOverlayClose(overlayId, closeFn) {
+  const overlay = document.getElementById(overlayId);
+  if (overlay) {
+    overlay.addEventListener('click', function(e) {
+      if (e.target === e.currentTarget) closeFn();
+    });
+  }
+}
+
 // ── 事件绑定 ──
 function bindEvents() {
   // 首次访问提示
@@ -14,7 +24,7 @@ function bindEvents() {
       _entering = true;
       btnEnter.textContent = '正在进入...';
       btnEnter.disabled = true;
-      localStorage.setItem('xixi_age_verified', 'true');
+      localStorage.setItem(LS_KEYS.ageVerified, 'true');
       // 立即隐藏警告层，让用户看到响应
       if (dom.warningOverlay) dom.warningOverlay.classList.remove('active');
       // 延迟加载存档面板，避免DOM操作阻塞点击反馈
@@ -35,9 +45,7 @@ function bindEvents() {
   $('#btn-generate-prompt').addEventListener('click', generatePrompt);
   $('#btn-confirm-save').addEventListener('click', confirmCreateSave);
   $('#btn-regenerate').addEventListener('click', generatePrompt);
-  $('#create-save-overlay')?.addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeCreateSave();
-  });
+  bindOverlayClose('create-save-overlay', closeCreateSave);
 
   // 风格/长度芯片
   $('#style-chips').addEventListener('click', function(e) {
@@ -62,7 +70,7 @@ function bindEvents() {
   $('#btn-save-apikey').addEventListener('click', () => {
     const key = dom.apiKeyInput ? dom.apiKeyInput.value.trim() : '';
     if (key && key.startsWith('sk-')) {
-      localStorage.setItem('xixi_apikey', key);
+      localStorage.setItem(LS_KEYS.apikey, key);
       const msgEl = $('#settings-msg');
       if (msgEl) { msgEl.textContent = '✅ API Key 已保存'; msgEl.style.color = 'var(--green)'; }
     } else {
@@ -83,9 +91,7 @@ function bindEvents() {
   $('#btn-reset-prompt').addEventListener('click', resetPrompt);
   $('#btn-save-fields').addEventListener('click', saveFields);
   $('#btn-add-field').addEventListener('click', addField);
-  dom.settingsOverlay.addEventListener('click', (e) => {
-    if (e.target === dom.settingsOverlay) closeSettings();
-  });
+  bindOverlayClose('settings-overlay', closeSettings);
 
   // 序章弹窗
   $('#btn-prologue-start').addEventListener('click', () => {
@@ -122,12 +128,25 @@ function bindEvents() {
     if (dom.saveSelectorOverlay?.classList.contains('active')) return;
     if (dom.createSaveOverlay?.classList.contains('active')) return;
     if ($('#dialog-overlay')?.classList.contains('active')) return;
-    if ($('#emoji-picker-popup')) return;  // emoji选择器打开时禁用快捷键
+    if ($('#emoji-picker-popup')) return;
     if ($('#prologue-overlay')?.classList.contains('active')) return;
     if ($('#ending-overlay')?.classList.contains('active')) return;
     if ($('#help-overlay')?.classList.contains('active')) return;
     if ($('#achievements-overlay')?.classList.contains('active')) return;
     if ($('#history-overlay')?.classList.contains('active')) return;
+
+    // Ctrl+S 快速存档 / Ctrl+Z 撤销
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      if (gameState.gameStarted && !gameState.isLoading) manualSave();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      if (gameState.gameStarted && !gameState.isLoading) undoLastRound();
+      return;
+    }
+
     if (gameState.isLoading) return;
     const key = parseInt(e.key);
     if (key >= 1 && key <= 4 && gameState.currentOptions[key - 1]) {
@@ -162,30 +181,25 @@ function bindEvents() {
     const overlay = $('#achievements-overlay');
     if (overlay) overlay.classList.remove('active');
   });
-  $('#achievements-overlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
+  bindOverlayClose('achievements-overlay', () => {
+    const overlay = $('#achievements-overlay');
+    if (overlay) overlay.classList.remove('active');
   });
 
   // 帮助弹窗
   $('#btn-help').addEventListener('click', () => { $('#help-overlay').classList.add('active'); });
   $('#btn-close-help').addEventListener('click', () => { $('#help-overlay').classList.remove('active'); });
-  $('#help-overlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
-  });
+  bindOverlayClose('help-overlay', () => { $('#help-overlay').classList.remove('active'); });
 
   // 历程弹窗
   $('#btn-close-history').addEventListener('click', () => { $('#history-overlay').classList.remove('active'); });
-  $('#history-overlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
-  });
+  bindOverlayClose('history-overlay', () => { $('#history-overlay').classList.remove('active'); });
 
   // 结局弹窗
   $('#btn-ending-restart').addEventListener('click', () => { closeEndingOverlay(); startNewGame(); });
   $('#btn-ending-saves').addEventListener('click', () => { closeEndingOverlay(); showSaveSelector(); });
   $('#btn-ending-continue').addEventListener('click', closeEndingOverlay);
-  $('#ending-overlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeEndingOverlay();
-  });
+  bindOverlayClose('ending-overlay', closeEndingOverlay);
 
   // 存档选择器 backdrop（不关闭）
   $('#save-selector-overlay')?.addEventListener('click', e => { /* 必须选存档 */ });
@@ -248,7 +262,7 @@ function bindEvents() {
 async function init() {
   bindEvents();
 
-  if (localStorage.getItem('xixi_age_verified') === 'true') {
+  if (localStorage.getItem(LS_KEYS.ageVerified) === 'true') {
     dom.warningOverlay.classList.remove('active');
     showSaveSelector();
   }
@@ -267,9 +281,9 @@ async function init() {
       gameState.activeTemplate = defaultTemplate;
       // 保存原始模板副本（用于结局章节修复 + 恢复默认）
       gameState._originalTemplate = JSON.parse(JSON.stringify(defaultTemplate));
-      const lastSaveId = localStorage.getItem('xixi_last_save_id') || 'surongrong';
+      const lastSaveId = localStorage.getItem(LS_KEYS.lastSaveId) || 'surongrong';
       gameState.activeSaveId = lastSaveId;
-      const savedTheme = localStorage.getItem('xixi_theme_' + lastSaveId);
+      const savedTheme = localStorage.getItem(LS_KEYS.theme(lastSaveId));
       applyTheme(savedTheme || defaultTemplate.theme || 'dark');
     }
     refreshSystemPrompt();
@@ -308,7 +322,54 @@ window.addEventListener('unhandledrejection', (e) => {
   console.error('🔴 UNHANDLED REJECTION:', e.reason?.message || e.reason);
 });
 
+// ── PWA 安装引导 ──
+var _pwaInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _pwaInstallPrompt = e;
+  var banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.classList.remove('hidden');
+});
+
+var btnInstall = document.getElementById('btn-pwa-install');
+if (btnInstall) {
+  btnInstall.addEventListener('click', async function() {
+    if (!_pwaInstallPrompt) return;
+    _pwaInstallPrompt.prompt();
+    var result = await _pwaInstallPrompt.userChoice;
+    console.log('PWA 安装:', result.outcome);
+    _pwaInstallPrompt = null;
+    var banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.classList.add('hidden');
+  });
+}
+
+var btnDismiss = document.getElementById('btn-pwa-dismiss');
+if (btnDismiss) {
+  btnDismiss.addEventListener('click', function() {
+    var banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.classList.add('hidden');
+  });
+}
+
 // ── 启动 ──
 init();
 console.log('🎮 模板驱动互动叙事游戏前端已就绪（模块化版）');
-console.log('   state → utils → dialogs → saves → ui → achievements → prompts → templates → tavern → ai → core → init');
+console.log('   state → utils → dialogs → saves → ui → achievements → prompts → templates → tavern → ai → audio → core → init');
+
+// ── 模块加载顺序校验 ──
+var EXPECTED_ORDER = ['state','utils','dialogs','saves','ui','achievements','prompts','templates','tavern','ai','audio','core','init'];
+var loaded = window.XIXI.modulesLoaded || [];
+var ok = true;
+for (var i = 0; i < Math.min(EXPECTED_ORDER.length, loaded.length); i++) {
+  if (loaded[i] !== EXPECTED_ORDER[i]) {
+    console.warn('⚠ 模块加载顺序异常: 期望第' + (i+1) + '个是 ' + EXPECTED_ORDER[i] + '，实际是 ' + loaded[i]);
+    ok = false;
+  }
+}
+if (ok && loaded.length === EXPECTED_ORDER.length) {
+  console.log('✅ 13 个模块加载顺序正确');
+} else if (loaded.length !== EXPECTED_ORDER.length) {
+  console.warn('⚠ 模块数量不匹配: 期望' + EXPECTED_ORDER.length + ', 实际' + loaded.length);
+}

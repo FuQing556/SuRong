@@ -23,7 +23,7 @@ async function openSettings() {
   }
 
   // 加载编辑过的模板（合并而非替换，防止串档）
-  const editKey = 'xixi_edited_template_' + (gameState.activeSaveId || 'default');
+  const editKey = LS_KEYS.editedTemplate(gameState.activeSaveId || 'default');
   const savedTpl = localStorage.getItem(editKey);
   if (savedTpl) {
     try {
@@ -71,7 +71,7 @@ async function openSettings() {
   }
 
   // 显示已保存的 API Key
-  const savedKey = localStorage.getItem('xixi_apikey') || '';
+  const savedKey = localStorage.getItem(LS_KEYS.apikey) || '';
   if (dom.apiKeyInput) dom.apiKeyInput.value = savedKey;
 
   dom.settingsOverlay.classList.add('active');
@@ -129,7 +129,7 @@ async function savePrompt() {
   const saveId = gameState.activeSaveId || tpl.id || 'default';
   tpl.promptBody = prompt;
   gameState.activeTemplate.promptBody = prompt;
-  const editKey = 'xixi_edited_template_' + saveId;
+  const editKey = LS_KEYS.editedTemplate(saveId);
   let edited = {};
   try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
   edited.promptBody = prompt;
@@ -182,7 +182,7 @@ async function resetPrompt() {
   gameState.customPrompt = '';
 
   // 清除编辑版模板中该存档的 promptBody，保留字段/成就编辑
-  const editKey = 'xixi_edited_template_' + saveId;
+  const editKey = LS_KEYS.editedTemplate(saveId);
   const savedTpl = localStorage.getItem(editKey);
   if (savedTpl) {
     try {
@@ -231,7 +231,7 @@ async function mergeInstructionsToPrompt() {
   tpl.promptBody = tpl.promptBody + '\n\n【玩家补充规则——以下规则由玩家在游戏过程中添加，优先级高于原有规则】\n' + allRules.map((r, idx) => (idx + 1) + '. ' + r).join('\n');
   gameState.activeTemplate.promptBody = tpl.promptBody;
   // 只持久化 promptBody，不覆盖字段/成就等其他编辑
-  const editKey = 'xixi_edited_template_' + saveId;
+  const editKey = LS_KEYS.editedTemplate(saveId);
   let edited = {};
   try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
   edited.promptBody = tpl.promptBody;
@@ -249,11 +249,11 @@ function initThemeSelector() {
   sel.dataset.bound = '1';
   const tpl = getActiveTemplate();
   const saveId = gameState.activeSaveId || 'default';
-  sel.value = localStorage.getItem('xixi_theme_' + saveId) || tpl.theme || 'dark';
+  sel.value = localStorage.getItem(LS_KEYS.theme(saveId)) || tpl.theme || 'dark';
 
   sel.addEventListener('change', function() {
     const theme = sel.value;
-    localStorage.setItem('xixi_theme_' + saveId, theme);
+    localStorage.setItem(LS_KEYS.theme(saveId), theme);
     applyTheme(theme);
     if (gameState.gameStarted) saveGameState();
     if (gameState.activeTemplate) gameState.activeTemplate.theme = theme;
@@ -272,7 +272,7 @@ function renderImageManager() {
   const images = tpl.sceneImages || {};
   const defaultImg = tpl.defaultSceneImage || '日常.png';
   const sceneTypes = tpl.sceneTypes || Object.keys(images);
-  const customImages = JSON.parse(localStorage.getItem('xixi_custom_images') || '{}');
+  const customImages = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}');
 
   container.innerHTML = sceneTypes.map(type => {
     const currentSrc = customImages[type] || images[type] || defaultImg;
@@ -297,13 +297,10 @@ function renderImageManager() {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = () => {
-          const imgs = JSON.parse(localStorage.getItem('xixi_custom_images') || '{}');
+          const imgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}');
           imgs[sceneType] = reader.result;
-          try {
-            localStorage.setItem('xixi_custom_images', JSON.stringify(imgs));
-          } catch (e) {
+          if (!safeSetItem(LS_KEYS.customImages, imgs)) {
             delete imgs[sceneType];
-            dlAlert('⚠ 图片保存失败：localStorage 空间不足。请清理浏览器数据或先删除其他自定义图片。');
             return;
           }
           if (parsedLastSceneType === sceneType || !parsedLastSceneType) {
@@ -320,12 +317,13 @@ function renderImageManager() {
 
   container.querySelectorAll('.btn-reset-img').forEach(btn => {
     btn.addEventListener('click', () => {
-      const imgs = JSON.parse(localStorage.getItem('xixi_custom_images') || '{}');
+      const imgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}');
       delete imgs[btn.dataset.scene];
-      localStorage.setItem('xixi_custom_images', JSON.stringify(imgs));
+      localStorage.setItem(LS_KEYS.customImages, JSON.stringify(imgs));
       renderImageManager();
     });
   });
 }
 
 console.log('📦 prompts.js 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('prompts');

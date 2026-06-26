@@ -6,12 +6,12 @@
 // ── 指令存储 ──
 function getAiInstructions() {
   try {
-    return JSON.parse(localStorage.getItem('xixi_ai_instructions') || '[]');
+    return JSON.parse(localStorage.getItem(LS_KEYS.aiInstructions) || '[]');
   } catch { return []; }
 }
 
 function saveAiInstructions(instructions) {
-  localStorage.setItem('xixi_ai_instructions', JSON.stringify(instructions));
+  localStorage.setItem(LS_KEYS.aiInstructions, JSON.stringify(instructions));
 }
 
 // ── 发送指令 ──
@@ -50,3 +50,4 @@ function renderAiChatMessages() {
 }
 
 console.log('📦 ai.js 已加载');
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('ai');
