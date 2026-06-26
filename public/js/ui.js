@@ -180,11 +180,16 @@ function renderStatusContainers(template) {
       </div>`
     ).join('');
     dom.varsGrid.classList.remove('collapsed');
+    var vp = document.getElementById('variables-panel');
+    if (vp) vp.classList.remove('var-collapsed');
   }
 
-  // 更新变量追踪标题
+  // 更新变量追踪标题（强制展开状态）
   if (dom.varsToggle && sections.variables?.label) {
     dom.varsToggle.textContent = sections.variables.label + ' ▼';
+    dom.varsToggle.style.cursor = 'pointer';
+    dom.varsToggle.style.padding = '8px 0';
+    dom.varsToggle.style.fontSize = '13px';
   }
 }
 
