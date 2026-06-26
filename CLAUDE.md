@@ -7,12 +7,56 @@
 **在线版**：部署在 Railway → `xixi-fable.up.railway.app`
 手机电脑浏览器打开即玩，无需安装任何东西。
 
+## v4 更新记录（2026-06-26）
+
+### 代码质量 — 68+ bug 修复
+- `LS_KEYS` 集中管理全部 16 个 localStorage key
+- `safeSetItem()` 统一存储满处理
+- `loadAndMergeTemplate()` 消除 selectSave/continueGame ~45 行重复
+- `sendMessage` 拆为 `_prepareMessages` / `_streamResponse` / `_handleParsedResponse`
+- `bindOverlayClose()` 消除 8 处 overlay 关闭重复
+- `window.XIXI` 命名空间 + 13 模块加载顺序校验 + test.js 跨模块命名冲突检查
+- 服务端删除 client systemPrompt 快速路径，始终用服务端构建
+- 管理员密码脱敏 → `/api/admin/verify` SHA-256 验证
+- `prompt.txt` 精简为 5 行通用兜底
+- 3 处 XSS（字段标签/值/图标 `escapeHtml`）+ 3 处 JSON.parse 加 try-catch
+
+### 结局系统重写
+- `repairEndingSection` 负向前瞻跳过内部 `【游戏结束】` 标记
+- `collectEligibleEndings` 遍历所有括号取第一个合法条件
+- 条件窗口 500→200 字符（防跨结局误判）
+- `=100` 放宽为 `≥95`（AI 压 99 也能触发）
+- 结局弹窗移到 `triggeredEndings` 守卫内 + 硬兜底不再提前 push
+- `_loadingSave` 守卫防读档重弹
+- **结局指令从 system 消息移到用户消息末尾** — AI 无法忽视
+- 结局成就自动解锁改为遍历所有匹配项
+
+### 游戏体验
+- **客户端掷骰**：高风险 50% / 孤注 30%，`Math.random()` 真随机
+- 骰子指令覆盖所有规则，强制 AI 改 3+ 项数值
+- 第 1 回合计数修正 + 首回合隐藏空结算框
+- 流式输出加滚动容差 + `beforeunload` 始终提醒
+- Ctrl+S 快速存档 / Ctrl+Z 撤销 / `manualSave` 加 `isLoading` 守卫
+
+### 美学 v2
+- 数值变化绿涨红跌闪烁 + 故事时间线金点连线
+- 按钮涟漪 / 场景 Ken Burns 慢速缩放 / 加载呼吸动画
+- 成就弹跳+金光 / 卡片悬浮上浮 / 滚动条美化
+
+### PWA + 移动端
+- 安装引导横幅 + SVG 矢量图标
+- SW 补全 10 主题 CSS + HTTP 错误回退缓存
+- 横幅 `position: fixed`（不挤占游戏空间）
+- iOS 输入框 16px + 触控目标增大 + `dvh` 单位
+
+---
+
 ## 文件结构
 
 ```
 xixi/
 ├── server.js              # Express 后端 + API 代理 + 模板API + 酒馆API + metaPrompt
-├── prompt.txt             # 服务端后备提示词（不要随意改）
+├── prompt.txt             # 服务端后备提示词（5行通用兜底）
 ├── package.json           # 3个依赖：cors/dotenv/express
 ├── render.yaml            # Railway 部署配置
 ├── CLAUDE.md              # 本文件
