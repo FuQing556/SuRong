@@ -375,6 +375,8 @@ init();
 console.log('🎮 模板驱动互动叙事游戏前端已就绪（模块化版）');
 console.log('   state → utils → dialogs → saves → ui → achievements → prompts → templates → tavern → ai → audio → core → init');
 
+window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('init');
+
 // ── 模块加载顺序校验 ──
 var EXPECTED_ORDER = ['state','utils','dialogs','saves','ui','achievements','prompts','templates','tavern','ai','audio','core','init'];
 var loaded = window.XIXI.modulesLoaded || [];
