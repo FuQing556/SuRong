@@ -77,7 +77,7 @@
         {
           "id": "blackmail",
           "label": "把柄",
-          "icon": "🗡",
+          "icon": "🔑",
           "formatHint": "[数量]",
           "type": "number"
         }
@@ -228,7 +228,7 @@
       }
     },
     "反杀时刻": {
-      "icon": "🗡",
+      "icon": "⚔️",
       "desc": "成功设局反杀",
       "trigger": {
         "type": "response_match",

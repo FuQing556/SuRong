@@ -29,7 +29,6 @@ const dom = {
   optionBtns: $$('.option-btn'),
   optionsContainer: $('#options-container'),
   characterImage: $('#character-image'),
-  imageCaption: $('.image-caption'),
   // 动态容器
   statusGrid: $('#status-grid'),
   resourcesRow: $('#resources-row'),

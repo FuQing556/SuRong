@@ -222,6 +222,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   cursor: pointer; transition: all .2s;
   background: var(--bg-card); color: var(--text);
   font-family: inherit;
+  position: relative;  /* 涟漪 span (position:absolute) 的定位锚点 */
 }
 .btn:hover { background: var(--bg-hover); border-color: var(--border-focus); }
 .btn:active { transform: scale(.97); }
@@ -260,14 +261,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   height: auto;
   max-height: 50vh;
   object-fit: cover;
-}
-.image-caption {
-  text-align: center;
-  padding: 8px;
-  font-size: 12px;
-  color: var(--gold-dim);
-  background: rgba(0,0,0,.5);
-  letter-spacing: 1px;
 }
 /* 图片切换动画 */
 .img-fade-out { opacity: 0; transition: opacity .2s ease; }

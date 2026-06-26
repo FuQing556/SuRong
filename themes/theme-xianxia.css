@@ -1,52 +1,143 @@
-/* 🏯 修仙 — 竹纸暖底 + 朱砂红×墨色撞色 + 墨点 + 双重赤金线 + 卷轴画框 */
+/* 🏯 修仙 v2 — 云海仙雾×墨韵×竹剑×符箓 · 竹纸暖底+朱砂×墨色 */
 :root {
   --bg:#efe6d4;--bg-panel:#f6f0e2;--bg-card:#faf6ec;--bg-hover:#ede4ce;
   --border:#c8b898;--border-focus:#c04030;
   --text:#2a2018;--text-dim:#8a7a60;--text-bright:#100800;
   --gold:#c04030;--gold-dim:#883020;--purple:#3850a0;--purple-hover:#4860b8;
   --red:#c04030;--green:#387840;--red-dim:#f8e8e4;
+  --bamboo:#4a6e38;--jade:#5a8a58;
   --option-1:#c04030;--option-2:#3058a8;--option-3:#388040;--option-4:#8050a0;
   --radius:3px;--shadow:0 4px 20px rgba(0,0,0,.12);
 }
 body{background:var(--bg);color:var(--text)}
 
-/* 墨点漂浮 */
+/* ═══════════ 仙气云雾 — 薄雾缓缓流动 ═══════════ */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 55% 12% at 25% 35%, rgba(255,255,255,.07) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 8% at 72% 28%, rgba(255,255,255,.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 10% at 50% 55%, rgba(255,255,255,.04) 0%, transparent 70%);
+  animation:mistFlow 24s ease-in-out infinite
+}
+@keyframes mistFlow{0%,100%{transform:translateY(0)}25%{transform:translateY(-12px)}50%{transform:translateY(6px)}75%{transform:translateY(-8px)}}
+
+/* ═══════════ 水墨·竹·剑·符 ═══════════ */
+/* 墨点漂浮 — 浓淡洇染 */
 body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
-    radial-gradient(2px 3px at 12% 25%,rgba(40,20,10,.12),transparent),
-    radial-gradient(3px 4px at 35% 55%,rgba(30,15,8,.1),transparent),
-    radial-gradient(1px 2px at 58% 18%,rgba(45,25,12,.11),transparent),
-    radial-gradient(2px 3px at 75% 65%,rgba(35,18,10,.09),transparent),
-    radial-gradient(1px 3px at 22% 72%,rgba(40,22,14,.12),transparent);
-  background-size:200px 280px,240px 220px,220px 300px,260px 240px,230px 280px;
+    /* 浓墨点 */
+    radial-gradient(3px 4px at 12% 25%,rgba(30,10,5,.15),transparent),
+    radial-gradient(4px 5px at 35% 55%,rgba(25,8,3,.12),transparent),
+    radial-gradient(2px 3px at 58% 18%,rgba(35,12,6,.14),transparent),
+    radial-gradient(3px 4px at 75% 65%,rgba(28,8,4,.1),transparent),
+    radial-gradient(2px 4px at 22% 72%,rgba(32,10,5,.14),transparent),
+    /* 淡墨晕 */
+    radial-gradient(ellipse 8% 6% at 40% 15%,rgba(20,5,2,.06),transparent),
+    radial-gradient(ellipse 6% 5% at 68% 48%,rgba(18,4,2,.05),transparent);
+  background-size:200px 280px,240px 220px,220px 300px,260px 240px,230px 280px,300px 250px,280px 260px;
   animation:inkDrift 18s ease-in-out infinite}
-@keyframes inkDrift{0%,100%{background-position:0 0,0 0,0 0,0 0,0 0}25%{background-position:30px 20px,-20px 15px,15px -10px,-25px 10px,10px 25px}50%{background-position:15px 40px,10px -5px,-10px 20px,20px -15px,-15px 10px}75%{background-position:-20px 15px,25px 10px,30px 5px,-10px 20px,20px -10px}}
+@keyframes inkDrift{0%,100%{background-position:0 0,0 0,0 0,0 0,0 0,0 0,0 0}25%{background-position:30px 20px,-20px 15px,15px -10px,-25px 10px,10px 25px,20px 15px,-15px 10px}50%{background-position:15px 40px,10px -5px,-10px 20px,20px -15px,-15px 10px,30px 5px,-20px 20px}75%{background-position:-20px 15px,25px 10px,30px 5px,-10px 20px,20px -10px,15px 25px,10px -8px}}
 
-/* 故事框 — 宣纸质感 + 朱砂左边线 */
-#story-box{border:3px double var(--gold-dim);border-radius:2px;background:var(--bg-card);box-shadow:inset 0 0 60px rgba(192,64,48,.02);border-left:4px solid var(--gold)}
+/* ── 竹林暗纹 — 极淡的纵向竹节纹理 ── */
+#game-container::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent,transparent 58px,
+      rgba(74,110,56,.015) 58px,rgba(74,110,56,.015) 60px,
+      transparent 60px,transparent 120px),
+    repeating-linear-gradient(0deg,
+      transparent,transparent 80px,
+      rgba(74,110,56,.01) 80px,rgba(74,110,56,.01) 82px);
+  opacity:.7
+}
+
+/* ═══════════ 故事框 — 宣纸+朱砂双线+剑锋 ═══════════ */
+#story-box{border:3px double var(--gold-dim);border-radius:2px;background:var(--bg-card);box-shadow:inset 0 0 60px rgba(192,64,48,.02);border-left:4px solid var(--gold);position:relative}
 #story-box::before{color:var(--gold);content:'◆ 卷';font-family:'KaiTi',serif;font-size:11px}
+/* 剑锋 — 右上角细长剑芒 */
+#story-box::after{content:'';position:absolute;top:8px;right:20px;width:28px;height:2px;background:linear-gradient(90deg,transparent,rgba(56,120,64,.25),rgba(56,120,64,.15));transform:rotate(-25deg);pointer-events:none;border-radius:1px}
 .story-fade-in{animation:inkReveal .8s ease-out}
 @keyframes inkReveal{from{opacity:0;transform:translateY(12px);text-shadow:0 0 6px rgba(192,64,48,.2)}to{opacity:1;transform:translateY(0);text-shadow:none}}
 
-/* 图片框 — 卷轴裱框 */
+/* ── 结算框 ── */
+.settlement-box{border-left:4px double var(--gold);border-radius:2px;background:var(--bg-card);box-shadow:inset 0 0 30px rgba(192,64,48,.02)}
+.settlement-box::before{color:var(--gold-dim);content:'◇ 前事';font-family:'KaiTi',serif;font-size:11px}
+
+/* ═══════════ 图片框 — 卷轴裱框 ═══════════ */
 .image-frame{border:8px solid transparent;border-image:repeating-linear-gradient(45deg,var(--gold-dim),var(--gold-dim) 2px,var(--border) 2px,var(--border) 4px) 8;padding:4px;background:var(--bg-card);box-shadow:0 4px 20px rgba(0,0,0,.15)}
 .image-frame img{filter:sepia(.12) brightness(.96)}
 
-.game-title{font-family:'KaiTi','STKaiti',serif;letter-spacing:16px;font-size:24px;color:var(--gold);text-shadow:0 2px 4px rgba(0,0,0,.08)}
+/* ── 游戏标题 — 功法符篆 ── */
+.game-title{font-family:'KaiTi','STKaiti',serif;letter-spacing:8px;font-size:19px;color:var(--gold);text-shadow:0 2px 4px rgba(0,0,0,.08)}
+.game-title::before{content:'◇ ';color:var(--gold-dim);font-size:13px;letter-spacing:0}
+.game-title::after{content:' ◇';color:var(--gold-dim);font-size:13px;letter-spacing:0}
+
+/* ── 按钮压缩 — 防顶部栏换行 ── */
+.btn{font-size:12px!important;line-height:1.3!important;padding:8px 14px!important}
+.btn-small{font-size:11px!important;padding:4px 10px!important;line-height:1.2!important}
+.btn-tiny{font-size:10px!important;padding:2px 6px!important;line-height:1.2!important}
+#btn-audio{font-size:11px!important;padding:4px 10px!important}
+
+/* ═══════════ 选项按钮 ═══════════ */
 .option-btn{border:2px solid var(--border);border-radius:2px;background:var(--bg-card);transition:all .3s}
-.option-btn:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(192,64,48,.12),inset 0 0 30px rgba(192,64,48,.02);transform:translateY(-1px)}
+.option-btn:hover{border-color:var(--gold);box-shadow:0 0 24px rgba(192,64,48,.14),inset 0 0 30px rgba(192,64,48,.03);transform:translateY(-1px)}
 .option-btn .option-num{border-radius:2px;color:#fff;font-weight:700;font-size:13px;width:24px;height:24px;line-height:24px}
 .option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
 .option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
 
+/* ── 选项区容器 — 竹简轻框 ── */
+#options-container{border:2px solid var(--border);border-left:4px solid var(--bamboo);border-radius:2px 6px 6px 2px;background:var(--bg-card);box-shadow:inset 0 0 40px rgba(74,110,56,.03);padding:12px 14px}
+.options-hint{color:var(--text-dim);font-size:10px;letter-spacing:1px}
+
+/* ═══════════ 工具栏/卡片/弹窗 ═══════════ */
 #top-bar{border-bottom:2px solid var(--gold-dim);background:linear-gradient(180deg,rgba(192,64,48,.04),transparent)}
-.modal,.save-card{border:2px solid var(--border);border-radius:2px;background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
-.settlement-box{border-left:4px double var(--gold);border-radius:2px;background:var(--bg-card)}
+.modal,.save-card{border:2px solid var(--border);border-radius:2px;background:var(--bg-panel)}.save-card:hover{border-color:var(--gold);box-shadow:0 8px 28px rgba(0,0,0,.1)}
 .overlay{background:rgba(0,0,0,.25)}.overlay .modal{background:var(--bg-panel);border:2px solid var(--gold-dim)}
+
+/* 弹窗标题 — 符篆风格 */
+.overlay .modal h2::before{content:'◇ ';color:var(--gold);font-family:'KaiTi',serif}
+.overlay .modal h2::after{content:' ◇';color:var(--gold);font-family:'KaiTi',serif}
+
+/* ── 表单 ── */
 input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:2px!important}
-input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 6px rgba(192,64,48,.15)}
-.chip.selected{background:var(--gold);color:#fff;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#fff;border-radius:2px;font-weight:600}.btn-primary:hover{background:#d04838}
-.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(192,64,48,.08);color:var(--gold-dim);border-radius:2px}
-.status-label{color:var(--gold-dim)}.status-value{color:var(--text)}
-.save-card-upload{background:rgba(192,64,48,.06);border-color:var(--gold-dim);color:var(--gold)}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 6px rgba(192,64,48,.15),0 0 14px rgba(56,120,64,.08)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* ── 标签/芯片/按钮 ── */
+.chip{border-radius:2px}.chip.selected{background:var(--gold);color:#fff;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#fff;border-radius:2px;font-weight:600}.btn-primary:hover{background:#d04838;box-shadow:0 4px 14px rgba(192,64,48,.18)}
+.btn-ghost:hover{color:var(--gold)}.btn-secondary:hover{border-color:var(--gold);box-shadow:0 2px 8px rgba(192,64,48,.08)}
+
+/* ── 状态面板 ── */
+#status-panel{border:2px solid var(--border);border-radius:2px 8px 2px 8px;background:var(--bg-card);box-shadow:inset 0 0 30px rgba(192,64,48,.02)}
+.status-label{color:var(--gold-dim);font-size:10px;letter-spacing:1px}.status-value{color:var(--text)}
+
+/* ── AI对话框 ── */
+.ai-chat-box{border:2px solid var(--border);border-radius:2px 6px 2px 6px;background:var(--bg-card)}
+.ai-chat-header{color:var(--text-dim);background:var(--bg-hover);border-bottom-color:var(--border)}
+.ai-chat-input-row{border-top-color:var(--border)}
+#ai-chat-input{background:var(--bg-panel);color:var(--text);border-color:var(--border)}
+
+/* ── 细节 ── */
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(192,64,48,.08);color:var(--gold-dim);border-radius:2px;font-size:10px;letter-spacing:1px}
+.story-entry::before{box-shadow:0 0 5px rgba(192,64,48,.2)}
+.status-value{cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s}
+.status-value:hover{border-bottom-color:var(--gold)}
+.save-card-upload{background:rgba(192,64,48,.06);border-color:var(--gold-dim);color:var(--gold);border-radius:2px}
+.ending-modal{border-top:4px double var(--gold);border-radius:2px}
+#ending-narrative{border-left:4px solid var(--gold);border-radius:2px;background:var(--bg-card)}
+.achievement-toast{border:2px solid var(--gold);background:var(--bg-panel);border-radius:2px}
+
+/* ── 滚动条 ── */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+
+/* ── 加载/错误 ── */
+.spinner{border-color:var(--border);border-top-color:var(--gold);box-shadow:0 0 10px rgba(192,64,48,.15)}
+#error-box{background:var(--red-dim);border-color:var(--red);border-left:4px double var(--red);border-radius:2px}
+
+/* ── 响应式 ── */
+@media (max-width:900px){.game-title{font-size:16px;letter-spacing:4px}.image-frame{border-width:6px}}
+@media (max-width:480px){.option-btn{border-radius:2px}.game-title{font-size:13px;letter-spacing:2px}}

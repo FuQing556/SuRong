@@ -266,6 +266,16 @@ function initThemeSelector() {
     applyTheme(theme);
     if (gameState.gameStarted) saveGameState();
     if (gameState.activeTemplate) gameState.activeTemplate.theme = theme;
+    // 樱花主题默认切楷体（用户可手动改回）
+    if (theme === 'sakura') {
+      var curFont = localStorage.getItem(LS_KEYS.font(saveId)) || 'sans';
+      if (curFont === 'sans') {
+        localStorage.setItem(LS_KEYS.font(saveId), 'kai');
+        if (typeof applyFont === 'function') applyFont('kai');
+        var fs = $('#font-selector');
+        if (fs) fs.value = 'kai';
+      }
+    }
   });
 
   // 隐藏"应用"按钮——自动应用后不再需要

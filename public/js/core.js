@@ -681,11 +681,12 @@ async function continueGame(saveId) {
     const lines = savesAvail.map(function(s) {
       return '槽位' + s.slot + ': 第' + s.data.roundNumber + '回合 (' + new Date(s.data.lastPlayed).toLocaleString('zh-CN') + ')';
     });
-    const choice = await dlPrompt('有多个存档：\n' + lines.join('\n') + '\n\n输入槽位编号读取，输入"删X"删除槽位X，取消则读取最新');
+    const choice = await dlPrompt('有多个存档：\n' + lines.join('\n') + '\n\n输入槽位编号直接读取\n输入 X编号 删除该槽位（如 X1）\n输入 XA 清除全部存档\n留空则读取最新');
     if (!choice || !choice.trim()) {
       saveData = savesAvail[0].data;
-    } else if (choice.startsWith('删')) {
-      const ds = parseInt(choice.replace('删', '').trim());
+    } else if (/^删/.test(choice) || /^X\d/i.test(choice)) {
+      // 删X 或 X1 格式：删除指定槽位
+      const ds = parseInt(choice.replace(/^[删Xx]\s*/, '').trim());
       if (!isNaN(ds) && savesAvail.some(function(s) { return s.slot === ds; })) {
         const confirmed = await dlConfirm('确定删除槽位' + ds + '？');
         if (confirmed) {
@@ -703,6 +704,15 @@ async function continueGame(saveId) {
       } else {
         saveData = savesAvail[0].data;
       }
+    } else if (/^XA$/i.test(choice.trim())) {
+      // XA：清除全部存档槽位
+      const confirmed = await dlConfirm('确定清除「' + (template.name || '该存档') + '」的全部 ' + savesAvail.length + ' 个存档槽位？');
+      if (confirmed) {
+        for (let s = 0; s < 10; s++) localStorage.removeItem(getSaveKey(saveId, s));
+        selectSave(saveId);
+        return;
+      }
+      saveData = savesAvail[0].data;
     } else {
       const chosen = savesAvail.find(function(s) { return s.slot === parseInt(choice); });
       saveData = chosen ? chosen.data : savesAvail[0].data;

@@ -1,50 +1,260 @@
-/* 🌊 深海 — 深蓝基底 + 珊瑚暖金撞色 + 气泡粒子 + 波浪画框 */
+/* 🌊 深海 v2 — 海渊×鲸影×漩涡×潜水艇×鱼群×珍珠珊瑚 · 墨蓝+暖金+珠光 */
 :root {
-  --bg:#030d18;--bg-panel:#081a2c;--bg-card:#0d2238;--bg-hover:#132c46;
-  --border:#183850;--border-focus:#f0a060;
-  --text:#c8dce8;--text-dim:#5088a8;--text-bright:#e8f4fc;
-  --gold:#f0a060;--gold-dim:#b06830;--purple:#60a0e0;--purple-hover:#78b8f8;
+  --bg:#020a14;--bg-panel:#061830;--bg-card:#0b2240;--bg-hover:#102c50;
+  --border:#183860;--border-focus:#f0a060;
+  --text:#c8dce8;--text-dim:#5090b8;--text-bright:#e8f8ff;
+  --gold:#f0a060;--gold-dim:#b87040;--purple:#50a0e0;--purple-hover:#68b8f8;
   --red:#f05850;--green:#40c880;--red-dim:#1a1018;
+  --pearl:#f8eed8;--abyss:#010810;
   --option-1:#f0a060;--option-2:#40a8e0;--option-3:#50d090;--option-4:#e058a0;
-  --radius:18px;--shadow:0 4px 28px rgba(0,0,0,.5);
+  --radius:16px;--shadow:0 4px 30px rgba(0,0,0,.55);
+}
+body{background:var(--bg);color:var(--text)}
+
+/* ═══════════ 海渊纵深 — 从墨蓝渐入深渊 ═══════════ */
+#game-container{
+  position:relative;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 30%, rgba(16,48,80,.25) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 30% at 50% 80%, rgba(2,8,16,.4) 0%, transparent 50%);
 }
 
-/* 气泡粒子 — 暖色点缀 */
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:
-    radial-gradient(circle at 15% 80%,rgba(240,160,96,.14),transparent 30px),
-    radial-gradient(circle at 35% 70%,rgba(200,140,80,.1),transparent 22px),
-    radial-gradient(circle at 52% 85%,rgba(220,150,90,.12),transparent 26px),
-    radial-gradient(circle at 68% 75%,rgba(240,160,96,.1),transparent 24px),
-    radial-gradient(circle at 82% 82%,rgba(210,145,85,.13),transparent 28px);
-  background-size:300px 400px,250px 350px,280px 380px,260px 360px,290px 390px;
-  animation:bubbles 8s ease-in-out infinite}
-@keyframes bubbles{0%,100%{background-position:0 0,0 0,0 0,0 0,0 0}50%{background-position:20px -30px,-15px -20px,10px -25px,-20px -15px,5px -35px}}
+/* ═══════════ 漩涡 — 极缓暗流旋转 ═══════════ */
+/* ═══════════ 散游鱼群 — 全部右→左自然游向 ═══════════ */
+/* 背景层大鱼 */
+body::before{
+  content:'🐟';position:fixed;pointer-events:none;z-index:0;
+  font-size:30px;opacity:.16;
+  top:32%;right:-50px;
+  animation:fish1 22s ease-in-out infinite
+}
+@keyframes fish1{
+  0%{transform:translateX(0) translateY(0)}
+  30%{transform:translateX(-35vw) translateY(-28px)}
+  65%{transform:translateX(-70vw) translateY(18px)}
+  100%{transform:translateX(-105vw) translateY(-8px)}
+}
 
-/* 故事框 — 舷窗 + 珊瑚左边线 */
-#story-box{border:2px solid var(--border);border-radius:18px;box-shadow:inset 0 0 60px rgba(240,160,96,.04);border-left:4px solid var(--gold)}
-#story-box::before{color:var(--gold);content:'🌊 现状';font-size:11px}
+/* 背景层中鱼 */
+#game-container::before{
+  content:'🐠';position:fixed;pointer-events:none;z-index:0;
+  font-size:22px;opacity:.13;
+  top:48%;right:-50px;
+  animation:fish2 28s ease-in-out infinite 5s
+}
+@keyframes fish2{
+  0%{transform:translateX(0) translateY(0)}
+  25%{transform:translateX(-30vw) translateY(22px)}
+  55%{transform:translateX(-60vw) translateY(-16px)}
+  100%{transform:translateX(-105vw) translateY(8px)}
+}
+
+/* 背景层小胖鱼 */
+#game-container::after{
+  content:'🐡';position:fixed;pointer-events:none;z-index:0;
+  font-size:16px;opacity:.11;
+  top:62%;right:-40px;
+  animation:fish3 34s ease-in-out infinite 10s
+}
+@keyframes fish3{
+  0%{transform:translateX(0) translateY(0)}
+  40%{transform:translateX(-50vw) translateY(-14px)}
+  80%{transform:translateX(-85vw) translateY(22px)}
+  100%{transform:translateX(-105vw) translateY(-4px)}
+}
+
+/* 背景层慢鱼 */
+#content-panel::before{
+  content:'🐟';position:fixed;pointer-events:none;z-index:0;
+  font-size:19px;opacity:.1;
+  top:26%;right:-45px;
+  animation:fish4 40s ease-in-out infinite 15s
+}
+@keyframes fish4{
+  0%{transform:translateX(0) translateY(0)}
+  30%{transform:translateX(-28vw) translateY(35px)}
+  60%{transform:translateX(-60vw) translateY(-18px)}
+  100%{transform:translateX(-105vw) translateY(12px)}
+}
+
+/* ═══════════ 界面上层飞鱼 — 存在感！ ═══════════ */
+#left-panel::before{
+  content:'🐠';position:fixed;pointer-events:none;z-index:10;
+  font-size:28px;opacity:.22;
+  top:15%;right:-55px;
+  animation:flyFish1 16s ease-in-out infinite 3s
+}
+@keyframes flyFish1{
+  0%{transform:translateX(0) translateY(0)}
+  35%{transform:translateX(-45vw) translateY(30px)}
+  70%{transform:translateX(-80vw) translateY(-22px)}
+  100%{transform:translateX(-105vw) translateY(8px)}
+}
+
+#left-panel::after{
+  content:'🐟';position:fixed;pointer-events:none;z-index:10;
+  font-size:24px;opacity:.18;
+  top:70%;right:-50px;
+  animation:flyFish2 19s ease-in-out infinite 9s
+}
+@keyframes flyFish2{
+  0%{transform:translateX(0) translateY(0)}
+  30%{transform:translateX(-35vw) translateY(-18px)}
+  65%{transform:translateX(-70vw) translateY(28px)}
+  100%{transform:translateX(-105vw) translateY(-8px)}
+}
+
+#story-box::after{
+  content:'🐡';position:fixed;pointer-events:none;z-index:10;
+  font-size:18px;opacity:.15;
+  top:42%;right:-40px;
+  animation:flyFish3 24s ease-in-out infinite 14s
+}
+@keyframes flyFish3{
+  0%{transform:translateX(0) translateY(0)}
+  45%{transform:translateX(-55vw) translateY(-32px)}
+  85%{transform:translateX(-90vw) translateY(18px)}
+  100%{transform:translateX(-105vw) translateY(-4px)}
+}
+
+/* ═══════════ 气泡粒子 + 珍珠光点 ═══════════ */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    /* 大气泡 — 暖色 */
+    radial-gradient(circle at 15% 78%,rgba(240,160,96,.16),transparent 32px),
+    radial-gradient(circle at 35% 68%,rgba(200,140,80,.12),transparent 24px),
+    radial-gradient(circle at 52% 82%,rgba(220,150,90,.14),transparent 28px),
+    radial-gradient(circle at 68% 72%,rgba(240,160,96,.11),transparent 26px),
+    radial-gradient(circle at 82% 80%,rgba(210,145,85,.15),transparent 30px),
+    /* 小珍珠光点 */
+    radial-gradient(circle at 22% 60%,rgba(248,238,216,.1),transparent 8px),
+    radial-gradient(circle at 58% 45%,rgba(248,238,216,.08),transparent 6px),
+    radial-gradient(circle at 75% 55%,rgba(248,238,216,.1),transparent 7px),
+    radial-gradient(circle at 42% 75%,rgba(248,238,216,.07),transparent 5px);
+  background-size:300px 400px,250px 350px,280px 380px,260px 360px,290px 390px,200px 250px,180px 220px,210px 240px,190px 230px;
+  animation:bubbles 8s ease-in-out infinite}
+@keyframes bubbles{0%,100%{background-position:0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0}50%{background-position:20px -35px,-15px -25px,10px -30px,-20px -20px,5px -40px,-10px -15px,15px -20px,-5px -10px,12px -18px}}
+
+/* ═══════════ 鱼群 — 细小暗影掠过 ═══════════ */
+#content-panel::before{
+  content:'';position:fixed;pointer-events:none;z-index:0;
+  width:60px;height:4px;
+  background:
+    radial-gradient(ellipse 2px 3px at 8px 50%,rgba(160,200,220,.08),transparent),
+    radial-gradient(ellipse 1px 2px at 18px 50%,rgba(140,190,210,.06),transparent),
+    radial-gradient(ellipse 2px 3px at 32px 50%,rgba(160,200,220,.07),transparent),
+    radial-gradient(ellipse 1px 2px at 46px 50%,rgba(150,195,215,.05),transparent);
+  top:35%;left:-60px;
+  animation:fishSwim 22s linear infinite;
+  opacity:.6
+}
+@keyframes fishSwim{
+  0%{transform:translateX(0) translateY(0);opacity:.5}
+  20%{transform:translateX(25vw) translateY(-12px);opacity:.7}
+  45%{transform:translateX(55vw) translateY(6px);opacity:.4}
+  70%{transform:translateX(80vw) translateY(-8px);opacity:.6}
+  100%{transform:translateX(105vw) translateY(0);opacity:0}
+}
+
+/* ═══════════ 鲸影 — 巨大暗影缓缓掠过 ═══════════ */
+#content-panel::after{
+  content:'';position:fixed;pointer-events:none;z-index:0;
+  width:200px;height:80px;
+  background:radial-gradient(ellipse 70% 50% at 50% 50%,rgba(8,30,50,.25) 0%,transparent 70%);
+  border-radius:45%;
+  top:28%;left:-200px;
+  animation:whalePass 45s ease-in-out infinite 10s
+}
+@keyframes whalePass{
+  0%{transform:translateX(0) translateY(0) scale(1);opacity:0}
+  8%{transform:translateX(18vw) translateY(15px) scale(1.05);opacity:.7}
+  16%{transform:translateX(40vw) translateY(-8px) scale(1.1);opacity:.5}
+  28%{transform:translateX(65vw) translateY(20px) scale(1.02);opacity:.3}
+  40%{transform:translateX(105vw) translateY(-10px) scale(1);opacity:0}
+  100%{transform:translateX(105vw) translateY(0) scale(1);opacity:0}
+}
+
+/* ═══════════ 故事框 — 潜水艇舷窗 × 声呐 ═══════════ */
+#story-box{border:2px solid var(--border);border-radius:18px;box-shadow:inset 0 0 60px rgba(240,160,96,.04);border-left:4px solid var(--gold);position:relative}
+#story-box::before{color:var(--gold);content:'◉ SONAR';font-family:'Consolas',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase}
+/* 声呐波纹 — 右下角 */
 .story-fade-in{animation:deepRise .7s cubic-bezier(.25,.46,.45,.94)}
 @keyframes deepRise{from{opacity:0;transform:translateY(24px);filter:blur(3px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
 
-/* 图片框 — 波浪底边 + 珊瑚边框 */
-.image-frame{border:2px solid var(--gold-dim);border-radius:18px 18px 40% 40%;overflow:hidden;box-shadow:0 0 30px rgba(240,160,96,.12)}
-.image-frame img{filter:brightness(.88) saturate(1.2)}
+/* ── 结算框 ── */
+.settlement-box{border-left:3px solid var(--gold);border-radius:14px;background:var(--bg-card);box-shadow:inset 0 0 20px rgba(240,160,96,.02)}
+.settlement-box::before{color:var(--gold-dim);content:'◉ PREV';font-family:'Consolas',monospace;font-size:9px;letter-spacing:3px}
 
-.game-title{color:var(--gold);letter-spacing:9px;text-shadow:0 0 20px rgba(240,160,96,.3);font-size:20px;font-weight:300}
-.option-btn{border-radius:22px;border:2px solid var(--border);transition:all .3s ease;background:var(--bg-card)}
-.option-btn:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(240,160,96,.18);border-color:var(--gold);background:rgba(240,160,96,.06)}
-.option-btn .option-num{border-radius:50%;color:#fff;font-weight:700;font-size:12px;width:24px;height:24px;line-height:24px}
+/* ═══════════ 图片框 — 波浪底边 + 珊瑚边框 ═══════════ */
+.image-frame{border:2px solid var(--gold-dim);border-radius:18px 18px 40% 40%;overflow:hidden;box-shadow:0 0 30px rgba(240,160,96,.12)}
+.image-frame img{filter:brightness(.85) saturate(1.25) contrast(1.05)}
+
+/* ── 游戏标题 ── */
+.game-title{color:var(--gold);letter-spacing:8px;text-shadow:0 0 20px rgba(240,160,96,.3);font-size:19px;font-weight:300}
+
+/* ═══════════ 选项按钮 — 珍珠圆润 ═══════════ */
+.option-btn{border-radius:22px;border:2px solid var(--border);transition:all .3s ease;background:var(--bg-hover)}
+.option-btn:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(240,160,96,.2),0 0 0 1px rgba(248,238,216,.06);border-color:var(--gold);background:rgba(240,160,96,.06)}
+.option-btn .option-num{border-radius:50%;color:#020a14;font-weight:700;font-size:12px;width:24px;height:24px;line-height:24px}
 .option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
 .option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
 
+/* ── 选项区容器 ── */
+#options-container{border:2px solid var(--border);border-left:4px solid var(--gold);border-radius:18px;background:var(--bg-card);box-shadow:inset 0 0 30px rgba(240,160,96,.02);padding:12px 14px}
+.options-hint{color:var(--text-dim);font-size:10px;letter-spacing:1px}
+
+/* ═══════════ 工具栏/卡片/弹窗 ═══════════ */
 #top-bar{border-bottom:2px solid var(--gold-dim);background:linear-gradient(180deg,rgba(240,160,96,.04),transparent)}
-.modal,.save-card{border-radius:20px;border:1px solid var(--border);background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
-.settlement-box{border-left:3px solid var(--gold);border-radius:14px;background:var(--bg-card)}
-.overlay .modal{border:1px solid var(--border);border-radius:20px}
+.modal,.save-card{border-radius:20px;border:1px solid var(--border);background:var(--bg-panel)}.save-card:hover{border-color:var(--gold);box-shadow:0 8px 28px rgba(0,0,0,.3)}
+.overlay .modal{border:1px solid var(--border);border-radius:20px;background:var(--bg-panel)}
+.overlay .modal h2{color:var(--gold)}
+
+/* ── 表单 ── */
 input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:12px!important}
-input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 8px rgba(240,160,96,.2)}
-.chip.selected{background:var(--gold);color:#030d18;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#030d18;border-radius:22px;font-weight:700}.btn-primary:hover{background:#f8b068}
-.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(240,160,96,.14);color:var(--gold);border-radius:12px}
-.save-card-upload{background:rgba(240,160,96,.1);border-color:var(--gold-dim);color:var(--gold)}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 8px rgba(240,160,96,.2),0 0 18px rgba(248,238,216,.06)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* ── 按钮 ── */
+.btn{font-size:12px!important;line-height:1.3!important}
+.btn-small{font-size:11px!important;padding:4px 10px!important;line-height:1.2!important}
+.btn-tiny{font-size:10px!important;padding:2px 6px!important;line-height:1.2!important}
+#btn-audio{font-size:11px!important;padding:4px 10px!important}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#020a14;border-radius:22px;font-weight:700}.btn-primary:hover{background:#f8b068;box-shadow:0 0 18px rgba(240,160,96,.3)}
+.btn-ghost:hover{color:var(--gold)}.btn-secondary:hover{border-color:var(--gold);box-shadow:0 2px 10px rgba(240,160,96,.1)}
+.chip{border-radius:20px}.chip.selected{background:var(--gold);color:#020a14;font-weight:600}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+/* ── 状态面板 ── */
+#status-panel{border:2px solid var(--border);border-radius:18px;background:var(--bg-card);box-shadow:inset 0 0 30px rgba(240,160,96,.02)}
+.status-label{color:var(--text-dim);font-size:10px;letter-spacing:1px}.status-value{color:var(--text)}
+
+/* ── AI对话框 ── */
+.ai-chat-box{border:2px solid var(--border);border-radius:18px;background:var(--bg-card)}
+.ai-chat-header{color:var(--text-dim);background:var(--bg-hover);border-bottom-color:var(--border)}
+.ai-chat-input-row{border-top-color:var(--border)}
+#ai-chat-input{background:var(--bg-panel);color:var(--text);border-color:var(--border)}
+
+/* ── 细节 ── */
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(240,160,96,.14);color:var(--gold);border-radius:12px;font-size:10px;letter-spacing:1px}
+.story-entry::before{box-shadow:0 0 6px rgba(240,160,96,.3)}
+.status-value{cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s}
+.status-value:hover{border-bottom-color:var(--gold)}
+.save-card-upload{background:rgba(240,160,96,.1);border-color:var(--gold-dim);color:var(--gold);border-radius:18px}
+.ending-modal{border-top:3px solid var(--gold);border-radius:20px}
+#ending-narrative{border-left:4px solid var(--gold);border-radius:14px;background:var(--bg-card)}
+.achievement-toast{border:2px solid var(--gold);background:var(--bg-panel);border-radius:20px}
+
+/* ── 滚动条 ── */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(240,160,96,.15);border-radius:2px}::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+
+/* ── 加载/错误 ── */
+.spinner{border-color:var(--border);border-top-color:var(--gold);box-shadow:0 0 12px rgba(240,160,96,.25)}
+#error-box{background:var(--red-dim);border-color:var(--red);border-left:4px solid var(--red);border-radius:14px}
+
+/* ═══════════ 响应式 ═══════════ */
+@media (max-width:900px){
+  .game-title{font-size:16px;letter-spacing:4px}
+}
+@media (max-width:480px){
+  .option-btn{border-radius:16px}.game-title{font-size:14px}
+}

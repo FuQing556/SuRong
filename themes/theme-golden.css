@@ -1,42 +1,179 @@
-/* ✨ 鎏金 — 浓黑棕基底 + 暖金×宝石蓝撞色 + 金属流光 + 镀金画框 */
+/* ✨ 鎏金 v2 — 暖棕金×紫晶×玫瑰金撞色 · 宝石镶角画框×金粉飘落×竖琴 */
 :root {
-  --bg:#040200;--bg-panel:#0e0804;--bg-card:#181008;--bg-hover:#221810;
-  --border:#302010;--border-focus:#e0b040;
-  --text:#d4c8b0;--text-dim:#786840;--text-bright:#f0e4c0;
-  --gold:#e0b040;--gold-dim:#906820;--purple:#4088d0;--purple-hover:#5098e0;
-  --red:#d04038;--green:#48a840;--red-dim:#201008;
-  --option-1:#e0b040;--option-2:#4088d0;--option-3:#48a840;--option-4:#c85068;
-  --radius:6px;--shadow:0 4px 28px rgba(0,0,0,.65);
+  --bg:#1a0e06;--bg-panel:#241810;--bg-card:#302014;--bg-hover:#3c2a1c;
+  --border:#5a3c28;--border-focus:#e0b040;
+  --text:#f0e4d0;--text-dim:#a08860;--text-bright:#fcf8f0;
+  --gold:#e0b040;--gold-dim:#a06820;--purple:#c060d0;--purple-hover:#d878e8;
+  --rose:#e87090;--ivory:#f8f0e0;
+  --red:#d04038;--green:#48a840;--red-dim:#281810;
+  --option-1:#e0b040;--option-2:#c060d0;--option-3:#48a840;--option-4:#e87090;
+  --radius:6px;--shadow:0 4px 28px rgba(0,0,0,.6);
+}
+body{background:var(--bg);color:var(--text)}
+
+/* ═══════════ 金粉飘落 — 暖金光点极缓下落 ═══════════ */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(2px 2px at 12% 15%,rgba(224,176,64,.2),transparent),
+    radial-gradient(1px 1px at 28% 22%,rgba(224,176,64,.15),transparent),
+    radial-gradient(2px 2px at 42% 8%,rgba(240,200,80,.18),transparent),
+    radial-gradient(1px 1px at 55% 18%,rgba(224,176,64,.14),transparent),
+    radial-gradient(3px 3px at 18% 28%,rgba(240,200,80,.16),transparent),
+    radial-gradient(1px 1px at 35% 12%,rgba(224,176,64,.17),transparent),
+    radial-gradient(2px 2px at 62% 25%,rgba(224,176,64,.13),transparent),
+    radial-gradient(1px 1px at 48% 32%,rgba(240,200,80,.15),transparent),
+    radial-gradient(2px 2px at 72% 10%,rgba(224,176,64,.14),transparent),
+    radial-gradient(1px 1px at 82% 20%,rgba(240,200,80,.12),transparent),
+    radial-gradient(2px 2px at 22% 35%,rgba(224,176,64,.11),transparent),
+    radial-gradient(1px 1px at 58% 28%,rgba(224,176,64,.16),transparent);
+  background-size:350px 450px;
+  animation:goldDust 20s linear infinite
+}
+@keyframes goldDust{
+  0%{background-position:0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0}
+  100%{background-position:15px 105vh,-8px 105vh,22px 105vh,-12px 105vh,5px 105vh,18px 105vh,-20px 105vh,10px 105vh,-15px 105vh,25px 105vh,-5px 105vh,8px 105vh}
 }
 
-/* 按钮金属光泽 */
-.option-btn{border:2px solid var(--border);border-radius:6px;background:linear-gradient(135deg,var(--bg-card),rgba(224,176,64,.05));position:relative;overflow:hidden}
-.option-btn::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent 40%,rgba(224,176,64,.08) 50%,transparent 60%);animation:goldShine 3s ease-in-out infinite;pointer-events:none}
-@keyframes goldShine{0%{transform:translateX(-100%) translateY(-100%)}100%{transform:translateX(100%) translateY(100%)}}
-.option-btn:hover{border-color:var(--gold);box-shadow:0 0 28px rgba(224,176,64,.3),inset 0 0 35px rgba(224,176,64,.05);transform:translateY(-2px)}
-.option-btn .option-num{border-radius:2px;font-family:Georgia,serif;color:#040200;font-weight:700;font-size:13px;width:24px;height:24px;line-height:24px}
-.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
-.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+/* ═══════════ 画框微光呼吸 ═══════════ */
+#game-container::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 55% 40% at 50% 35%,rgba(224,176,64,.04) 0%,transparent 55%);
+  animation:frameGlow 6s ease-in-out infinite
+}
+@keyframes frameGlow{0%,100%{opacity:.4}50%{opacity:.85}}
 
-/* 故事框 — 镀金框 + 金边 */
-#story-box{border:2px solid var(--border);border-radius:6px;background:linear-gradient(180deg,rgba(224,176,64,.025),transparent 50%,rgba(224,176,64,.025));position:relative;border-left:4px solid var(--gold)}
+/* ═══════════ 图片框 — 宝石镶角镀金画框 ═══════════ */
+.image-frame{
+  position:relative;
+  border:3px solid var(--gold-dim);
+  border-image:linear-gradient(135deg,var(--gold-dim),var(--gold),var(--gold-dim)) 1;
+  border-radius:4px;
+  box-shadow:
+    0 0 36px rgba(224,176,64,.15),
+    inset 0 0 12px rgba(0,0,0,.35);
+  padding:6px;background:var(--bg-card)
+}
+/* 四角紫晶镶饰 */
+.image-frame::before{
+  content:'';
+  position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:
+    radial-gradient(circle at 12px 12px, var(--purple) 0, var(--purple) 3px, transparent 3px),
+    radial-gradient(circle at calc(100% - 12px) 12px, var(--purple) 0, var(--purple) 3px, transparent 3px),
+    radial-gradient(circle at 12px calc(100% - 12px), var(--purple) 0, var(--purple) 3px, transparent 3px),
+    radial-gradient(circle at calc(100% - 12px) calc(100% - 12px), var(--purple) 0, var(--purple) 3px, transparent 3px);
+  filter:drop-shadow(0 0 6px rgba(192,96,208,.4))
+}
+
+.image-frame img{
+  display:block;width:100%;
+  filter:brightness(.88) contrast(1.06);
+  border-radius:2px;position:relative;z-index:1
+}
+
+.game-title{color:var(--gold);text-shadow:0 0 20px rgba(224,176,64,.55),0 2px 4px rgba(0,0,0,.5);letter-spacing:12px;font-size:22px;font-family:Georgia,serif}
+
+/* ═══════════ 故事框 — 镀金大理石 ═══════════ */
+#story-box{
+  border:2px solid var(--border);border-left:4px solid var(--gold);
+  border-radius:6px;
+  background:linear-gradient(180deg,rgba(224,176,64,.03),transparent 50%,rgba(224,176,64,.03));
+  position:relative
+}
 #story-box::before{color:var(--gold);content:'◆ 现状';font-family:Georgia,serif;font-size:11px}
-#story-box::after{content:'◆';position:absolute;bottom:8px;right:12px;font-size:10px;color:var(--gold-dim);opacity:.5}
+#story-box::after{content:'◆';position:absolute;bottom:8px;right:12px;font-size:10px;color:var(--rose);opacity:.5}
 .story-fade-in{animation:goldReveal .7s ease-out}
-@keyframes goldReveal{from{opacity:0;transform:translateY(8px);color:var(--gold-dim)}to{opacity:1;transform:translateY(0);color:var(--text-bright)}}
+@keyframes goldReveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-/* 图片框 — 镀金画框 */
-.image-frame{border:4px solid transparent;border-image:linear-gradient(135deg,var(--gold-dim),var(--gold),var(--gold-dim)) 1;box-shadow:0 0 36px rgba(224,176,64,.15),inset 0 0 12px rgba(0,0,0,.35);border-radius:4px}
-.image-frame img{filter:brightness(.88) contrast(1.06)}
+.settlement-box{border-left:4px solid var(--rose);border-radius:6px;background:var(--bg-card)}
+.settlement-box::before{color:var(--rose);content:'◇ 前事';font-family:Georgia,serif;font-size:10px}
 
-.game-title{color:var(--gold);text-shadow:0 0 20px rgba(224,176,64,.45),0 2px 4px rgba(0,0,0,.5);letter-spacing:12px;font-size:23px;font-family:Georgia,serif}
-.modal,.save-card{border:2px solid var(--border);border-radius:6px;background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
-.settlement-box{border-left:4px solid var(--gold);border-radius:6px;background:var(--bg-card)}
-.overlay .modal{border:2px solid var(--gold-dim);box-shadow:0 0 55px rgba(0,0,0,.75);border-radius:6px}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:4px!important}
-input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 12px rgba(224,176,64,.15)}
-.chip.selected{background:var(--gold);color:#040200;font-weight:700}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-dim));border-color:var(--gold);color:#040200;font-weight:700;border-radius:6px}.btn-primary:hover{box-shadow:0 0 20px rgba(224,176,64,.35)}
-.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(224,176,64,.16);color:var(--gold);border-radius:4px}
-.status-value{color:var(--text-bright)}
-.save-card-upload{background:rgba(224,176,64,.14);border-color:var(--gold-dim);color:var(--gold)}
+/* ═══════════ 选项容器 ═══════════ */
+#options-container{border:2px solid var(--border);border-left:4px solid var(--gold);border-radius:6px;background:var(--bg-card);box-shadow:inset 0 0 30px rgba(224,176,64,.03);padding:12px 14px}
+.options-hint{color:var(--text-dim);font-size:10px;letter-spacing:1px}
+
+/* ═══════════ 选项按钮 — 金属扫光+紫晶hover ═══════════ */
+.option-btn{
+  border:2px solid var(--border);border-radius:6px;
+  background:linear-gradient(135deg,var(--bg-card),rgba(224,176,64,.05));
+  position:relative;overflow:hidden;transition:all .3s
+}
+/* 金属扫光 */
+.option-btn::before{
+  content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+  background:linear-gradient(45deg,transparent 40%,rgba(224,176,64,.08) 50%,transparent 60%);
+  animation:goldShine 3s ease-in-out infinite;pointer-events:none
+}
+@keyframes goldShine{0%{transform:translateX(-100%) translateY(-100%)}100%{transform:translateX(100%) translateY(100%)}}
+.option-btn:hover{
+  border-color:var(--purple);
+  box-shadow:0 0 32px rgba(192,96,208,.35),inset 0 0 30px rgba(192,96,208,.04);
+  background:linear-gradient(135deg,rgba(192,96,208,.06),rgba(224,176,64,.04));
+  transform:translateY(-2px)
+}
+.option-btn:active{transform:scale(.97) translateY(0)}
+.option-btn:disabled{opacity:.35;box-shadow:none;transform:none}
+.option-btn:disabled::before{display:none}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}
+.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}
+.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+.option-btn .option-num{border-radius:2px;font-family:Georgia,serif;color:#1a0e06;font-weight:700;font-size:13px;width:24px;height:24px;line-height:24px}
+
+/* ═══════════ 卡片/弹窗 ═══════════ */
+.modal,.save-card{border:2px solid var(--border);border-radius:6px;background:var(--bg-panel)}
+.save-card:hover{border-color:var(--gold);box-shadow:0 8px 28px rgba(0,0,0,.5)}
+.overlay{background:rgba(0,0,0,.55)}
+.overlay .modal{border:2px solid var(--gold-dim);border-radius:6px;box-shadow:0 0 55px rgba(0,0,0,.75)}
+.overlay .modal h2{color:var(--gold);font-family:Georgia,serif}
+.overlay .modal h2::before{content:'◇ ';color:var(--purple)}
+.overlay .modal h2::after{content:' ◇';color:var(--purple)}
+
+.btn{font-size:12px!important;line-height:1.3!important}
+.btn-small{font-size:11px!important;padding:4px 10px!important;line-height:1.2!important}
+.btn-tiny{font-size:10px!important;padding:2px 6px!important;line-height:1.2!important}
+#btn-audio{font-size:11px!important;padding:4px 10px!important}
+.btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-dim));border-color:var(--gold);color:#1a0e06;font-weight:700;border-radius:6px}
+.btn-primary:hover{box-shadow:0 0 20px rgba(224,176,64,.4)}
+.btn-ghost:hover{color:var(--gold)}
+.btn-secondary:hover{border-color:var(--gold);box-shadow:0 2px 10px rgba(224,176,64,.1)}
+
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:4px!important;font-size:13px!important}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 12px rgba(224,176,64,.2)}
+:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+.chip{border-radius:4px}.chip.selected{background:var(--gold);color:#1a0e06;font-weight:700}
+.tab-btn{font-size:13px}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab-bar{border-bottom:1px solid var(--border)}
+
+/* ── 状态面板 ── */
+#status-panel{border:2px solid var(--border);border-radius:6px;background:var(--bg-card);box-shadow:inset 0 0 30px rgba(224,176,64,.02)}
+.status-label{color:var(--gold-dim);font-size:10px;letter-spacing:1px}
+.status-value{color:var(--text-bright);cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s}
+.status-value:hover{border-bottom-color:var(--gold)}
+.pressure-safe{color:var(--green)!important}
+.pressure-warn{color:var(--gold)!important}
+.pressure-danger{color:var(--red)!important}
+
+/* ── AI对话框 ── */
+.ai-chat-box{border:2px solid var(--border);border-radius:6px;background:var(--bg-card)}
+.ai-chat-header{color:var(--text-dim);background:var(--bg-hover);border-bottom-color:var(--border)}
+.ai-chat-input-row{border-top-color:var(--border)}
+#ai-chat-input{background:var(--bg-panel);color:var(--text);border-color:var(--border)}
+
+/* ── 细节 ── */
+.ach-progress-fill{background:var(--gold)}
+.story-round-badge{background:rgba(224,176,64,.16);color:var(--gold);border-radius:4px;font-size:10px}
+.story-entry::before{box-shadow:0 0 5px rgba(224,176,64,.4)}
+.save-card-upload{background:rgba(224,176,64,.14);border-color:var(--gold-dim);color:var(--gold);border-radius:4px}
+.ending-modal{border-top:4px solid var(--gold);border-radius:6px}
+#ending-narrative{border-left:4px solid var(--gold);border-radius:4px;background:var(--bg-card)}
+.achievement-toast{border:2px solid var(--gold);background:var(--bg-panel);border-radius:6px}
+#top-bar{border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(224,176,64,.05),transparent)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+.spinner{border-color:var(--border);border-top-color:var(--gold);box-shadow:0 0 12px rgba(224,176,64,.3)}
+#error-box{border-left:4px solid var(--red);border-radius:4px}
+
+@media (max-width:900px){.game-title{font-size:18px;letter-spacing:6px}}
+@media (max-width:480px){.option-btn{border-radius:4px}.game-title{font-size:15px}}

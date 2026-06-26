@@ -310,7 +310,6 @@ function switchSceneImage(sceneType, template) {
       img.classList.add('img-fade-in');
       setTimeout(() => img.classList.remove('img-fade-in'), 500);
     }, 200);
-    if (sceneType) dom.imageCaption.textContent = '[' + sceneType + '] 📁';
     return;
   }
 
@@ -328,10 +327,6 @@ function switchSceneImage(sceneType, template) {
     img.classList.add('img-fade-in');
     setTimeout(() => img.classList.remove('img-fade-in'), 500);
   }, 200);
-  if (sceneType) {
-    const tplName = template?.name || '';
-    dom.imageCaption.textContent = tplName ? tplName + ' [' + sceneType + ']' : '[' + sceneType + ']';
-  }
 }
 
 // ── 存档时间指示器 ──
@@ -477,7 +472,6 @@ function renderMySavesPanel() {
       </div>
       ${hasProgress
         ? `<button class="btn btn-primary save-card-btn save-continue-btn" data-save-id="${s.id}">▶ 继续</button>
-           <button class="save-card-delete save-clear-btn" data-save-id="${s.id}" style="position:absolute;bottom:8px;right:8px;font-size:10px;opacity:.4;" title="清除所有存档槽位">🗑 清档</button>
            <button class="btn btn-secondary save-card-btn save-new-btn" data-save-id="${s.id}" style="margin-top:4px;">🔄 新游戏</button>`
         : `<button class="btn btn-primary save-card-btn save-new-btn" data-save-id="${s.id}">▶ 开始</button>`}
       ${s.type !== 'default' ? `<button class="save-card-upload tavern-upload-btn" data-save-id="${s.id}">☁ 分享到酒馆</button>
@@ -496,10 +490,6 @@ function renderMySavesPanel() {
   // 绑定删除模板按钮
   grid.querySelectorAll('.save-del-btn').forEach(btn => {
     btn.addEventListener('click', (e) => { e.stopPropagation(); deleteSave(btn.dataset.saveId); });
-  });
-  // 绑定清档按钮
-  grid.querySelectorAll('.save-clear-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); clearAllSaves(btn.dataset.saveId); });
   });
   // 绑定上传按钮
   grid.querySelectorAll('.tavern-upload-btn').forEach(btn => {

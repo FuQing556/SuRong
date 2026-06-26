@@ -1,55 +1,174 @@
-/* 🌃 子夜 — 深邃蓝黑基底 + 暖金星光撞色 + 12颗闪星 + 极光紫 + 圆形望远镜画框 */
+/* 🌃 子夜 v2 — 暗夜蓝×极光青绿×银白星光 · 六边形蜂巢窗×流星×脚步声 */
 :root {
-  --bg:#030310;--bg-panel:#0a0a20;--bg-card:#101030;--bg-hover:#181840;
-  --border:#202050;--border-focus:#f0c860;
-  --text:#c8c8e8;--text-dim:#5868a8;--text-bright:#e8e8ff;
-  --gold:#f0c860;--gold-dim:#a07828;--purple:#a8a0ff;--purple-hover:#c0b8ff;
-  --red:#ff5c70;--green:#50d0a0;--red-dim:#181028;
-  --option-1:#f0c860;--option-2:#8088f0;--option-3:#40d0a8;--option-4:#f068a0;
+  --bg:#060e1a;--bg-panel:#0c1628;--bg-card:#141e38;--bg-hover:#1c2848;
+  --border:#243058;--border-focus:#40e8c0;
+  --text:#e0e4f8;--text-dim:#6878b8;--text-bright:#f4f8ff;
+  --gold:#f0c860;--gold-dim:#a07828;--purple:#8898f0;--purple-hover:#a0b0ff;
+  --aurora:#40e8c0;--silver:#d0d8f0;
+  --red:#ff5c70;--green:#40d0a0;--red-dim:#181028;
+  --option-1:#f0c860;--option-2:#8898f0;--option-3:#40e8c0;--option-4:#f068a0;
   --radius:12px;--shadow:0 4px 32px rgba(0,0,0,.55);
 }
+body{background:var(--bg);color:var(--text)}
 
-/* 12颗亮星 + 暖金闪烁 */
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+/* ═══════════ 极光帷幕 — 顶部淡绿紫渐变缓慢飘动 ═══════════ */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 20% at 30% 12%, rgba(64,232,192,.06) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 15% at 65% 8%, rgba(136,152,240,.05) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 18% at 50% 15%, rgba(200,210,250,.03) 0%, transparent 60%);
+  animation:auroraDrift 18s ease-in-out infinite
+}
+@keyframes auroraDrift{0%,100%{opacity:.6;transform:translateX(0)}30%{opacity:1;transform:translateX(20px)}60%{opacity:.75;transform:translateX(-15px)}}
+
+/* ═══════════ 12颗闪星 + 暖金闪烁 ═══════════ */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
     radial-gradient(2px 2px at 8% 10%,rgba(255,245,220,1),transparent),
     radial-gradient(1px 1px at 22% 25%,rgba(255,240,210,.9),transparent),
-    radial-gradient(3px 3px at 35% 6%,rgba(240,200,150,.85),transparent),
-    radial-gradient(1px 1px at 48% 32%,rgba(255,245,225,.8),transparent),
-    radial-gradient(3px 3px at 55% 12%,rgba(250,220,170,.88),transparent),
-    radial-gradient(2px 2px at 62% 40%,rgba(255,240,215,.9),transparent),
-    radial-gradient(2px 2px at 75% 15%,rgba(245,210,160,.92),transparent),
-    radial-gradient(1px 1px at 85% 28%,rgba(255,245,220,.82),transparent),
-    radial-gradient(2px 2px at 12% 45%,rgba(250,225,175,.78),transparent),
-    radial-gradient(1px 1px at 92% 18%,rgba(255,240,210,.88),transparent),
-    radial-gradient(2px 2px at 42% 52%,rgba(245,215,165,.8),transparent),
-    radial-gradient(1px 1px at 68% 44%,rgba(255,238,205,.75),transparent);
-  animation:starTwinkle 3.5s ease-in-out infinite}
+    radial-gradient(3px 3px at 35% 6%,rgba(240,200,150,.88),transparent),
+    radial-gradient(1px 1px at 48% 32%,rgba(255,245,225,.82),transparent),
+    radial-gradient(3px 3px at 55% 12%,rgba(250,220,170,.9),transparent),
+    radial-gradient(2px 2px at 62% 40%,rgba(255,240,215,.92),transparent),
+    radial-gradient(2px 2px at 75% 15%,rgba(245,210,160,.94),transparent),
+    radial-gradient(1px 1px at 85% 28%,rgba(255,245,220,.84),transparent),
+    radial-gradient(2px 2px at 12% 45%,rgba(250,225,175,.8),transparent),
+    radial-gradient(1px 1px at 92% 18%,rgba(255,240,210,.9),transparent),
+    radial-gradient(2px 2px at 42% 52%,rgba(245,215,165,.82),transparent),
+    radial-gradient(1px 1px at 68% 44%,rgba(255,238,205,.78),transparent);
+  animation:starTwinkle 3.5s ease-in-out infinite
+}
 @keyframes starTwinkle{0%,100%{opacity:.75}30%{opacity:1}60%{opacity:.88}}
 
-/* 故事框 — 天文台 + 暖金左边线 */
-#story-box{border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,rgba(240,200,96,.04),transparent 40%);box-shadow:0 0 40px rgba(168,160,255,.1);border-left:3px solid var(--gold)}
-#story-box::before{color:var(--gold);content:'🌃 现状';font-size:11px}
-.story-fade-in{animation:midnightFloat .6s ease-out}
-@keyframes midnightFloat{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+/* ═══════════ 流星 — 偶发斜线划落 ═══════════ */
+#game-container::before{
+  content:'';position:fixed;pointer-events:none;z-index:1;
+  width:2px;height:50px;
+  background:linear-gradient(180deg,rgba(208,216,240,.8),transparent);
+  top:-60px;left:70%;
+  transform:rotate(-35deg);
+  animation:shootingStar 25s linear infinite 5s
+}
+@keyframes shootingStar{
+  0%{top:-60px;left:70%;opacity:0}
+  2%{opacity:.8}
+  5%{top:110vh;left:20%;opacity:0}
+  100%{top:110vh;left:20%;opacity:0}
+}
 
-/* 图片框 — 圆形望远镜 + 星光边框 */
-.image-frame{border:2px solid var(--gold-dim);border-radius:50%;overflow:hidden;box-shadow:0 0 50px rgba(168,160,255,.18),0 0 80px rgba(240,200,96,.08);max-width:280px;margin:0 auto;aspect-ratio:1}
-.image-frame img{border-radius:50%;filter:brightness(.82) contrast(1.12)}
+/* ═══════════ 图片框 — 六边形蜂巢窗 ═══════════ */
+.image-frame{
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  border:none;
+  box-shadow:0 0 0 3px var(--silver),0 0 40px rgba(136,152,240,.2),0 8px 40px rgba(0,0,0,.6);
+  margin:20px auto;max-width:320px
+}
+.image-frame img{
+  display:block;width:100%;aspect-ratio:1;
+  object-fit:cover;
+  filter:brightness(.78) contrast(1.15) saturate(.9);
+  transition:filter .5s
+}
+.image-frame img:hover{filter:brightness(.86) contrast(1.2) saturate(.95)}
 
-.game-title{color:var(--gold);letter-spacing:12px;font-weight:200;text-shadow:0 0 30px rgba(240,200,96,.4);font-size:22px}
+.game-title{color:var(--gold);letter-spacing:14px;font-weight:200;text-shadow:0 0 30px rgba(240,200,96,.45);font-size:21px}
+
+/* ═══════════ 故事框 — 天文台日志+星座连线 ═══════════ */
+#story-box{
+  border:1px solid var(--border);border-radius:12px;
+  background:linear-gradient(180deg,rgba(240,200,96,.04),rgba(136,152,240,.02) 50%,transparent 80%);
+  box-shadow:0 0 40px rgba(136,152,240,.1);border-left:3px solid var(--gold)
+}
+#story-box::before{color:var(--gold);content:'🌃 星夜';font-size:11px;letter-spacing:4px}
+.story-fade-in{animation:starRise .6s ease-out}
+@keyframes starRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.settlement-box{border-left:3px solid var(--aurora);border-radius:12px;background:var(--bg-card)}
+.settlement-box::before{color:var(--aurora);content:'◈ 前刻';font-size:10px;letter-spacing:3px}
+
+/* ═══════════ 选项容器 ═══════════ */
+#options-container{border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:12px;background:var(--bg-card);box-shadow:inset 0 0 30px rgba(136,152,240,.03);padding:12px 14px}
+.options-hint{color:var(--text-dim);font-size:10px;letter-spacing:1px}
+
+/* ═══════════ 选项按钮 — 星光hover ═══════════ */
 .option-btn{border-radius:14px;border:1px solid var(--border);transition:all .3s;background:var(--bg-card)}
-.option-btn:hover{border-color:var(--gold);box-shadow:0 0 24px rgba(240,200,96,.22);background:rgba(240,200,96,.06);transform:translateY(-2px)}
-.option-btn .option-num{border-radius:50%;color:#fff;font-weight:700;font-size:12px;width:24px;height:24px;line-height:24px}
-.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
-.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+.option-btn:hover{
+  border-color:var(--gold);
+  box-shadow:0 0 28px rgba(240,200,96,.35),inset 0 0 18px rgba(240,200,96,.04);
+  background:rgba(240,200,96,.06);transform:translateY(-2px)
+}
+.option-btn:active{transform:scale(.97)}
+.option-btn:disabled{opacity:.35;box-shadow:none;transform:none}
+.option-btn .option-num{border-radius:50%;color:#060e1a;font-weight:700;font-size:12px;width:24px;height:24px;line-height:24px}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}
+.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}
+.option-btn:nth-child(4) .option-num{background:var(--option-4)}
 
-.modal,.save-card{border:1px solid var(--border);border-radius:14px;background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
-.settlement-box{border-left:3px solid var(--gold);border-radius:12px;background:var(--bg-card)}
-.overlay .modal{border:1px solid var(--border);box-shadow:0 0 50px rgba(0,0,0,.65);border-radius:14px}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:10px!important}
-input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 10px rgba(240,200,96,.18)}
-.chip.selected{background:var(--gold);color:#030310;font-weight:700}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#030310;border-radius:12px;font-weight:700}.btn-primary:hover{background:#f8d068}
-.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(240,200,96,.13);color:var(--gold)}
-.save-card-upload{background:rgba(240,200,96,.1);border-color:var(--gold-dim);color:var(--gold)}
+/* ═══════════ 卡片/弹窗 ═══════════ */
+.modal,.save-card{border:1px solid var(--border);border-radius:14px;background:var(--bg-panel)}
+.save-card:hover{border-color:var(--gold);box-shadow:0 8px 28px rgba(0,0,0,.4)}
+.overlay{background:rgba(0,0,0,.5)}
+.overlay .modal{border:1px solid var(--border);border-radius:14px;box-shadow:0 0 50px rgba(0,0,0,.65)}
+.overlay .modal h2{color:var(--gold)}
+.overlay .modal h2::before{content:'✦ ';color:var(--aurora)}
+.overlay .modal h2::after{content:' ✦';color:var(--aurora)}
+
+/* ── 按钮 ── */
+.btn{font-size:12px!important;line-height:1.3!important}
+.btn-small{font-size:11px!important;padding:4px 10px!important;line-height:1.2!important}
+.btn-tiny{font-size:10px!important;padding:2px 6px!important;line-height:1.2!important}
+#btn-audio{font-size:11px!important;padding:4px 10px!important}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#060e1a;border-radius:12px;font-weight:700}
+.btn-primary:hover{background:#f8d068;box-shadow:0 0 20px rgba(240,200,96,.35)}
+.btn-ghost:hover{color:var(--gold)}
+.btn-secondary:hover{border-color:var(--gold);box-shadow:0 2px 10px rgba(240,200,96,.1)}
+
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:10px!important;font-size:13px!important}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 10px rgba(240,200,96,.2)}
+:focus-visible{outline:2px solid var(--aurora);outline-offset:2px}
+.chip{border-radius:12px}.chip.selected{background:var(--gold);color:#060e1a;font-weight:700}
+.tab-btn{font-size:13px}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab-bar{border-bottom:1px solid var(--border)}
+
+/* ── 状态面板 ── */
+#status-panel{border:1px solid var(--border);border-radius:12px;background:var(--bg-card);box-shadow:inset 0 0 30px rgba(136,152,240,.03)}
+.status-label{color:var(--text-dim);font-size:10px;letter-spacing:1px}
+.status-value{color:var(--text);cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s}
+.status-value:hover{border-bottom-color:var(--gold)}
+.pressure-safe{color:var(--green)!important}
+.pressure-warn{color:var(--gold)!important}
+.pressure-danger{color:var(--red)!important}
+
+/* ── AI对话框 ── */
+.ai-chat-box{border:1px solid var(--border);border-radius:12px;background:var(--bg-card)}
+.ai-chat-header{color:var(--text-dim);background:var(--bg-hover);border-bottom-color:var(--border)}
+.ai-chat-input-row{border-top-color:var(--border)}
+#ai-chat-input{background:var(--bg-panel);color:var(--text);border-color:var(--border)}
+
+/* ── 细节 ── */
+.ach-progress-fill{background:var(--gold)}
+.story-round-badge{background:rgba(240,200,96,.14);color:var(--gold);border-radius:8px;font-size:10px}
+.story-entry::before{box-shadow:0 0 5px rgba(240,200,96,.4)}
+.save-card-upload{background:rgba(240,200,96,.1);border-color:var(--gold-dim);color:var(--gold);border-radius:12px}
+.ending-modal{border-top:3px solid var(--gold);border-radius:14px}
+#ending-narrative{border-left:4px solid var(--gold);border-radius:10px;background:var(--bg-card)}
+.achievement-toast{border:2px solid var(--gold);background:var(--bg-panel);border-radius:14px}
+#top-bar{border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(240,200,96,.04),transparent)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+.spinner{border-color:var(--border);border-top-color:var(--gold);box-shadow:0 0 12px rgba(240,200,96,.25)}
+#error-box{border-left:4px solid var(--red);border-radius:10px}
+
+/* ═══════════ 响应式 ═══════════ */
+@media (max-width:900px){
+  .image-frame{max-width:260px}
+  .game-title{font-size:18px;letter-spacing:8px}
+}
+@media (max-width:480px){
+  .image-frame{max-width:200px}
+  .option-btn{border-radius:10px}
+  .game-title{font-size:15px;letter-spacing:4px}
+}

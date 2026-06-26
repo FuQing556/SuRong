@@ -1,4 +1,4 @@
-/* ⬜ 黑白 — 高对比编辑风 + 深绯红点缀 + 打字机字体 + 粗线分割 */
+/* ⬜ 黑白 v2 — 米白×纯黑×绯红 · 宝丽来相框×装订孔×胶片颗粒×打字机 */
 :root {
   --bg:#e8e4dc;--bg-panel:#f4f0ea;--bg-card:#faf8f4;--bg-hover:#ece8e0;
   --border:#181410;--border-focus:#b82030;
@@ -8,37 +8,138 @@
   --option-1:#b82030;--option-2:#184868;--option-3:#286838;--option-4:#582860;
   --radius:1px;--shadow:0 0 0 1px rgba(0,0,0,.08);
 }
-body{background:var(--bg);color:var(--text);}
+body{background:var(--bg);color:var(--text)}
 
-/* 故事框 — 粗线纸卡 */
-#story-box{border:2px solid var(--text);border-radius:1px;background:var(--bg-card);box-shadow:none;border-left:6px solid var(--gold)}
-#story-box::before{content:'STORY';color:var(--gold);font-family:'Courier New',monospace;font-size:10px;letter-spacing:8px;font-weight:700;text-transform:uppercase}
+/* ═══════════ 胶片颗粒 — 全屏极淡噪点 ═══════════ */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.03;
+  background:repeating-conic-gradient(#000 0 15%,transparent 0 30%) 0 0/3px 3px;
+}
+
+/* ═══════════ 图片框 — 宝丽来白边+装订孔 ═══════════ */
+.image-frame{
+  border:none;border-radius:0;
+  padding:20px 12px 40px 12px;
+  background:#faf8f4;
+  box-shadow:0 2px 8px rgba(0,0,0,.1);
+  position:relative
+}
+/* 上装订孔 ×3 */
+.image-frame::before{
+  content:'•  •  •';
+  position:absolute;top:6px;left:0;right:0;
+  text-align:center;font-size:6px;letter-spacing:18px;
+  color:rgba(0,0,0,.15);pointer-events:none
+}
+/* 下装订孔 ×3 */
+.image-frame::after{
+  content:'•  •  •';
+  position:absolute;bottom:6px;left:0;right:0;
+  text-align:center;font-size:6px;letter-spacing:18px;
+  color:rgba(0,0,0,.15);pointer-events:none
+}
+.image-frame img{display:block;width:100%;filter:grayscale(.25) contrast(1.1)}
+
+.game-title{color:var(--text);letter-spacing:16px;font-weight:700;text-transform:uppercase;font-size:17px;font-family:'Courier New',monospace;border-bottom:3px double var(--gold);padding-bottom:6px;display:inline-block}
+
+/* ═══════════ 故事框 — 粗线纸卡+光标闪烁 ═══════════ */
+#story-box{
+  border:2px solid var(--text);border-left:6px solid var(--gold);border-radius:1px;
+  background:var(--bg-card);box-shadow:none;position:relative
+}
+#story-box::before{content:'STORY';color:var(--gold);font-family:'Courier New',monospace;font-size:10px;letter-spacing:8px;font-weight:700}
+/* 打字机光标 */
+#story-box::after{
+  content:'▌';position:absolute;bottom:10px;right:16px;
+  font-family:'Courier New',monospace;font-size:16px;
+  color:var(--text);opacity:.6;
+  animation:cursorBlink 1s step-end infinite
+}
+@keyframes cursorBlink{0%,100%{opacity:.6}50%{opacity:0}}
 .story-fade-in{animation:typeIn .15s steps(8)}
 @keyframes typeIn{from{opacity:.6}to{opacity:1}}
 
-/* 图片框 — 硬边留白 */
-.image-frame{border:2px solid var(--text);border-radius:1px;box-shadow:none;filter:grayscale(.3)}
-.image-frame img{filter:grayscale(.25) contrast(1.1)}
-
-.game-title{color:var(--text);letter-spacing:14px;font-weight:700;text-transform:uppercase;font-size:18px;font-family:'Courier New',monospace;border-bottom:3px double var(--gold);padding-bottom:6px;display:inline-block}
-.option-btn{border-radius:1px;border:2px solid var(--text);background:var(--bg-card);transition:all .12s;position:relative}
-.option-btn:hover{border-color:var(--gold);background:var(--bg-hover);transform:translateX(4px);box-shadow:-4px 0 0 var(--gold)}
-.option-btn .option-num{border-radius:1px;color:#fff;font-weight:700;font-family:'Courier New',monospace;font-size:11px;width:22px;height:22px;line-height:22px}
-.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
-.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
-
-.modal,.save-card{border:2px solid var(--text);border-radius:1px;background:var(--bg-panel)}.save-card:hover{border-color:var(--gold);transform:translateY(-2px)}
 .settlement-box{border-left:6px solid var(--text);border-radius:1px;background:var(--bg-card)}
-.overlay{background:rgba(0,0,0,.4)}.overlay .modal{border:2px solid var(--text);border-radius:1px}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border:2px solid var(--text)!important;border-radius:1px!important;font-family:inherit}
+.settlement-box::before{color:var(--text);content:'PREV';font-family:'Courier New',monospace;font-size:9px;letter-spacing:4px;font-weight:700}
+
+/* ═══════════ 选项容器 ═══════════ */
+#options-container{border:2px solid var(--text);border-left:6px solid var(--gold);border-radius:1px;background:var(--bg-card);padding:10px 14px}
+.options-hint{color:var(--text-dim);font-size:10px;font-family:'Courier New',monospace}
+
+/* ═══════════ 选项按钮 — 粗线右移hover ═══════════ */
+.option-btn{
+  border:2px solid var(--text);border-radius:1px;background:var(--bg-card);
+  transition:all .15s;position:relative
+}
+.option-btn:hover{
+  border-color:var(--gold);border-left-width:8px;
+  background:var(--bg-hover);transform:translateX(4px);
+  box-shadow:-4px 0 0 var(--gold)
+}
+.option-btn:active{transform:scale(.98) translateX(4px)}
+.option-btn:disabled{opacity:.3;transform:none;box-shadow:none}
+.option-btn .option-num{border-radius:1px;color:#fff;font-weight:700;font-family:'Courier New',monospace;font-size:11px;width:22px;height:22px;line-height:22px}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}
+.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}
+.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+
+/* ═══════════ 卡片/弹窗 ═══════════ */
+.modal,.save-card{border:2px solid var(--text);border-radius:1px;background:var(--bg-panel)}
+.save-card:hover{border-color:var(--gold);transform:translateY(-2px)}
+.overlay{background:rgba(0,0,0,.4)}
+.overlay .modal{border:2px solid var(--text);border-radius:1px}
+.overlay .modal h2{font-family:'Courier New',monospace;text-transform:uppercase;font-size:16px}
+.overlay .modal h2::before{content:'// ';color:var(--gold);font-weight:400}
+.overlay .modal h2::after{content:''}
+
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border:2px solid var(--text)!important;border-radius:1px!important;font-family:'Courier New',monospace;font-size:13px!important}
 input:focus,textarea:focus{border-color:var(--gold)!important;outline:none}
-.chip.selected{background:var(--text);color:var(--bg);font-weight:700;border-radius:1px}.tab-btn.active{color:var(--text);border-bottom:3px solid var(--gold);font-weight:700}
-.btn-primary{background:var(--text);border:2px solid var(--text);color:var(--bg);font-weight:700;border-radius:1px;text-transform:uppercase;letter-spacing:2px;font-size:12px}.btn-primary:hover{background:var(--gold);border-color:var(--gold);color:#fff}
-#btn-retry{background:var(--bg-card);border:2px solid var(--text);color:var(--text)}#btn-retry:hover{border-color:var(--gold);color:var(--gold)}
-.ach-item:not(.locked){border-left:4px solid var(--text)}.ach-progress-bar{background:var(--border)}.ach-progress-fill{background:var(--gold)}.ach-progress-text{color:var(--text-dim)}
-.story-round-badge{background:var(--text);color:var(--bg);border-radius:1px;font-family:'Courier New',monospace;font-weight:700;font-size:10px}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+.chip{border-radius:1px}.chip.selected{background:var(--text);color:var(--bg);font-weight:700}
+.tab-btn{font-size:12px;font-family:'Courier New',monospace}.tab-btn.active{color:var(--text);border-bottom:3px solid var(--gold);font-weight:700}
+.tab-bar{border-bottom:2px solid var(--text)}
+
+.btn{font-size:12px!important;line-height:1.3!important;font-family:'Courier New',monospace!important;text-transform:uppercase;letter-spacing:1px}
+.btn-small{font-size:10px!important;padding:4px 10px!important;line-height:1.2!important}
+.btn-tiny{font-size:9px!important;padding:2px 6px!important;line-height:1.2!important}
+#btn-audio{font-size:10px!important;padding:4px 10px!important}
+.btn-primary{background:var(--text);border:2px solid var(--text);color:var(--bg);font-weight:700;border-radius:1px;text-transform:uppercase;letter-spacing:2px;font-size:12px}
+.btn-primary:hover{background:var(--gold);border-color:var(--gold);color:#fff}
+.btn-ghost:hover{color:var(--gold)}
+.btn-secondary:hover{border-color:var(--gold);box-shadow:0 2px 8px rgba(184,32,48,.12)}
+
+/* ── 状态面板 ── */
+#status-panel{border:2px solid var(--text);border-radius:1px;background:var(--bg-card)}
 .status-label{color:var(--text-dim);font-family:'Courier New',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px}
 .status-value{color:var(--text);font-weight:700}
-.save-card-upload{background:var(--bg-card);border:2px solid var(--text-dim);color:var(--text-dim)}
-::-webkit-scrollbar-thumb{background:var(--text-dim);border-radius:1px}
+.pressure-safe{color:var(--green)!important}
+.pressure-warn{color:var(--gold-dim)!important}
+.pressure-danger{color:var(--red)!important}
+
+/* ── AI对话框 ── */
+.ai-chat-box{border:2px solid var(--text);border-radius:1px;background:var(--bg-card)}
+.ai-chat-header{color:var(--text-dim);background:var(--bg-hover);border-bottom:2px solid var(--text);font-family:'Courier New',monospace;font-size:11px}
+.ai-chat-input-row{border-top:2px solid var(--text)}
+#ai-chat-input{background:var(--bg-panel);color:var(--text);border:2px solid var(--text);font-family:'Courier New',monospace}
+
+/* ── 细节 ── */
+.ach-item:not(.locked){border-left:4px solid var(--text)}
+.ach-progress-fill{background:var(--gold)}
+.story-round-badge{background:var(--text);color:var(--bg);border-radius:1px;font-family:'Courier New',monospace;font-weight:700;font-size:10px}
+.story-entry::before{box-shadow:0 0 3px rgba(0,0,0,.2)}
+.save-card-upload{background:var(--bg-card);border:2px solid var(--text-dim);color:var(--text-dim);border-radius:1px}
+.ending-modal{border:3px solid var(--text);border-radius:1px}
+#ending-narrative{border-left:6px solid var(--text);border-radius:1px;background:var(--bg-card)}
+.achievement-toast{border:2px solid var(--text);background:var(--bg-panel);border-radius:1px}
 #top-bar{border-bottom:3px double var(--text)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--text-dim);border-radius:1px}::-webkit-scrollbar-thumb:hover{background:var(--text)}
+.spinner{border:2px solid var(--text);border-top:2px solid var(--gold)}
+#error-box{border:2px solid var(--red);border-left:6px solid var(--red);border-radius:1px}
+#btn-retry{background:var(--bg-card);border:2px solid var(--text);color:var(--text)}
+#btn-retry:hover{border-color:var(--gold);color:var(--gold)}
+
+@media (max-width:900px){.game-title{font-size:14px;letter-spacing:8px}}
+@media (max-width:480px){.game-title{font-size:12px;letter-spacing:4px}.option-btn:hover{transform:translateX(2px)}}

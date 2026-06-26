@@ -1,41 +1,471 @@
-/* 🌅 日落 — 深紫暮光基底 + 琥珀×青金撞色 + 地平线暖光 + 半圆画框 */
+/* 🌅 日落 v2 — 窗边城市黄昏 · 现代窗框×丁达尔光柱×浮尘×归鸟×纱帘×天际线剪影 · 东方晚钟 */
 :root {
-  --bg:#100a12;--bg-panel:#1a101c;--bg-card:#241824;--bg-hover:#2e202c;
-  --border:#3a2838;--border-focus:#e8a040;
-  --text:#d8ccd4;--text-dim:#907880;--text-bright:#f0e0d8;
-  --gold:#e8a040;--gold-dim:#986020;--purple:#40b8c8;--purple-hover:#50c8d8;
-  --red:#e05848;--green:#58c870;--red-dim:#241018;
-  --option-1:#e8a040;--option-2:#40b8c8;--option-3:#78c858;--option-4:#d87088;
-  --radius:10px;--shadow:0 4px 28px rgba(0,0,0,.5);
+  --bg:#f0e8da;--bg-panel:#f5efe5;--bg-card:#faf7f1;--bg-hover:#e8dcc4;
+  --border:#c8b898;--border-focus:#e09050;
+  --text:#3a2818;--text-dim:#8a7050;--text-bright:#1a0a00;
+  --gold:#e09050;--gold-dim:#a06030;--purple:#6878b8;--purple-hover:#8090d0;
+  --red:#d06048;--green:#609050;--red-dim:#f8ece4;
+  --option-1:#e09050;--option-2:#6878b8;--option-3:#609050;--option-4:#c06078;
+  --radius:6px;--shadow:0 2px 16px rgba(0,0,0,.06);
+}
+body{background:var(--bg);color:var(--text)}
+
+/* ═══════════════════════════════════════════
+   🪟 丁达尔光柱 — 从窗外斜射入室内的夕阳光束
+   ═══════════════════════════════════════════ */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    /* 主光束：左上→右下 */
+    linear-gradient(150deg,
+      transparent 0%, transparent 32%,
+      rgba(224,144,80,.07) 34%,
+      rgba(224,144,80,.035) 42%,
+      transparent 46%
+    ),
+    /* 次光束 */
+    linear-gradient(146deg,
+      transparent 0%, transparent 50%,
+      rgba(224,144,80,.05) 52%,
+      rgba(224,144,80,.02) 58%,
+      transparent 62%
+    ),
+    /* 第三条细光束 */
+    linear-gradient(154deg,
+      transparent 0%, transparent 42%,
+      rgba(224,144,80,.04) 44%,
+      rgba(224,144,80,.015) 50%,
+      transparent 54%
+    ),
+    /* 漫射暖光 — 整个上半区域微暖 */
+    radial-gradient(ellipse 80% 40% at 40% 30%, rgba(224,160,100,.03) 0%, transparent 60%);
+  animation:godRays 9s ease-in-out infinite
+}
+@keyframes godRays{
+  0%,100%{opacity:.55}
+  30%{opacity:.85}
+  60%{opacity:.7}
+  85%{opacity:1}
 }
 
-/* 地平线暖光 */
-#top-bar{background:linear-gradient(180deg,rgba(232,160,64,.1),transparent);border-bottom:2px solid var(--gold-dim);position:relative}
-#top-bar::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),var(--purple),var(--gold),transparent);animation:horizonGlow 4s ease-in-out infinite}
-@keyframes horizonGlow{0%,100%{opacity:.4}50%{opacity:1}}
+/* ═══════════════════════════════════════════
+   ✨ 浮尘粒子 — 光柱中被照亮的微尘缓慢飘浮
+   ═══════════════════════════════════════════ */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(1.5px 1.5px at 18% 42%,rgba(224,160,100,.22),transparent),
+    radial-gradient(1px 1px at 32% 38%,rgba(224,160,100,.16),transparent),
+    radial-gradient(2px 2px at 45% 48%,rgba(240,180,120,.14),transparent),
+    radial-gradient(1px 1px at 28% 52%,rgba(224,160,100,.18),transparent),
+    radial-gradient(1.5px 1.5px at 38% 44%,rgba(240,180,120,.15),transparent),
+    radial-gradient(1px 1px at 52% 40%,rgba(224,160,100,.12),transparent),
+    radial-gradient(1.5px 1.5px at 22% 46%,rgba(240,175,110,.17),transparent),
+    radial-gradient(1px 1px at 42% 50%,rgba(224,160,100,.13),transparent),
+    radial-gradient(2px 2px at 35% 36%,rgba(240,180,120,.11),transparent),
+    radial-gradient(1px 1px at 48% 45%,rgba(224,160,100,.15),transparent);
+  background-size:400px 500px;
+  animation:dustFloat 15s ease-in-out infinite
+}
+@keyframes dustFloat{
+  0%,100%{background-position:0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0}
+  20%{background-position:18px -28px,-8px -18px,12px -35px,-15px -22px,22px -30px,-10px -16px,8px -40px,-18px -25px,14px -20px,-5px -35px}
+  40%{background-position:30px -15px,-20px -38px,25px -20px,-8px -42px,35px -18px,-22px -35px,16px -22px,-10px -45px,28px -38px,-15px -20px}
+  60%{background-position:15px -40px,-12px -25px,32px -38px,-22px -28px,18px -42px,-8px -20px,26px -35px,-20px -30px,10px -42px,-25px -38px}
+  80%{background-position:22px -22px,-18px -40px,18px -28px,-5px -35px,28px -32px,-15px -42px,20px -18px,-12px -38px,22px -28px,-8px -22px}
+}
 
-/* 故事框 — 暮光 + 琥珀左边线 */
-#story-box{border:1px solid var(--border);border-radius:10px;box-shadow:inset 0 -60px 80px rgba(232,160,64,.04);border-left:3px solid var(--gold)}
-#story-box::before{color:var(--gold);content:'🌅 现状';font-size:11px}
-.story-fade-in{animation:sunsetSlide .5s cubic-bezier(.25,.46,.45,.94)}
-@keyframes sunsetSlide{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+/* ═══════════════════════════════════════════
+   🌫️ 暮光呼吸 — 整个画面暖度周期性脉动
+   ═══════════════════════════════════════════ */
+#game-container{
+  position:relative;
+  background:
+    radial-gradient(ellipse 65% 50% at 45% 35%, rgba(224,144,80,.04) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 30% at 60% 60%, rgba(200,140,80,.025) 0%, transparent 50%);
+}
+#game-container::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 70% 45% at 40% 35%, rgba(224,150,90,.05) 0%, transparent 60%);
+  animation:twilightBreathe 7s ease-in-out infinite
+}
+@keyframes twilightBreathe{
+  0%,100%{opacity:.4}
+  35%{opacity:.9}
+  70%{opacity:.6}
+}
 
-/* 图片框 — 半圆落日 */
-.image-frame{border:2px solid var(--gold-dim);border-radius:50% 50% 10px 10px;overflow:hidden;box-shadow:0 0 30px rgba(232,160,64,.12)}
-.image-frame img{filter:brightness(.92) saturate(1.15)}
+/* ═══════════════════════════════════════════
+   🐦 归鸟剪影 — 三只由近到远的飞鸟掠过窗外
+   ═══════════════════════════════════════════ */
+/* 近鸟：较大，较快 */
+#game-container::after{
+  content:'🐦';position:fixed;pointer-events:none;z-index:1;
+  font-size:16px;opacity:.18;
+  filter:grayscale(.6) brightness(.35);
+  top:22%;right:-35px;
+  animation:bird1 17s ease-in-out infinite
+}
+@keyframes bird1{
+  0%{transform:translateX(0) translateY(0)}
+  25%{transform:translateX(-30vw) translateY(-18px)}
+  55%{transform:translateX(-60vw) translateY(10px)}
+  100%{transform:translateX(-105vw) translateY(-6px)}
+}
 
-.game-title{color:var(--gold);text-shadow:0 0 20px rgba(232,160,64,.35);letter-spacing:8px;font-size:20px;font-weight:400}
-.option-btn{border:2px solid var(--border);transition:all .3s;border-radius:10px;background:var(--bg-card)}
-.option-btn:hover{box-shadow:0 0 24px rgba(232,160,64,.22);border-color:var(--gold);transform:translateY(-2px);background:rgba(232,160,64,.05)}
-.option-btn .option-num{border-radius:50%;color:#fff;font-weight:700;font-size:12px;width:24px;height:24px;line-height:24px}
-.option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
-.option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+/* 中鸟 */
+#content-panel::before{
+  content:'🐦';position:fixed;pointer-events:none;z-index:1;
+  font-size:12px;opacity:.13;
+  filter:grayscale(.6) brightness(.35);
+  top:18%;right:-45px;
+  animation:bird2 23s ease-in-out infinite 7s
+}
+@keyframes bird2{
+  0%{transform:translateX(0) translateY(0)}
+  30%{transform:translateX(-35vw) translateY(14px)}
+  65%{transform:translateX(-70vw) translateY(-12px)}
+  100%{transform:translateX(-105vw) translateY(8px)}
+}
 
-.modal,.save-card{border:1px solid var(--border);border-radius:10px;background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
-.settlement-box{border-left:3px solid var(--gold);border-radius:10px;background:var(--bg-card)}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:8px!important}
-input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 8px rgba(232,160,64,.2)}
-.chip.selected{background:var(--gold);color:#100a12;font-weight:700}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
-.btn-primary{background:var(--gold);border-color:var(--gold);color:#100a12;font-weight:700;border-radius:8px}.btn-primary:hover{background:#f0b050}
-.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(232,160,64,.12);color:var(--gold);border-radius:6px}
-.save-card-upload{background:rgba(232,160,64,.1);border-color:var(--gold-dim);color:var(--gold)}
+/* 远鸟：最小，最慢 */
+#content-panel::after{
+  content:'🐦';position:fixed;pointer-events:none;z-index:1;
+  font-size:9px;opacity:.09;
+  filter:grayscale(.6) brightness(.35);
+  top:26%;right:-40px;
+  animation:bird3 31s ease-in-out infinite 15s
+}
+@keyframes bird3{
+  0%{transform:translateX(0) translateY(0)}
+  40%{transform:translateX(-45vw) translateY(-22px)}
+  75%{transform:translateX(-80vw) translateY(16px)}
+  100%{transform:translateX(-105vw) translateY(-10px)}
+}
+
+/* ═══════════════════════════════════════════
+   🪟 纱帘 — 现代简约窗帘，两侧微垂微动
+   ═══════════════════════════════════════════ */
+
+
+
+/* ☕ 茶杯 — 窗台右侧 */
+/* tea cup removed */
+
+
+/* ☕ 茶杯 — 窗台右侧 */
+#left-panel::before{
+  content:'';position:absolute;left:-14px;top:-10px;bottom:-10px;
+  width:48px;
+  background:linear-gradient(90deg,
+    rgba(240,230,215,.32) 0%,
+    rgba(240,230,215,.18) 35%,
+    rgba(240,230,215,.05) 70%,
+    transparent 100%
+  );
+  z-index:5;pointer-events:none;
+  animation:curtainSway 14s ease-in-out infinite;
+  border-radius:0 4px 4px 0
+}
+#left-panel{position:relative;background:linear-gradient(270deg,rgba(240,230,215,.28) 0%,rgba(240,230,215,.06) 35%,transparent 100%) right center/48px 100% no-repeat}
+/* curtains merged into #left-panel background */
+@keyframes curtainSway{
+  0%,100%{transform:translateX(0) scaleY(1)}
+  20%{transform:translateX(4px) scaleY(1.003)}
+  50%{transform:translateX(-3px) scaleY(1.001)}
+  75%{transform:translateX(2px) scaleY(1.004)}
+}
+
+/* ═══════════════════════════════════════════
+   🪟 现代窗户框 — 深色铝框，利落极简
+   ═══════════════════════════════════════════ */
+.image-frame{
+  position:relative;overflow:visible;
+  border:5px solid #2a2420;
+  border-radius:2px;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 8px 32px rgba(0,0,0,.12);
+  margin:16px 12px 30px;
+  padding:0;
+  background:var(--bg-card)
+}
+.image-frame img{
+  display:block;width:100%;
+  object-fit:cover;
+  border-radius:0;
+  filter:brightness(.88) saturate(1.12) contrast(1.04);
+  transition:filter .5s;
+  position:relative;z-index:1
+}
+.image-frame img:hover{filter:brightness(.94) saturate(1.22) contrast(1.06)}
+
+/* ═══════════════════════════════════════════
+   🏙️ 城市天际线剪影 — 窗框底部建筑轮廓
+   ═══════════════════════════════════════════ */
+/* skyline removed */
+
+/* ═══════════════════════════════════════════
+   🪴 窗台 — 木质横板 + 小盆栽 + 热茶
+   ═══════════════════════════════════════════ */
+.image-frame::after{
+  content:'';
+  position:absolute;
+  bottom:-30px;left:-18px;right:-18px;
+  height:30px;
+  background:linear-gradient(to bottom, #7a5a40 0%, #5a3a20 60%, #4a2a18 100%);
+  border-radius:0 0 3px 3px;
+  z-index:3;pointer-events:none;
+  box-shadow:0 4px 14px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.06)
+}
+
+/* ═══════════════════════════════════════════
+   📖 故事框 — 夕阳照暖的书页
+   ═══════════════════════════════════════════ */
+#story-box{
+  border:1px solid var(--border);border-left:3px solid var(--gold);
+  border-radius:6px;
+  background:linear-gradient(180deg, var(--bg-card) 0%, rgba(250,247,241,.94) 100%);
+  box-shadow:inset 0 -40px 60px rgba(224,144,80,.03),0 2px 16px rgba(0,0,0,.06)
+}
+#story-box::before{
+  color:var(--gold-dim);
+  content:'🌅 窗边';
+  font-size:11px;letter-spacing:3px;
+  font-weight:400
+}
+.story-fade-in{animation:sunsetReveal .6s cubic-bezier(.25,.46,.45,.94)}
+@keyframes sunsetReveal{
+  from{opacity:0;transform:translateY(10px);filter:brightness(1.3)}
+  to{opacity:1;transform:translateY(0);filter:brightness(1)}
+}
+
+/* ── 结算框 ── */
+.settlement-box{
+  border-left:3px solid var(--purple);border-radius:6px;
+  background:var(--bg-card);
+  box-shadow:inset 0 0 20px rgba(104,120,184,.03)
+}
+.settlement-box::before{
+  color:var(--purple);
+  content:'🌇 片刻前';
+  font-size:10px;letter-spacing:2px
+}
+
+/* ═══════════════════════════════════════════
+   🎯 选项区容器 — 桌面卡片
+   ═══════════════════════════════════════════ */
+#options-container{
+  border:1px solid var(--border);border-left:3px solid var(--gold);
+  border-radius:6px;
+  background:var(--bg-card);
+  box-shadow:inset 0 0 30px rgba(224,144,80,.02);
+  padding:12px 14px;margin-bottom:16px
+}
+.options-hint{color:var(--text-dim);font-size:10px;letter-spacing:1px}
+
+/* ═══════════════════════════════════════════
+   🔘 选项按钮 — 现代素简 + 暖金hover
+   ═══════════════════════════════════════════ */
+.option-btn{
+  border:1px solid var(--border);border-radius:6px;
+  background:var(--bg-card);
+  transition:all .25s cubic-bezier(.25,.46,.45,.94);
+  box-shadow:0 1px 3px rgba(0,0,0,.04)
+}
+.option-btn:hover{
+  border-color:var(--gold);
+  box-shadow:0 0 32px rgba(224,144,80,.35),0 6px 20px rgba(0,0,0,.12),inset 0 0 0 1px rgba(224,144,80,.12);
+  transform:translateY(-3px);
+  background:rgba(224,144,80,.08)
+}
+.option-btn:active{transform:scale(.97) translateY(0)}
+.option-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.option-btn:disabled{opacity:.35;box-shadow:none;transform:none;background:var(--bg-card)}
+.option-btn .option-num{
+  border-radius:50%;color:#fff;font-weight:600;
+  font-size:11px;width:22px;height:22px;line-height:22px
+}
+.option-btn:nth-child(1) .option-num{background:var(--option-1)}
+.option-btn:nth-child(2) .option-num{background:var(--option-2)}
+.option-btn:nth-child(3) .option-num{background:var(--option-3)}
+.option-btn:nth-child(4) .option-num{background:var(--option-4)}
+
+/* ═══════════════════════════════════════════
+   📐 顶部栏 — 地平线暖光底线
+   ═══════════════════════════════════════════ */
+#top-bar{
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg, rgba(224,144,80,.06), transparent);
+  position:relative
+}
+#top-bar::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;
+  background:linear-gradient(90deg, transparent, var(--gold), var(--purple), var(--gold), transparent);
+  animation:horizonGlow 5s ease-in-out infinite
+}
+@keyframes horizonGlow{0%,100%{opacity:.35}50%{opacity:.85}}
+
+/* ── 游戏标题 ── */
+.game-title{
+  color:var(--gold);font-weight:400;letter-spacing:10px;font-size:19px;
+  text-shadow:0 0 18px rgba(224,144,80,.25)
+}
+
+/* ═══════════════════════════════════════════
+   🗂️ 卡片 / 弹窗 / 表单
+   ═══════════════════════════════════════════ */
+.modal,.save-card{
+  border:1px solid var(--border);border-radius:8px;
+  background:var(--bg-panel);
+  box-shadow:0 4px 24px rgba(0,0,0,.08)
+}
+.save-card{
+  border-left:3px solid var(--gold);
+  transition:all .25s ease
+}
+.save-card:hover{
+  border-color:var(--gold);border-left-width:6px;
+  transform:translateY(-3px);
+  box-shadow:0 8px 28px rgba(224,144,80,.12)
+}
+.overlay{background:rgba(0,0,0,.18)}
+.overlay .modal{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:8px
+}
+.overlay .modal h2{color:var(--gold)}
+.overlay .modal h2::before{content:'— ';color:var(--gold-dim)}
+.overlay .modal h2::after{content:' —';color:var(--gold-dim)}
+
+/* ── 表单 ── */
+input,textarea,select{
+  background:var(--bg-card)!important;color:var(--text)!important;
+  border-color:var(--border)!important;border-radius:6px!important;
+  font-size:13px!important
+}
+input:focus,textarea:focus{
+  border-color:var(--gold)!important;
+  box-shadow:0 0 6px rgba(224,144,80,.18),0 0 18px rgba(224,144,80,.06)
+}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* ── 标签/芯片/按钮 ── */
+.chip{border-radius:6px}.chip.selected{background:var(--gold);color:#fff;font-weight:600}
+.tab-btn{font-size:13px}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab-bar{border-bottom:1px solid var(--border)}
+
+.btn{font-size:12px!important;line-height:1.3!important}
+.btn-small{font-size:11px!important;padding:4px 10px!important;line-height:1.2!important}
+.btn-tiny{font-size:10px!important;padding:2px 6px!important;line-height:1.2!important}
+#btn-audio{font-size:11px!important;padding:4px 10px!important;width:auto!important;text-align:center!important}
+
+.btn-primary{
+  background:var(--gold);border-color:var(--gold);color:#fff;
+  border-radius:6px;font-weight:600
+}
+.btn-primary:hover{
+  background:#e89858;
+  box-shadow:0 4px 18px rgba(224,144,80,.25)
+}
+.btn-ghost:hover{color:var(--gold)}
+.btn-secondary:hover{
+  border-color:var(--gold);
+  box-shadow:0 2px 10px rgba(224,144,80,.1)
+}
+
+/* ═══════════════════════════════════════════
+   📊 状态面板 — 暖光卡片
+   ═══════════════════════════════════════════ */
+#status-panel{
+  border:1px solid var(--border);border-radius:8px;
+  background:var(--bg-card);
+  box-shadow:inset 0 0 30px rgba(224,144,80,.02)
+}
+.status-label{color:var(--text-dim);font-size:10px;letter-spacing:1px}
+.status-value{color:var(--text)}
+.status-value{cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s}
+.status-value:hover{border-bottom-color:var(--gold)}
+.vars-toggle{font-size:11px;letter-spacing:1px}
+
+/* 色盲友好状态色 */
+.pressure-safe{color:var(--green)!important}
+.pressure-warn{color:#b08038!important}
+.pressure-danger{color:var(--red)!important}
+
+/* ═══════════════════════════════════════════
+   💬 AI 对话框 — 桌面便签质感
+   ═══════════════════════════════════════════ */
+.ai-chat-box{
+  border:1px solid var(--border);border-radius:6px;
+  background:var(--bg-card)
+}
+.ai-chat-header{
+  color:var(--text-dim);background:var(--bg-hover);
+  border-bottom-color:var(--border)
+}
+.ai-chat-input-row{border-top-color:var(--border)}
+#ai-chat-input{
+  background:var(--bg-panel);color:var(--text);border-color:var(--border)
+}
+#ai-chat-input:focus{border-color:var(--gold)}
+
+/* ═══════════════════════════════════════════
+   🏆 细节 — 成就 / 徽章 / 滚动条 / 加载 / 错误
+   ═══════════════════════════════════════════ */
+.ach-progress-fill{background:var(--gold)}
+.story-round-badge{
+  background:rgba(224,144,80,.1);color:var(--gold-dim);
+  border-radius:4px;font-size:10px;letter-spacing:1px
+}
+.story-entry::before{box-shadow:0 0 5px rgba(224,144,80,.3)}
+.story-entry::after{background:var(--gold-dim)}
+
+.save-card-upload{
+  background:rgba(224,144,80,.08);border:1px dashed var(--gold-dim);
+  color:var(--gold);border-radius:6px
+}
+
+/* 结局弹窗 */
+.ending-modal{border-top:4px solid var(--gold);border-radius:8px}
+#ending-narrative{
+  border-left:3px solid var(--gold);border-radius:6px;
+  background:var(--bg-card)
+}
+
+/* 成就弹窗 */
+.achievement-toast{
+  border:1px solid var(--gold);background:var(--bg-panel);
+  border-radius:8px
+}
+
+/* 滚动条 */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+
+/* 加载 */
+.spinner{border-color:var(--border);border-top-color:var(--gold)}
+#loading-indicator span{color:var(--text-dim)}
+
+/* 错误框 */
+#error-box{
+  background:var(--red-dim);border-color:var(--red);
+  border-left:4px solid var(--red);border-radius:6px
+}
+
+/* ═══════════════════════════════════════════
+   📱 响应式
+   ═══════════════════════════════════════════ */
+@media (max-width:900px){
+  .image-frame{margin:14px 8px 26px}
+  .image-frame::after{bottom:-26px;left:-14px;right:-14px;height:26px}
+  .game-title{font-size:16px;letter-spacing:6px}
+  #left-panel::before{width:32px}
+}
+@media (max-width:480px){
+  .image-frame{margin:12px 4px 22px}
+  .image-frame::after{bottom:-22px;left:-10px;right:-10px;height:22px}
+  .option-btn{border-radius:4px}
+  .game-title{font-size:14px;letter-spacing:4px}
+  #left-panel::before{width:20px;opacity:.6}
+  /* 小屏归鸟减到两只 */
+  #content-panel::after{display:none}
+}
