@@ -226,9 +226,12 @@ function collectEligibleEndings(template) {
       }
       if (actual === null || actual === undefined || isNaN(Number(actual))) return { ok: false };
       actual = Number(actual);
-      if ((chk.op === '≥' && actual < chk.threshold) ||
-          (chk.op === '≤' && actual > chk.threshold) ||
-          (chk.op === '=' && actual !== chk.threshold)) return { ok: false };
+      // 对=100的死亡条件放宽到≥95（AI倾向把数值压在99不触发）
+      var effectiveThreshold = chk.threshold;
+      if (chk.op === '=' && chk.threshold >= 95) { chk.op = '≥'; effectiveThreshold = 95; }
+      if ((chk.op === '≥' && actual < effectiveThreshold) ||
+          (chk.op === '≤' && actual > effectiveThreshold) ||
+          (chk.op === '=' && actual !== effectiveThreshold)) return { ok: false };
     }
     return { ok: true, roundReq: roundReq, hasRelation: hasRel };
   }

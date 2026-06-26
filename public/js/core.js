@@ -302,8 +302,8 @@ function _handleParsedResponse(fullContent, tpl, parsed) {
       if (!parsed.situation || parsed.situation.length < 20) {
         var inj = typeof buildEndingInjection === 'function'
           ? buildEndingInjection(clientEnding, tpl) : '';
-        var descM = inj.match(/叙事要点[：:]\s*(.+?)[。\n]/);
-        parsed.situation = '【' + clientEnding + '】\n' + (descM ? descM[1] : '命运之轮停转，故事暂告一段落。');
+        var descM = inj.match(/结局主题[：:]\s*(.+?)[。]/);
+        parsed.situation = '【' + clientEnding + '】\n' + (descM ? descM[1] : '这一刻终于到来。' + clientEnding + '。');
       }
     }
   }
