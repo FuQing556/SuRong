@@ -129,7 +129,7 @@ function checkAchievementsFromState(parsed) {
     let triggered = false;
 
     if (/结局/.test(desc) && !/未触发/.test(desc) && !/\d/.test(desc)) {
-      triggered = !!gameState.achievementFlags.endingTriggered;
+      triggered = !!(gameState.achievementFlags.endingTriggered || (gameState.achievementFlags.triggeredEndings || []).length > 0);
     } else if (/孤注/.test(desc)) {
       triggered = !!gameState.achievementFlags.gambitSucceeded;
     } else if (/反杀|设局/.test(desc)) {

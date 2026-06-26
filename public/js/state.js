@@ -59,6 +59,11 @@ let gameState = {
   fieldHistory: {},
   _lastChoiceText: '',
   _currentTheme: 'dark',
+  _loadingSave: false,
+  _cancelledByUser: false,
+  _saveFailed: false,
+  _pendingDiceRoll: null,
+  _lastDiceResult: null,
   achievementFlags: {
     gambitChosen: false,
     gambitSucceeded: false,

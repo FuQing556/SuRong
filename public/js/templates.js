@@ -420,8 +420,8 @@ function saveFields() {
   if (typeof clearSettingsDirty === 'function') clearSettingsDirty();
   const msgEl = $('#fields-msg');
   if (msgEl) {
-    msgEl.textContent = '✅ 字段已保存！系统提示词已自动同步。';
-    msgEl.style.color = 'var(--green)';
+    msgEl.textContent = gameState._saveFailed ? '⚠ 保存失败：存储空间不足' : '✅ 字段已保存！系统提示词已自动同步。';
+    msgEl.style.color = gameState._saveFailed ? 'var(--red)' : 'var(--green)';
   }
 }
 

@@ -432,7 +432,7 @@ sceneTypes:5-7中文。description:≤20字。worldSetting/protagonist/conflict:
 
     try {
       const apiKey = getApiKey(req.body);
-      const content = await callDeepSeek([
+      var content = await callDeepSeek([
         { role: 'system', content: '你是游戏设计AI，输出必须是合法JSON对象，不要任何额外文字。' },
         { role: 'user', content: metaPrompt },
       ], apiKey, 0.5, 8192, true); // jsonMode=true
