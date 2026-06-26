@@ -221,6 +221,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 #game-container {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -709,7 +710,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
   /* 顶部栏 — 标题缩小，按钮更紧凑 */
   .game-title { font-size: 14px; }
-  .top-actions .btn-small { font-size: 9px; padding: 3px 5px; letter-spacing: 0; }
+  .top-actions .btn-small { font-size: 11px; padding: 6px 8px; letter-spacing: 0; }
 
   /* 创建存档表单 */
   .create-save-form input, .create-save-form textarea { font-size: 12px; }
