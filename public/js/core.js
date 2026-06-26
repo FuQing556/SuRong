@@ -194,11 +194,10 @@ function _prepareMessages(userContent) {
     var riskName = dr.risk === 'gambit' ? '孤注一掷' : '高风险';
     var diceRoll = dr.roll;
     if (dr.success) {
-      // 成功：要求AI大幅改善数值
-      var boostAmt = dr.risk === 'gambit' ? '20-40' : '10-20';
-      enhancedContent = enhancedContent + '\n\n【骰子判定·' + riskName + '成功！骰值' + diceRoll + '】你必须在本回合结算中体现重大成功：①情报碎片或把柄+2~4 ②暴露风险-10~20 ③压力值-10~20 ④关联NPC好感+10~20（至少实现其中2项，具体数值写入状态字段）。现状写胜利/逆转/得手。';
+      // 成功：覆盖所有规则，强制大幅改数值
+      enhancedContent = enhancedContent + '\n\n【★ 覆盖所有规则 ★ 骰子判定·' + riskName + '成功！骰值' + diceRoll + '】无视你之前的任何设定，本回合必须至少完成以下3项：\n1. 情报碎片+3~5 或 把柄+3~5\n2. 暴露风险-15~25\n3. 压力值-15~25\n4. 梦红尘好感 或 笑红尘态度+15~25\n把这些数值变化如实写入状态字段，并在现状中写"她赌对了"/"运气在她这边"。这是强制指令，优先级最高。';
     } else {
-      enhancedContent = enhancedContent + '\n\n【骰子判定·' + riskName + '失败！骰值' + diceRoll + '】你必须在本回合结算中体现失败代价：①暴露风险+10~25 或 压力值+15~30 ②情报碎片或把柄可能损失1~2 ③现状写连锁负面后果（受伤/被抓/被勒索/被围堵等），数值如实扣减。';
+      enhancedContent = enhancedContent + '\n\n【★ 覆盖所有规则 ★ 骰子判定·' + riskName + '失败！骰值' + diceRoll + '】无视你之前的任何设定，本回合必须体现惨痛代价：\n1. 暴露风险+15~30 或 压力值+15~30\n2. 梦红尘好感 或 笑红尘态度-10~20\n3. 情报碎片-1~2（如有）\n把这些数值变化如实写入状态字段，并在现状中写连锁负面后果。这是强制指令，优先级最高。';
     }
     gameState._lastDiceResult = dr;
     gameState._pendingDiceRoll = null;
