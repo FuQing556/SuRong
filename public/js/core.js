@@ -111,8 +111,9 @@ function renderGameState(parsed, template) {
   updateAllDynamicFields(parsed.fields, template);
 
   // 结局检测（读档时跳过，避免重弹结局窗）
+  var endingType = null;
   if (!gameState._loadingSave) {
-    const endingType = detectEnding(parsed.raw);
+    endingType = detectEnding(parsed.raw);
     if (endingType) {
       gameState.achievementFlags.endingTriggered = true;
       gameState.achievementFlags.endingType = endingType;
@@ -120,7 +121,7 @@ function renderGameState(parsed, template) {
       if (gameState.achievementFlags.triggeredEndings.indexOf(endingType) === -1) {
         gameState.achievementFlags.triggeredEndings.push(endingType);
       }
-      setTimeout(() => showEndingOverlay(endingType, parsed), 800);
+      setTimeout(function() { showEndingOverlay(endingType, parsed); }, 800);
     }
   }
 
@@ -530,6 +531,7 @@ async function startNewGame() {
 
 // ── 继续游戏（多槽位版）──
 async function continueGame(saveId) {
+  try {
   const ov = $('#save-selector-overlay');
   if (ov) ov.classList.remove('active');
 
@@ -635,6 +637,10 @@ async function continueGame(saveId) {
   } else {
     updateOptionButtons([]);
     updateAllDynamicFields({}, template);
+  }
+  } catch (e) {
+    console.error('continueGame 失败:', e);
+    dlAlert('❌ 读取存档失败: ' + (e.message || '未知错误')).catch(function(){});
   }
 }
 
@@ -742,7 +748,7 @@ function showEndingOverlay(endingType, parsed) {
   sf.forEach(f => {
     if (f.type === 'number') {
       const h = gameState.fieldHistory[f.id];
-      sh += '<div class="ending-stat"><span class="ending-stat-label">' + (f.icon || '') + ' ' + f.label + '</span><span class="ending-stat-value">' + (h ? (h.current || h.currentText || '—') : '—') + '</span></div>';
+      sh += '<div class="ending-stat"><span class="ending-stat-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span><span class="ending-stat-value">' + escapeHtml(String(h ? (h.current || h.currentText || '—') : '—')) + '</span></div>';
     }
   });
   $('#ending-stats').innerHTML = sh;
@@ -794,7 +800,7 @@ function renderHistoryModal() {
       if (parsed.situation) html += '<div class="hist-situation">' + escapeHtml(parsed.situation) + '</div>';
       const ns = Object.entries(parsed.fields).filter(([id, v]) => !isNaN(parseInt(v)) && v.trim());
       if (ns.length > 0) {
-        html += '<div class="hist-fields">' + ns.map(([id, v]) => (fl[id] || id) + ':<b>' + v + '</b>').join(' · ') + '</div>';
+        html += '<div class="hist-fields">' + ns.map(function(kv) { return escapeHtml(fl[kv[0]] || kv[0]) + ':<b>' + escapeHtml(kv[1]) + '</b>'; }).join(' · ') + '</div>';
       }
     }
   }

@@ -8,6 +8,11 @@ const FILES = [
   '/manifest.json', '/icon.svg', '/icon-192.png', '/icon-512.png',
   '/日常.png', '/对峙.png', '/调查.png', '/潜伏.png', '/社交.png',
   '/战斗.png', '/研究.png', '/交易.png', '/崩溃.png',
+  '/themes/theme-forest.css', '/themes/theme-xianxia.css',
+  '/themes/theme-cyber.css', '/themes/theme-sakura.css',
+  '/themes/theme-ocean.css', '/themes/theme-sunset.css',
+  '/themes/theme-midnight.css', '/themes/theme-monochrome.css',
+  '/themes/theme-golden.css', '/themes/theme-light.css',
 ];
 
 self.addEventListener('install', e => {
@@ -38,12 +43,13 @@ self.addEventListener('fetch', e => {
 
   e.respondWith(
     fetch(e.request).then(response => {
-      // 只缓存成功响应
       if (response.ok) {
         const clone = response.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
+        return response;
       }
-      return response;
+      // HTTP 错误（404/500等）回退缓存
+      return caches.match(e.request).then(cached => cached || response);
     }).catch(() => caches.match(e.request))
   );
 });
