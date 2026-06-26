@@ -253,12 +253,24 @@ function bindEvents() {
     });
   });
 
-  // ── 全局UI按钮音效：一个委托覆盖所有按钮（自动包含动态创建的）──
+  // ── 全局UI按钮音效+涟漪：一个委托覆盖所有按钮（自动包含动态创建的）──
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('button');
     if (!btn || btn.disabled) return;
-    if (btn.classList.contains('option-btn')) return;  // 选项按钮有自己的 playClick
-    if (btn.id === 'btn-audio') return;                 // 音效开关不自响
+    // 涟漪效果
+    if (!btn.classList.contains('option-btn')) {
+      var ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      var rect = btn.getBoundingClientRect();
+      var size = Math.max(rect.width, rect.height);
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      btn.appendChild(ripple);
+      setTimeout(function() { ripple.remove(); }, 600);
+    }
+    if (btn.classList.contains('option-btn')) return;
+    if (btn.id === 'btn-audio') return;
     if (typeof playUIClick === 'function') playUIClick();
   });
 }

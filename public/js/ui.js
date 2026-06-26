@@ -204,14 +204,25 @@ function updateAllDynamicFields(fieldValues, template) {
     const value = fieldValues[field.id] ?? '—';
     el.textContent = value;
 
-    // 数值高亮
+    // 数值高亮 + 变化闪烁
     el.className = 'status-value';
     if (field.type === 'number') {
-      const num = parseInt(value);
+      var num = parseInt(value);
       if (!isNaN(num)) {
         if (num >= 70) el.classList.add('pressure-danger');
         else if (num >= 40) el.classList.add('pressure-warn');
         else el.classList.add('pressure-safe');
+        // 检测数值变化并闪烁
+        var oldVal = el.getAttribute('data-prev-value');
+        if (oldVal !== null && oldVal !== String(num)) {
+          var prev = parseInt(oldVal);
+          if (!isNaN(prev)) {
+            el.classList.add(num > prev ? 'val-up' : 'val-down');
+            el.classList.add('val-flash');
+            setTimeout(function() { el.classList.remove('val-up', 'val-down', 'val-flash'); }, 600);
+          }
+        }
+        el.setAttribute('data-prev-value', String(num));
       }
     }
   }

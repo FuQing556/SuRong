@@ -61,10 +61,11 @@ function _showNextToast() {
   if (!toast) { _achToastShowing = false; return; }
   $('#ach-toast-text').textContent = (ach?.icon || '🏆') + ' ' + name;
   toast.classList.remove('hidden');
-  toast.style.animation = 'none';
-  toast.offsetHeight;
-  toast.style.animation = 'achSlideIn .5s ease, achSlideOut .5s ease 3.5s forwards';
-  setTimeout(function() { toast.classList.add('hidden'); _showNextToast(); }, 4000);
+  // CSS动画自动播放（achBounce + achGlow），4秒后隐藏并播下一个
+  setTimeout(function() {
+    toast.classList.add('hidden');
+    _showNextToast();
+  }, 4000);
 }
 
 // ── 从解析结果更新 fieldHistory ──
