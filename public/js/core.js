@@ -203,16 +203,23 @@ function _prepareMessages(userContent) {
     gameState._pendingDiceRoll = null;
   }
 
-  gameState.fullHistory.push({ role: 'user', content: enhancedContent });
-
   refreshSystemPrompt();
   const tpl = getActiveTemplate();
 
-  // 结局预检：发请求前先跑客户端兜底
-  let preEndingType = null;
+  // 结局预检：条件满足则追加到用户消息（不是system），AI必须在本回合处理
+  var preEndingType = null;
   if (typeof checkEndingClientSide === 'function') {
     preEndingType = checkEndingClientSide(tpl);
   }
+  if (preEndingType) {
+    console.log('🔔 结局预检触发: 「' + preEndingType + '」— 追加到用户消息末尾');
+    var endingInjection = typeof buildEndingInjection === 'function'
+      ? buildEndingInjection(preEndingType, tpl)
+      : '触发结局「' + preEndingType + '」，写结局叙事+输出标记+4选项';
+    enhancedContent = enhancedContent + '\n\n' + endingInjection;
+  }
+
+  gameState.fullHistory.push({ role: 'user', content: enhancedContent });
 
   const allMessages = [
     { role: 'system', content: gameState.activeSystemPrompt },
@@ -220,17 +227,8 @@ function _prepareMessages(userContent) {
   if (gameState.summary && gameState.summary.trim()) {
     allMessages.push({ role: 'system', content: '【历史摘要】' + gameState.summary });
   }
-  const recentMessages = gameState.fullHistory.slice(-(KEEP_ROUNDS * 2));
+  var recentMessages = gameState.fullHistory.slice(-(KEEP_ROUNDS * 2));
   allMessages.push.apply(allMessages, recentMessages);
-
-  // 结局指令放在消息数组最后
-  if (preEndingType) {
-    console.log('🔔 结局预检触发: 「' + preEndingType + '」— 在消息末尾注入结局指令');
-    var injection = typeof buildEndingInjection === 'function'
-      ? buildEndingInjection(preEndingType, tpl)
-      : '触发结局「' + preEndingType + '」，写结局叙事+输出标记+4选项';
-    allMessages.push({ role: 'system', content: injection });
-  }
 
   return { allMessages: allMessages, tpl: tpl, preEndingType: preEndingType };
 }
