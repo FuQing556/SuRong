@@ -42,20 +42,29 @@ function unlockAchievement(name) {
   return true;
 }
 
-let _achToastTimer = null;  // 追踪当前toast定时器，防止连续解锁时互相覆盖
+var _achToastQueue = [];
+var _achToastShowing = false;
 
 function showAchievementToast(name) {
-  const ach = getAchievements()[name];
-  const toast = $('#achievement-toast');
-  if (!toast) return;
-  // 清除上一个toast的定时器，确保新toast完整展示3.5秒
-  if (_achToastTimer) { clearTimeout(_achToastTimer); _achToastTimer = null; }
+  // 队列化：多个成就同时解锁时逐个展示
+  _achToastQueue.push(name);
+  if (_achToastShowing) return;
+  _showNextToast();
+}
+
+function _showNextToast() {
+  if (_achToastQueue.length === 0) { _achToastShowing = false; return; }
+  _achToastShowing = true;
+  var name = _achToastQueue.shift();
+  var ach = getAchievements()[name];
+  var toast = $('#achievement-toast');
+  if (!toast) { _achToastShowing = false; return; }
   $('#ach-toast-text').textContent = (ach?.icon || '🏆') + ' ' + name;
   toast.classList.remove('hidden');
   toast.style.animation = 'none';
   toast.offsetHeight;
-  toast.style.animation = 'achSlideIn .5s ease, achSlideOut .5s ease 4.5s forwards';
-  _achToastTimer = setTimeout(() => { toast.classList.add('hidden'); _achToastTimer = null; }, 5000);
+  toast.style.animation = 'achSlideIn .5s ease, achSlideOut .5s ease 3.5s forwards';
+  setTimeout(function() { toast.classList.add('hidden'); _showNextToast(); }, 4000);
 }
 
 // ── 从解析结果更新 fieldHistory ──

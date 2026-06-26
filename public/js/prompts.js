@@ -122,7 +122,6 @@ async function savePrompt() {
   }
 
   gameState.customPrompt = prompt;
-  gameState.activeSystemPrompt = prompt;
 
   // 持久化——只保存 promptBody，不覆盖字段/成就等其他编辑
   const tpl = getActiveTemplate();

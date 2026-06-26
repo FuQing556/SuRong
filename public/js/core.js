@@ -739,7 +739,8 @@ function showEndingOverlay(endingType, parsed) {
   }
   $('#ending-icon').textContent = icon;
   $('#ending-title').textContent = '结局：' + endingType;
-  $('#ending-narrative').textContent = (parsed.situation || parsed.raw || '故事到此结束。').substring(0, 600);
+  var rawNarrative = parsed.situation || parsed.raw || '故事到此结束。';
+  $('#ending-narrative').textContent = rawNarrative.length > 600 ? rawNarrative.substring(0, 600) + '…' : rawNarrative;
 
   const rn = gameState.fieldHistory['round']?.current || gameState.fullHistory.filter(m => m.role === 'user').length;
   const uc = Object.keys(getUnlockedAchievements()).length;

@@ -129,7 +129,11 @@ async function clearAllSaves(saveId) {
     await dlAlert('没有存档可清除');
     return;
   }
-  const confirmed = await dlConfirm('确定清除「' + saveId + '」的全部 ' + count + ' 个存档槽位？\n模板和成就保留，仅删除游戏进度。');
+  var savesList = loadSaves();
+  var saveName = saveId;
+  var match = savesList.find(function(s) { return s.id === saveId; });
+  if (match) saveName = match.name;
+  const confirmed = await dlConfirm('确定清除「' + saveName + '」的全部 ' + count + ' 个存档槽位？\n模板和成就保留，仅删除游戏进度。');
   if (!confirmed) return;
   for (let s = 0; s < 10; s++) localStorage.removeItem(getSaveKey(saveId, s));
   renderMySavesPanel();
