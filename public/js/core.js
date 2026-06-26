@@ -178,10 +178,10 @@ let _abortController = null;  // 用于取消正在进行的请求
 // 构建消息数组（指令注入 + 摘要 + 结局预检）
 function _prepareMessages(userContent) {
   const instructions = getAiInstructions();
-  let enhancedContent = userContent.replace(
-    /\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：[\s\S]*?】$/,
-    ''
-  );
+  // 剥离旧的指令块和骰子块（不限结尾位置，防止骰子等文本跟在其后导致残留）
+  var enhancedContent = userContent
+    .replace(/\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：[\s\S]*?】/g, '')
+    .replace(/\n\n【骰子判定[^】]*】[^\n]*/g, '');
   if (instructions.length > 0) {
     const instrText = instructions.map(function(i) { return i.text; }).join('；');
     enhancedContent = enhancedContent + '\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：' + instrText + '。请在本次回复中直接体现这些指令的效果，不要只是说"收到"——用剧情和选项来展示变化。】';
@@ -578,6 +578,19 @@ async function continueGame(saveId) {
   gameState.currentOptions = saveData.currentOptions || [];
   gameState._lastChoiceText = '';
   gameState.fieldHistory = saveData.fieldHistory || {};
+  // 为模板新增字段（存档时还不存在的）初始化默认值
+  for (var secKey in template.outputSections) {
+    if (!template.outputSections.hasOwnProperty(secKey)) continue;
+    var secFields = template.outputSections[secKey].fields || [];
+    for (var sfi = 0; sfi < secFields.length; sfi++) {
+      var sf = secFields[sfi];
+      if (!gameState.fieldHistory[sf.id]) {
+        gameState.fieldHistory[sf.id] = sf.type === 'number'
+          ? { current: 0, max: 0 }
+          : { currentText: '—' };
+      }
+    }
+  }
   gameState.achievementFlags = saveData.achievementFlags || {
     gambitChosen: false, gambitSucceeded: false, gambitSuccessCount: 0,
     endingTriggered: false, endingType: '', triggeredEndings: [],

@@ -260,7 +260,6 @@ function collectEligibleEndings(template) {
 	      index: idx,
 	    });
 	    idx++;
-    idx++;
   }
   return results;
 }
@@ -388,7 +387,9 @@ async function loadAndMergeTemplate(saveId) {
   }
   if (!template) return null;
 
-  // 深克隆保存原始模板（用于结局章节修复 + 恢复默认）
+  // 深克隆模板副本用于编辑，避免修改 saves 数组中的原始引用
+  template = JSON.parse(JSON.stringify(template));
+  // 另存一份作为原版快照（用于结局章节修复 + 恢复默认）
   gameState._originalTemplate = JSON.parse(JSON.stringify(template));
 
   // 合并编辑版模板
@@ -397,7 +398,7 @@ async function loadAndMergeTemplate(saveId) {
   if (ej) {
     try {
       const ed = JSON.parse(ej);
-      if (ed.promptBody) template.promptBody = ed.promptBody;
+      if (ed.promptBody !== undefined) template.promptBody = ed.promptBody;
       if (ed.outputSections) template.outputSections = ed.outputSections;
       if (ed.achievements) template.achievements = ed.achievements;
       if (ed.hiddenAchievements) template.hiddenAchievements = ed.hiddenAchievements;

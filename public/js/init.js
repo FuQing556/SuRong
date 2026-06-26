@@ -147,6 +147,9 @@ function bindEvents() {
       return;
     }
 
+    // 焦点在输入框/文本域时不触发快捷键（允许正常打字）
+    var ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
     if (gameState.isLoading) return;
     const key = parseInt(e.key);
     if (key >= 1 && key <= 4 && gameState.currentOptions[key - 1]) {
@@ -230,12 +233,14 @@ function bindEvents() {
     dlPrompt('修改「' + (ve.previousElementSibling?.textContent?.trim() || '') + '」的当前值：', cv).then(nv => {
       if (nv === null || nv === cv) return;
       if (!gameState.fieldHistory[fid]) gameState.fieldHistory[fid] = {};
-      const num = parseInt(nv);
+      const num = parseInt(nv, 10);
       if (!isNaN(num)) {
         gameState.fieldHistory[fid].current = num;
         gameState.fieldHistory[fid].max = Math.max(gameState.fieldHistory[fid].max || 0, num);
+        delete gameState.fieldHistory[fid].currentText;  // 清理旧文本值
       } else {
         gameState.fieldHistory[fid].currentText = nv;
+        delete gameState.fieldHistory[fid].current;       // 清理旧数值
       }
       ve.textContent = nv;
       ve.className = 'status-value';

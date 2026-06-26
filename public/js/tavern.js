@@ -69,7 +69,7 @@ async function uploadToTavern(saveId) {
   if (ej) {
     try {
       const ed = JSON.parse(ej);
-      if (ed.promptBody) uploadTemplate.promptBody = ed.promptBody;
+      if (ed.promptBody !== undefined) uploadTemplate.promptBody = ed.promptBody;
       if (ed.outputSections) uploadTemplate.outputSections = ed.outputSections;
       if (ed.achievements) uploadTemplate.achievements = ed.achievements;
       if (ed.hiddenAchievements) uploadTemplate.hiddenAchievements = ed.hiddenAchievements;

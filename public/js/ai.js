@@ -6,7 +6,8 @@
 // ── 指令存储 ──
 function getAiInstructions() {
   try {
-    return JSON.parse(localStorage.getItem(LS_KEYS.aiInstructions) || '[]');
+    var val = JSON.parse(localStorage.getItem(LS_KEYS.aiInstructions) || '[]');
+    return Array.isArray(val) ? val : [];
   } catch { return []; }
 }
 
@@ -18,11 +19,14 @@ function saveAiInstructions(instructions) {
 function sendAiInstruction() {
   const input = $('#ai-chat-input');
   if (!input) return;
-  const text = input.value.trim();
+  const text = input.value.trim().substring(0, 500);  // 限制 500 字符
   if (!text) return;
 
   const instructions = getAiInstructions();
-  instructions.push({ text, time: Date.now() });
+  // 去重：同文本不重复添加
+  if (!instructions.some(function(i) { return i.text === text; })) {
+    instructions.push({ text: text, time: Date.now() });
+  }
   saveAiInstructions(instructions);
   renderAiChatMessages();
   input.value = '';

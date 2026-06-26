@@ -17,6 +17,11 @@ let _userGestured = false;
     if (_audioCtx && _audioCtx.state === 'suspended') {
       _audioCtx.resume().catch(() => {});
     }
+    // 手势解锁后，如果音频开关是开的，启动氛围音效
+    if (_audioOn && !_ambientNode) {
+      var t = (typeof gameState !== 'undefined' && gameState._currentTheme) || 'dark';
+      startAmbient(t);
+    }
     ['click', 'keydown', 'touchstart'].forEach(evt => {
       document.removeEventListener(evt, _unlock);
     });

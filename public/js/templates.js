@@ -110,13 +110,16 @@ function openCreateSave() {
   const msgEl = document.querySelector('#create-save-msg');
   if (msgEl) msgEl.textContent = generatedTemplate ? '✅ 已恢复上次生成的提示词' : '';
 
-  // 绑定自动保存
-  document.querySelectorAll('#create-save-overlay input, #create-save-overlay textarea').forEach(el => {
-    el.addEventListener('input', saveFormData);
-  });
-  document.querySelectorAll('#style-chips .chip, #length-chips .chip').forEach(chip => {
-    chip.addEventListener('click', () => setTimeout(saveFormData, 100));
-  });
+  // 绑定自动保存（仅首次）
+  if (!window._createFormListenersBound) {
+    window._createFormListenersBound = true;
+    document.querySelectorAll('#create-save-overlay input, #create-save-overlay textarea').forEach(function(el) {
+      el.addEventListener('input', saveFormData);
+    });
+    document.querySelectorAll('#style-chips .chip, #length-chips .chip').forEach(function(chip) {
+      chip.addEventListener('click', function() { setTimeout(saveFormData, 100); });
+    });
+  }
 }
 
 function closeCreateSave() {
@@ -216,7 +219,7 @@ async function confirmCreateSave() {
 
   const csOv = $('#create-save-overlay');
   if (csOv) csOv.classList.remove('active');
-  selectSave(newId);
+  await selectSave(newId);
 }
 
 // ── 字段编辑器 ──
@@ -364,17 +367,29 @@ function saveFields() {
   tpl.outputSections = newSections;
   refreshSystemPrompt();
 
-  // ── 字段ID迁移：检测重命名的字段，迁移fieldHistory数据 ──
+  // ── 字段ID迁移：仅在纯重命名（等长、仅一个ID变化）时迁移，防止插入/删除导致数据错位 ──
   for (const [sKey, newSec] of Object.entries(newSections)) {
     const oldFields = (tpl._preEditFields && tpl._preEditFields[sKey]) || [];
     const newFields = newSec.fields || [];
-    for (let i = 0; i < Math.min(oldFields.length, newFields.length); i++) {
-      const oldId = oldFields[i].id;
-      const newId = newFields[i].id;
-      if (oldId !== newId && gameState.fieldHistory[oldId] && !gameState.fieldHistory[newId]) {
-        gameState.fieldHistory[newId] = gameState.fieldHistory[oldId];
-        delete gameState.fieldHistory[oldId];
+    // 统计重命名数和新ID冲突数
+    var renameCount = 0, conflictCount = 0;
+    for (var ri = 0; ri < Math.min(oldFields.length, newFields.length); ri++) {
+      if (oldFields[ri].id !== newFields[ri].id) {
+        renameCount++;
+        if (gameState.fieldHistory[newFields[ri].id]) conflictCount++;
       }
+    }
+    // 只在安全时迁移：等长 + 仅1个重命名 + 新ID无历史冲突
+    if (oldFields.length === newFields.length && renameCount === 1 && conflictCount === 0) {
+      for (var mi = 0; mi < oldFields.length; mi++) {
+        var oid = oldFields[mi].id, nid = newFields[mi].id;
+        if (oid !== nid && gameState.fieldHistory[oid]) {
+          gameState.fieldHistory[nid] = gameState.fieldHistory[oid];
+          delete gameState.fieldHistory[oid];
+        }
+      }
+    } else if (renameCount > 1 || oldFields.length !== newFields.length) {
+      console.warn('⚠ 字段结构变化较大（重命名' + renameCount + '/增删' + Math.abs(oldFields.length - newFields.length) + '），已跳过自动迁移。旧fieldHistory保留为孤立数据。');
     }
   }
 
@@ -395,9 +410,12 @@ function saveFields() {
   updateAllDynamicFieldsFromHistory();  // 重建DOM后立即回填数值
   renderFieldEditor();
 
-  // 按存档隔离保存
+  // 按存档隔离保存（仅保存 outputSections，与其他编辑键互不覆盖）
   const saveId = gameState.activeSaveId || tpl.id || 'default';
-  localStorage.setItem(LS_KEYS.editedTemplate(saveId), JSON.stringify(tpl));
+  var edited = {};
+  try { var ej = localStorage.getItem(LS_KEYS.editedTemplate(saveId)); if (ej) edited = JSON.parse(ej); } catch (e) {}
+  edited.outputSections = tpl.outputSections;
+  safeSetItem(LS_KEYS.editedTemplate(saveId), edited);
 
   if (typeof clearSettingsDirty === 'function') clearSettingsDirty();
   const msgEl = $('#fields-msg');

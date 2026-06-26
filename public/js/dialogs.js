@@ -75,9 +75,11 @@ const EMOJI_LIST = [
 
 function pickEmoji(current) {
   return new Promise((resolve) => {
-    // 移除旧的选择器
-    const old = document.getElementById('emoji-picker-popup');
-    if (old) old.remove();
+    // 移除旧的选择器 + 遮罩
+    var oldPopup = document.getElementById('emoji-picker-popup');
+    if (oldPopup) oldPopup.remove();
+    var oldBackdrop = document.getElementById('emoji-picker-backdrop');
+    if (oldBackdrop) oldBackdrop.remove();
 
     const popup = document.createElement('div');
     popup.id = 'emoji-picker-popup';
@@ -101,9 +103,13 @@ function pickEmoji(current) {
     backdrop.id = 'emoji-picker-backdrop';
     document.body.appendChild(backdrop);
 
+    var closed = false;
     function cleanup(val) {
+      if (closed) return;
+      closed = true;
       popup.remove();
       backdrop.remove();
+      document.removeEventListener('keydown', escHandler);
       resolve(val);
     }
 
@@ -113,7 +119,7 @@ function pickEmoji(current) {
     popup.querySelector('#emoji-cancel').addEventListener('click', () => cleanup(null));
     backdrop.addEventListener('click', () => cleanup(null));
     // ESC 关闭
-    const escHandler = (e) => { if (e.key === 'Escape') { document.removeEventListener('keydown', escHandler); cleanup(null); } };
+    var escHandler = function(e) { if (e.key === 'Escape') cleanup(null); };
     document.addEventListener('keydown', escHandler);
   });
 }

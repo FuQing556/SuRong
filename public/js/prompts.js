@@ -29,7 +29,7 @@ async function openSettings() {
     try {
       const ed = JSON.parse(savedTpl);
       const tpl = getActiveTemplate();
-      if (ed.promptBody) tpl.promptBody = ed.promptBody;
+      if (ed.promptBody !== undefined) tpl.promptBody = ed.promptBody;
       if (ed.outputSections) tpl.outputSections = ed.outputSections;
       if (ed.achievements) tpl.achievements = ed.achievements;
       if (ed.hiddenAchievements) tpl.hiddenAchievements = ed.hiddenAchievements;
@@ -188,15 +188,15 @@ async function resetPrompt() {
     try {
       const ed = JSON.parse(savedTpl);
       ed.promptBody = originalPromptBody;
-      localStorage.setItem(editKey, JSON.stringify(ed));
-    } catch (e) { localStorage.removeItem(editKey); }
+      safeSetItem(editKey, ed);
+    } catch (e) {
+      // 解析失败只重置 promptBody，不删整个编辑键（保留字段/成就）
+      safeSetItem(editKey, { promptBody: originalPromptBody });
+    }
   }
 
-  // 恢复当前模板的 promptBody
+  // 恢复当前模板的 promptBody（不修改 _originalTemplate 原版快照）
   tpl.promptBody = originalPromptBody;
-  if (gameState._originalTemplate) {
-    gameState._originalTemplate.promptBody = originalPromptBody;
-  }
 
   // 重建系统提示词
   gameState.activeSystemPrompt = buildSystemPrompt(tpl);
@@ -221,10 +221,14 @@ async function mergeInstructionsToPrompt() {
   const oldRules = [];
   const oi = tpl.promptBody.indexOf('【玩家补充规则');
   if (oi >= 0) {
-    const os = tpl.promptBody.substring(oi);
-    const ois = os.match(/\d+\.\s+(.+)/g);
-    if (ois) ois.forEach(item => oldRules.push(item.replace(/^\d+\.\s+/, '')));
-    tpl.promptBody = tpl.promptBody.substring(0, oi).trimEnd();
+    // 只提取【玩家补充规则】区块内的编号行（到下一个【标记为止）
+    var sectionEnd = tpl.promptBody.indexOf('【', oi + 8);
+    if (sectionEnd < 0) sectionEnd = tpl.promptBody.length;
+    var sectionText = tpl.promptBody.substring(oi, sectionEnd);
+    var ois = sectionText.match(/\d+\.\s+(.+)/g);
+    if (ois) ois.forEach(function(item) { oldRules.push(item.replace(/^\d+\.\s+/, '')); });
+    // 只删除旧区块，保留后续章节
+    tpl.promptBody = (tpl.promptBody.substring(0, oi) + tpl.promptBody.substring(sectionEnd)).trimEnd();
   }
   const allRules = [...oldRules];
   instructions.forEach(i => { if (!allRules.includes(i.text)) allRules.push(i.text); });

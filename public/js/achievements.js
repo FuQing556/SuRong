@@ -383,6 +383,12 @@ async function addNewAchievement(isHidden) {
   const tpl = getActiveTemplate();
   const name = await dlPrompt('新' + (isHidden ? '隐藏' : '可见') + '成就名称：');
   if (!name || !name.trim()) return;
+  var nm = name.trim();
+  // 检查重名
+  if ((tpl.achievements && tpl.achievements[nm]) || (tpl.hiddenAchievements && tpl.hiddenAchievements[nm])) {
+    dlAlert('⚠ 已存在同名成就「' + nm + '」，请使用不同名称。');
+    return;
+  }
   const icon = await pickEmoji('🏆');
   if (icon === null) return;
   const desc = await dlPrompt(isHidden ? '描述（解锁后可见）：' : '描述（需含字段名+阈值）：');
@@ -390,14 +396,14 @@ async function addNewAchievement(isHidden) {
 
   if (isHidden) {
     if (!tpl.hiddenAchievements) tpl.hiddenAchievements = {};
-    tpl.hiddenAchievements[name.trim()] = {
+    tpl.hiddenAchievements[nm] = {
       icon: icon.trim() || '🎭',
-      desc: desc.trim() || name.trim(),
+      desc: desc.trim() || nm,
       trigger: { type: 'gambit', count: 1 }
     };
   } else {
     if (!tpl.achievements) tpl.achievements = {};
-    tpl.achievements[name.trim()] = { icon: icon.trim() || '🏆', desc: desc.trim() || name.trim() };
+    tpl.achievements[nm] = { icon: icon.trim() || '🏆', desc: desc.trim() || nm };
   }
   const saveId = gameState.activeSaveId || tpl.id || 'default';
   const editKey = LS_KEYS.editedTemplate(saveId);

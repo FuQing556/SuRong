@@ -87,8 +87,8 @@ function loadSaves() {
     const userSaves = Array.isArray(raw) ? raw : [];
     return [...saves, ...userSaves];
   } catch (e) {
-    console.error('📂 存档列表损坏，已重置:', e.message);
-    localStorage.removeItem(LS_KEYS.saves);
+    console.error('📂 存档列表损坏:', e.message);
+    // 尝试保留旧数据，不清空；下次保存时会自然修复
     return saves;
   }
 }
@@ -115,6 +115,7 @@ function deleteSave(saveId) {
       localStorage.removeItem(LS_KEYS.achievements(saveId));
       localStorage.removeItem(LS_KEYS.theme(saveId));
       localStorage.removeItem(LS_KEYS.editedTemplate(saveId));
+      localStorage.removeItem(LS_KEYS.lastManualSlot(saveId));
     } catch (e) { /* cleanup best-effort */ }
     renderMySavesPanel();
   });
