@@ -561,7 +561,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* ── 成就弹窗动画 ── */
 .achievement-toast {
   position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  background: var(--bg-panel);
   border: 2px solid var(--gold);
   border-radius: 12px; padding: 12px 24px;
   display: flex; align-items: center; gap: 10px;
@@ -1109,7 +1109,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 /* ── 设置页提示 ── */
 .settings-warning {
-  background: rgba(201,169,110,.1);
+  background: var(--bg-card);
   border: 1px solid var(--gold-dim);
   border-radius: 6px;
   padding: 10px 14px;
@@ -1184,7 +1184,10 @@ select option { background: var(--bg-panel); color: var(--text); }
 input, textarea {
   background: var(--bg-card); color: var(--text);
   border: 1px solid var(--border); border-radius: 6px;
-  font-family: inherit; font-size: 13px;
+  font-family: inherit; font-size: 16px;
+}
+@media (min-width: 901px) {
+  input, textarea { font-size: 13px; }
 }
 input:focus, textarea:focus { border-color: var(--gold); outline: none; }
 .form-row label { color: var(--text-dim); }
