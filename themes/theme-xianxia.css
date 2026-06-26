@@ -8,7 +8,7 @@
   --option-1:#c04030;--option-2:#3058a8;--option-3:#388040;--option-4:#8050a0;
   --radius:3px;--shadow:0 4px 20px rgba(0,0,0,.12);
 }
-body{font-family:'KaiTi','STKaiti','SimSun','Noto Serif SC','Microsoft YaHei',serif;font-size:16px;background:var(--bg);color:var(--text)}
+body{background:var(--bg);color:var(--text)}
 
 /* 墨点漂浮 */
 body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;

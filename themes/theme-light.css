@@ -8,7 +8,7 @@
   --option-1:#4858a8;--option-2:#b85030;--option-3:#388848;--option-4:#8858a0;
   --radius:8px;--shadow:0 2px 12px rgba(0,0,0,.06);
 }
-body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);font-size:15px;font-weight:400}
+body{background:var(--bg);color:var(--text);}
 
 /* 故事框 — 纸卡质感 + 靛蓝左边线 */
 #story-box{background:var(--bg-panel);border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.05);border-left:3px solid var(--gold)}

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* https://api.deepseek.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* https://api.deepseek.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' http://localhost:* https://api.deepseek.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* https://api.deepseek.com;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -199,6 +199,21 @@
             <option value="golden">✨ 鎏金</option>
           </select>
           <button id="btn-apply-theme" class="btn btn-secondary" style="flex-shrink:0;">应用</button>
+        </div>
+        <!-- 字体选择 -->
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+          <select id="font-selector" style="flex:1;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;">
+            <option value="sans">🔤 黑体 · 现代无衬线</option>
+            <option value="serif">🔤 宋体 · 经典衬线</option>
+            <option value="kai">🔤 楷体 · 温润手写</option>
+            <option value="fangsong">🔤 仿宋 · 清瘦文人</option>
+            <option value="round">🔤 圆体 · 圆润可爱</option>
+            <option value="xingshu">🔤 行书 · 潇洒飘逸</option>
+            <option value="mono">🔤 等宽 · 代码风味</option>
+            <option value="light">🔤 轻宋 · 纤细优雅</option>
+            <option value="bold">🔤 粗黑 · 醒目有力</option>
+            <option value="classic">🔤 篆隶 · 金石古典</option>
+          </select>
         </div>
 
         <h3 style="margin:16px 0 8px;color:var(--gold);">🖼 场景图片管理</h3>
@@ -421,22 +436,24 @@
   </div>
 
   <!-- JS 模块（按依赖顺序加载） -->
-  <script src="js/state.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/dialogs.js"></script>
-  <script src="js/saves.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/achievements.js"></script>
-  <script src="js/prompts.js"></script>
-  <script src="js/templates.js"></script>
-  <script src="js/tavern.js"></script>
-  <script src="js/ai.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/core.js"></script>
-  <script src="js/init.js"></script>
+  <script defer src="js/state.js"></script>
+  <script defer src="js/utils.js"></script>
+  <script defer src="js/dialogs.js"></script>
+  <script defer src="js/saves.js"></script>
+  <script defer src="js/ui.js"></script>
+  <script defer src="js/achievements.js"></script>
+  <script defer src="js/prompts.js"></script>
+  <script defer src="js/templates.js"></script>
+  <script defer src="js/tavern.js"></script>
+  <script defer src="js/ai.js"></script>
+  <script defer src="js/audio.js"></script>
+  <script defer src="js/core.js"></script>
+  <script defer src="js/init.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('/sw.js').catch(function(err) {
+        console.warn('SW 注册失败（非关键）:', err.message);
+      });
     }
   </script>
 </body>

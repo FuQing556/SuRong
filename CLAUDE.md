@@ -7,6 +7,58 @@
 **在线版**：部署在 Railway → `xixi-fable.up.railway.app`
 手机电脑浏览器打开即玩，无需安装任何东西。
 
+## v5 更新记录（2026-06-26 晚间）
+
+### 性能优化
+- `buildSystemPrompt` 静态部分缓存（`_promptCache`），仅模板变化时重建
+- `extractAllFields` 批量字段提取替代逐字段正则，O(lines×fields) 替代 O(fields×text)
+- 流式预览 3 个 replace 合并为 1 个正则
+- `/api/chat` 内置模板仅传 `templateId`，自定义模板传 `templateFallback`
+
+### 安全加固
+- **提示词破限三层防御**：系统提示词「安全边界」+ 指令包装器改写 + 前端输入拦截
+- API Key XOR 加密存储（`_readApiKey`/`_writeApiKey`）
+- 管理员密码移除硬编码 hash，完全依赖环境变量 `ADMIN_PASSWORD`
+- CSP 移除 `unsafe-eval`
+
+### 结局系统测试
+- `tests/ending-system.test.js` — 54 个用例，覆盖 `detectEnding`(9格式变体+`*`修复) / `collectEligibleEndings`(17边界+`><>=<=`运算符) / `selectBestEnding`(7择优) / `checkEndingClientSide` / `buildEndingInjection` / `repairEndingSection` / 综合场景
+
+### Bug 修复（关键）
+- **extractAllFields 倒序扫描**：AI 回复开头的格式提示（`压力值：[0-100]`）先被匹配导致实际数值被跳过，改为从末尾往前扫描 + `matched` 锁
+- **fieldHistory 自愈**：`_lastParsedFields` 缓存 + `updateAllDynamicFieldsFromHistory` 兜底，打开设置不再丢字段
+- **涟漪 `<span>` 撑爆按钮**：全局涟漪未排除 `#btn-audio` 且无 `position:absolute`，导致按钮 10 倍变大
+- **dialog 队列化**：`_dialogQueue` 替代单变量 `_pendingDialogDone`，消除竞争条件
+- **fullHistory 截断**：存档保留最近 30 轮，防止 localStorage 膨胀
+- **`summarisedCount` 截断后越界**：重置为 0
+- **SW 缓存**：v8 恢复完整场景图片预缓存 + 常用主题
+
+### 游戏体验
+- **里程碑引导**：第 3/5/10/15/20/30 回合自动注入叙事提示
+- **AI 质量监控**：`window.XIXI.metrics` — 请求数/格式错误率/平均响应/结局触发数
+- **重试指数退避**：1s→3s→5s
+- **存档版本化**：`dataVersion: 2`，旧存档自动迁移
+- **exportStory**：末尾追加成就摘要/结局信息/最终状态
+- **状态栏色盲友好**：数值颜色 + `data-level` 属性双重传达
+
+### 音效系统 v3
+- **三态开关**：🔉全部 → 🔔仅UI界面 → 🔇静音 循环
+- **标准化主增益**：`_ambientGain = 0.06`，白噪声类内部增益下调，全主题音量一致
+- **🌸 樱花新音色**：白噪声风→纯四度泛音垫(330+392Hz) + 高音风铃(E5-C6)
+- UI/氛围独立控制：`_safeCtx()` 仅检查 `_uiAudioOn`，`_safeAmbientCtx()` 检查 `_ambientOn`
+
+### 主题系统重构
+- **字体解耦**：10 套系统字体栈独立选择器（黑/宋/楷/仿宋/圆/行书/等宽/轻宋/粗黑/篆隶），按存档隔离。主题 CSS 不再管 `font-family`
+- **🌸 樱花 v4**：三标签定位（樱花+日式+微古风），掛け軸画框（天杆地杆）、和紙肌理、墨線边框、6瓣正弦漂落、9:16 竖幅 `object-fit:cover`
+
+### 文件变更
+- 新增 `tests/ending-system.test.js`（54 用例）
+- 新增 `public/js/font-debug.js`、`public/js/status-debug.js`、`public/js/field-trace.js`（诊断脚本）
+- SW 版本 v7→v8
+- `LS_KEYS` 新增 `font(id)`
+
+---
+
 ## v4 更新记录（2026-06-26）
 
 ### 代码质量 — 68+ bug 修复
@@ -264,40 +316,38 @@ AI 回复后调用。如果 AI 未触发但条件满足：
 - 主题按存档隔离存储
 - CSS变量驱动，主题文件只覆盖 `:root` + 特定元素
 
-### 音效系统（`audio.js` v2）
+### 音效系统（`audio.js` v3）
 
 **Web Audio API 合成，无外部音频文件。**
 
-**用户手势门控**：`_safeCtx()` 在用户首次交互前返回 null，避免浏览器 Autoplay Policy 警告。
+**三态音效开关**：🔉全部 → 🔔仅UI界面 → 🔇静音，循环切换。`_uiAudioOn` 和 `_ambientOn` 独立控制。
+
+**用户手势门控**：`_safeCtx()` 检查 `_uiAudioOn`，`_safeAmbientCtx()` 检查 `_ambientOn`。
 
 **UI 音效**：
-- `playClick()` — 游戏选项点击：1200→900Hz 正弦，0.05s，明亮短促（区别于一般UI按钮）
-- `playUIClick()` — 通用UI按钮：600Hz 正弦，0.04s，极轻咔嗒
+- `playClick()` — 游戏选项点击：1200→900Hz 正弦，0.05s
+- `playUIClick()` — 通用UI按钮：600Hz 正弦，0.04s
 - `playAchievement()` — 成就解锁：C-E-G 大三和弦，三角波
-- `playError()` — 错误提示：150→80Hz 三角波下行，柔和（v2 替代刺耳锯齿波）
+- `playError()` — 错误提示：150→80Hz 三角波下行
 
-**全局音效委托**（`init.js`）：一条 `document.addEventListener('click', ...)` + `closest('button')` 覆盖所有按钮（含动态创建的），自动排除选项按钮和音效开关。键盘 1-4 也调用 `playClick()`。
-
-**主题氛围**（v2 全部统一路由到 `_ambientGain`，基准增益 0.02）：
+**主题氛围**（v3 统一主增益 0.06，白噪声类内部增益下调）：
 | 主题 | 音色 | 说明 |
 |------|------|------|
-| 🌿 forest | 400Hz lowpass 白噪声，Q=0.5 | 柔和宽带风吟 |
-| 🌊 ocean | 200Hz lowpass + 0.1Hz LFO | 低频潮汐涨落 |
-| 💜 cyber | 55Hz sawtooth → 150Hz lowpass | 科技感低嗡 |
-| 🏯 xianxia | 65+98Hz 五度pad + 稀疏柔铃 | 温暖修仙氛围（替代刺耳高频风铃）|
-| 🌃 midnight | 55Hz sine + 0.05Hz LFO | 宇宙呼吸感（替代28Hz不可闻频率）|
+| 🌿 forest | 350Hz lowpass 白噪声，内部增益 0.25 | 柔和风吟 |
+| 🌊 ocean | 200Hz lowpass + 0.1Hz LFO，噪声振幅 0.07 | 低频潮汐 |
+| 💜 cyber | 55Hz sawtooth → 150Hz lowpass | 科技低嗡 |
+| 🏯 xianxia | 65+98Hz 五度pad + 稀疏柔铃(C5-A5) | 修仙氛围 |
+| 🌃 midnight | 55Hz sine + 0.05Hz LFO | 宇宙呼吸 |
 | ✨ golden | 110Hz + 165Hz 五度泛音 | 金属共鸣 |
-| 🌸 sakura | 250Hz lowpass 白噪声，Q=0.4 | 温暖柔风（替代偏高频bandpass）|
-| 🌅 sunset | 80Hz triangle | 温暖低频嗡 |
+| 🌸 sakura | 330+392Hz 纯四度pad + 高音风铃(E5-C6) | 花瓣静谧 |
+| 🌅 sunset | 80Hz triangle | 温暖低频 |
 | 其他 | 无氛围 | dark/light/monochrome |
-
-音效开关按钮（🔊/🔇），状态全局记忆。
 
 ---
 
 ## Service Worker（`sw.js`）
 
-- 版本：**v6**（修改 SW 代码时必须同步更新 `test.js` 中的版本检查）
+- 版本：**v8**（修改 SW 代码时必须同步更新 `test.js` 中的版本检查）
 - 策略：网络优先（Network First），回退缓存
 - 安装：`Promise.allSettled` 异步缓存，不阻塞 activate
 - 激活：`clients.claim()` 立即接管所有页面
@@ -371,6 +421,7 @@ AI 回复后调用。如果 AI 未触发但条件满足：
 | `xixi_last_save_id` | 上次游玩的存档ID |
 | `xixi_active_template_id` | 当前活动模板ID |
 | `xixi_last_manual_slot_{id}` | 上次手动存档槽位号 |
+| `xixi_font_{id}` | 字体选择（按存档隔离，10套系统字体栈） |
 
 ## 模板 JSON 结构
 

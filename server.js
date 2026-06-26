@@ -126,7 +126,9 @@ function buildSystemPrompt(template) {
 }
 
 // ── 服务端结局章节修复 ──
-// 需要从磁盘加载原始模板（template参数可能是客户端传来的编辑版，不能和自己比）
+// 注：=100 死亡条件在各处均放宽为 ≥95（防 AI 压 99 不触发）。
+// 条件检测在客户端 collectEligibleEndings 中，此处仅做结局标记完整性修复。
+// 从磁盘加载原始模板（template参数可能是客户端传来的编辑版，不能和自己比）
 function repairEndingSection(body, template) {
   if (!body || !template) return body;
 
@@ -239,13 +241,9 @@ app.post('/api/admin/verify', (req, res) => {
     return res.json({ valid: password === ADMIN_PASSWORD });
   }
 
-  // 后备：SHA-256("admin123") → 硬编码 hash，避免明文泄露
-  const crypto = require('crypto');
-  const hash = crypto.createHash('sha256').update(password).digest('hex');
-  const knownHash = 'c1d066691ec82f3e7f75d1105e7a1b27b99c4d3a3a2b7b8f1b7e5b7d8d4d5e6f';
-  // 正确的 admin123 hash
-  const correctHash = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
-  return res.json({ valid: hash === correctHash });
+  // 未配置 ADMIN_PASSWORD 环境变量时，管理员功能不可用
+  // 在 Railway Variables 中设置 ADMIN_PASSWORD 即可启用酒馆管理
+  return res.json({ valid: false, error: '管理员密码未配置（请在环境变量中设置 ADMIN_PASSWORD）' });
 });
 
 // ── 调用 DeepSeek API ──
@@ -289,16 +287,20 @@ async function callDeepSeek(messages, apiKey, temperature = 0.8, maxTokens = 102
 
 // ── API: 游戏对话（流式输出）──
 app.post('/api/chat', async (req, res) => {
-  const { messages, summary, template, systemPrompt } = req.body;
+  const { messages, summary, templateId, templateFallback } = req.body;
 
-  // 构建消息数组 — 始终由服务端从磁盘模板构建权威提示词
-  // （客户端 systemPrompt/null 已废弃，服务端 buildSystemPrompt 是唯一权威来源）
+  // 构建消息数组 — 优先从磁盘加载，自定义/酒馆模板回退到客户端提供的字段
   let activeSystemPrompt;
-  if (template && template.outputSections) {
-    activeSystemPrompt = buildSystemPrompt(template);
-  } else if (template && template.id) {
-    const loaded = loadTemplate(template.id);
-    activeSystemPrompt = loaded ? buildSystemPrompt(loaded) : gamePrompt;
+  if (templateId) {
+    const loaded = loadTemplate(templateId);
+    if (loaded) {
+      activeSystemPrompt = buildSystemPrompt(loaded);
+    } else if (templateFallback && templateFallback.outputSections) {
+      // 自定义/酒馆模板：磁盘上没有，用客户端传来的字段构建
+      activeSystemPrompt = buildSystemPrompt(templateFallback);
+    } else {
+      activeSystemPrompt = gamePrompt;
+    }
   } else {
     activeSystemPrompt = gamePrompt;
   }

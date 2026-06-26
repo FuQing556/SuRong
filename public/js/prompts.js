@@ -34,10 +34,8 @@ async function openSettings() {
       if (ed.achievements) tpl.achievements = ed.achievements;
       if (ed.hiddenAchievements) tpl.hiddenAchievements = ed.hiddenAchievements;
       refreshSystemPrompt();
-      renderStatusContainers(tpl);
-      // 重建DOM后立即回填当前值 + 为新字段ID补fieldHistory默认值
+      // 游戏进行中不重建状态栏DOM — 只在需要时补字段+回填值
       if (gameState.gameStarted) {
-        // 确保所有outputSections中的字段在fieldHistory中有条目
         for (const sec of Object.values(tpl.outputSections || {})) {
           for (const f of (sec.fields || [])) {
             if (!gameState.fieldHistory[f.id]) {
@@ -48,8 +46,10 @@ async function openSettings() {
           }
         }
         updateAllDynamicFieldsFromHistory();
+      } else {
+        renderStatusContainers(tpl);
       }
-    } catch (e) { /* corrupt */ }
+    } catch (e) { _devWarn('openSettings parse edits', e); }
   }
 
   // 始终只显示 promptBody（正文），格式模板由 outputSections 自动生成，不可编辑
@@ -71,7 +71,7 @@ async function openSettings() {
   }
 
   // 显示已保存的 API Key
-  const savedKey = localStorage.getItem(LS_KEYS.apikey) || '';
+  const savedKey = (typeof _readApiKey === 'function' ? _readApiKey() : localStorage.getItem(LS_KEYS.apikey)) || '';
   if (dom.apiKeyInput) dom.apiKeyInput.value = savedKey;
 
   dom.settingsOverlay.classList.add('active');
@@ -79,7 +79,13 @@ async function openSettings() {
   // 渲染字段编辑器
   renderFieldEditor();
   initThemeSelector();
+  initFontSelector();
   renderImageManager();
+
+  // 兜底：无论什么操作触发了DOM重建，确保字段值已回填
+  if (gameState.gameStarted && typeof updateAllDynamicFieldsFromHistory === 'function') {
+    updateAllDynamicFieldsFromHistory();
+  }
 }
 
 async function closeSettings() {
@@ -130,9 +136,9 @@ async function savePrompt() {
   gameState.activeTemplate.promptBody = prompt;
   const editKey = LS_KEYS.editedTemplate(saveId);
   let edited = {};
-  try { const ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { /* corrupt */ }
+  try { var ej = localStorage.getItem(editKey); if (ej) edited = JSON.parse(ej); } catch (e) { _devWarn('savePrompt parse', e); }
   edited.promptBody = prompt;
-  localStorage.setItem(editKey, JSON.stringify(edited));
+  safeSetItem(editKey, edited);
 
   dom.settingsMsg.textContent = '⏳ 保存中...';
   dom.settingsMsg.style.color = 'var(--text-dim)';
@@ -189,7 +195,7 @@ async function resetPrompt() {
       ed.promptBody = originalPromptBody;
       safeSetItem(editKey, ed);
     } catch (e) {
-      // 解析失败只重置 promptBody，不删整个编辑键（保留字段/成就）
+      _devWarn('resetPrompt parse', e);
       safeSetItem(editKey, { promptBody: originalPromptBody });
     }
   }
@@ -265,6 +271,46 @@ function initThemeSelector() {
   // 隐藏"应用"按钮——自动应用后不再需要
   const applyBtn = $('#btn-apply-theme');
   if (applyBtn) applyBtn.style.display = 'none';
+}
+
+// ── 10套字体栈 ──
+var FONT_STACKS = {
+  sans:     "'Noto Sans SC','PingFang SC','Microsoft YaHei','Hiragino Sans GB',sans-serif",
+  serif:    "'Noto Serif SC','STSong','Songti SC','SimSun',serif",
+  kai:      "'KaiTi','STKaiti','Noto Serif SC',serif",
+  fangsong: "'FangSong','STFangsong','Noto Serif SC',serif",
+  round:    "'PingFang SC','Hiragino Maru Gothic Pro','Microsoft YaHei',sans-serif",
+  xingshu:  "'KaiTi','STKaiti','Hiragino Mincho Pro',cursive",
+  mono:     "'Cascadia Code','Fira Code','Noto Sans SC',monospace",
+  light:    "'Noto Serif SC','Hiragino Mincho Pro','Songti SC',serif",
+  bold:     "'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif",
+  classic:  "'Noto Serif SC','STKaiti','Hiragino Mincho Pro',serif",
+};
+
+function initFontSelector() {
+  var sel = $('#font-selector');
+  if (!sel) return;
+  if (sel.dataset.bound) return;
+  sel.dataset.bound = '1';
+  var saveId = gameState.activeSaveId || 'default';
+  sel.value = localStorage.getItem(LS_KEYS.font(saveId)) || 'sans';
+
+  sel.addEventListener('change', function() {
+    var fontKey = sel.value;
+    localStorage.setItem(LS_KEYS.font(saveId), fontKey);
+    applyFont(fontKey);
+    // 字体切换触发回流，双保险回填字段值
+    if (gameState.gameStarted && typeof updateAllDynamicFieldsFromHistory === 'function') {
+      updateAllDynamicFieldsFromHistory();
+      requestAnimationFrame(function() { updateAllDynamicFieldsFromHistory(); });
+    }
+  });
+}
+
+function applyFont(fontKey) {
+  // 移除旧字体 class，换新 — 最轻量的方式，不触发DOM回流
+  var cls = document.body.className.replace(/\bfont-\w+\b/g, '').trim();
+  document.body.className = cls + ' font-' + fontKey;
 }
 
 // ── 图片管理 ──

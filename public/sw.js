@@ -1,18 +1,18 @@
 // Service Worker — 离线缓存（网络优先，回退缓存）
-const CACHE = 'xixi-v7';
-const FILES = [
+// v8: 恢复完整场景图片预缓存 + 常用主题
+const CACHE = 'xixi-v8';
+// 核心shell（install时预缓存）
+const SHELL = [
   '/', '/index.html', '/style.css',
   '/js/state.js', '/js/utils.js', '/js/dialogs.js', '/js/saves.js',
   '/js/ui.js', '/js/achievements.js', '/js/prompts.js', '/js/templates.js',
   '/js/tavern.js', '/js/ai.js', '/js/core.js', '/js/init.js', '/js/audio.js',
   '/manifest.json', '/icon.svg', '/icon-192.png', '/icon-512.png',
+  // 所有场景图片 — 离线时也需要
   '/日常.png', '/对峙.png', '/调查.png', '/潜伏.png', '/社交.png',
   '/战斗.png', '/研究.png', '/交易.png', '/崩溃.png',
-  '/themes/theme-forest.css', '/themes/theme-xianxia.css',
-  '/themes/theme-cyber.css', '/themes/theme-sakura.css',
-  '/themes/theme-ocean.css', '/themes/theme-sunset.css',
-  '/themes/theme-midnight.css', '/themes/theme-monochrome.css',
-  '/themes/theme-golden.css', '/themes/theme-light.css',
+  // 常用主题 — 至少缓存默认主题
+  '/themes/theme-xianxia.css', '/themes/theme-cyber.css',
 ];
 
 self.addEventListener('install', e => {
@@ -20,7 +20,7 @@ self.addEventListener('install', e => {
   // 异步缓存，不阻塞 activate
   e.waitUntil(
     caches.open(CACHE).then(c => {
-      return Promise.allSettled(FILES.map(f =>
+      return Promise.allSettled(SHELL.map(f =>
         c.add(f).catch(() => console.debug('SW: skip cache', f))
       ));
     })

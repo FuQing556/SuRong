@@ -132,7 +132,60 @@ const FALLBACK_TEMPLATE = {
 console.log('📦 state.js 已加载');
 window.XIXI = window.XIXI || {};
 window.XIXI.version = '1.0.0';
+window.XIXI.debug = false;  // 设为 true 可在控制台看到更多诊断信息
 window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('state');
+
+// ── 统一的 catch 块 warning（dev 模式）──
+// 用法: catch (e) { _devWarn('localStorage read failed', e); }
+function _devWarn(msg, err) {
+  if (window.XIXI && window.XIXI.debug) {
+    console.warn('[dev] ' + msg + (err ? ': ' + (err.message || err) : ''));
+  }
+}
+
+// ── API Key 加密存储（XOR + 浏览器指纹，防明文泄露）──
+var _keyObfuscator = (function() {
+  // 从浏览器特征派生一个稳定的混淆种子（非密码学安全，但比明文强）
+  var seed = [navigator.language || '', navigator.platform || '', screen.width || 0, screen.height || 0].join('|');
+  var seedBytes = [];
+  for (var i = 0; i < seed.length; i++) seedBytes.push(seed.charCodeAt(i) & 0xFF);
+  return {
+    encode: function(plain) {
+      if (!plain) return '';
+      var result = '';
+      for (var i = 0; i < plain.length; i++) {
+        var code = plain.charCodeAt(i) ^ seedBytes[i % seedBytes.length];
+        result += ('0' + code.toString(16)).slice(-2);
+      }
+      return 'e:' + result;  // 'e:' 前缀区分加密版本
+    },
+    decode: function(encoded) {
+      if (!encoded) return '';
+      if (encoded.indexOf('e:') !== 0) return encoded;  // 旧版明文，返回原值
+      var hex = encoded.substring(2);
+      var result = '';
+      for (var i = 0; i < hex.length; i += 2) {
+        var code = parseInt(hex.substring(i, i + 2), 16);
+        result += String.fromCharCode(code ^ seedBytes[(i / 2) % seedBytes.length]);
+      }
+      return result;
+    }
+  };
+})();
+
+// 安全的 API Key 读写
+function _readApiKey() {
+  try {
+    var raw = localStorage.getItem(LS_KEYS.apikey) || '';
+    return _keyObfuscator.decode(raw);
+  } catch (e) { return ''; }
+}
+
+function _writeApiKey(key) {
+  if (!key) { localStorage.removeItem(LS_KEYS.apikey); return; }
+  var encoded = _keyObfuscator.encode(key);
+  localStorage.setItem(LS_KEYS.apikey, encoded);
+}
 
 // ── localStorage Key 集中管理 ──
 const LS_KEYS = {
@@ -150,4 +203,5 @@ const LS_KEYS = {
   lastSaveId: 'xixi_last_save_id',
   activeTemplateId: 'xixi_active_template_id',
   lastManualSlot: function(id) { return 'xixi_last_manual_slot_' + id; },
+  font: function(id) { return 'xixi_font_' + id; },
 };

@@ -34,11 +34,26 @@
 html, body {
   height: 100%;
   font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+  font-weight: 350;
+  font-size: 14px;
+  letter-spacing: 0.02em;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
   overflow: hidden;
 }
+
+/* ── 10套字体 class ── */
+body.font-sans     { font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei','Hiragino Sans GB',sans-serif;font-weight:350;font-size:14px;letter-spacing:.02em }
+body.font-serif    { font-family:'Noto Serif SC','STSong','Songti SC','SimSun',serif;font-weight:350;font-size:14px;letter-spacing:.02em }
+body.font-kai      { font-family:'KaiTi','STKaiti','Noto Serif SC',serif;font-weight:350;font-size:15px;letter-spacing:.02em }
+body.font-fangsong { font-family:'FangSong','STFangsong','Noto Serif SC',serif;font-weight:350;font-size:14px;letter-spacing:.02em }
+body.font-round    { font-family:'PingFang SC','Hiragino Maru Gothic Pro','Microsoft YaHei',sans-serif;font-weight:350;font-size:14px;letter-spacing:.02em }
+body.font-xingshu  { font-family:'KaiTi','STKaiti','Hiragino Mincho Pro',cursive;font-weight:350;font-size:15px;letter-spacing:.02em }
+body.font-mono     { font-family:'Cascadia Code','Fira Code','Noto Sans SC',monospace;font-weight:350;font-size:14px;letter-spacing:0 }
+body.font-light    { font-family:'Noto Serif SC','Hiragino Mincho Pro','Songti SC',serif;font-weight:300;font-size:14px;letter-spacing:.04em }
+body.font-bold     { font-family:'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif;font-weight:500;font-size:14px;letter-spacing:.02em }
+body.font-classic  { font-family:'Noto Serif SC','STKaiti','Hiragino Mincho Pro',serif;font-weight:350;font-size:14px;letter-spacing:.04em }
 
 /* ── 无障碍：键盘焦点环 ── */
 :focus-visible {

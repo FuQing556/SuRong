@@ -9,6 +9,7 @@ let parsedLastSceneType = '';
 // ── 加载指示器 ──
 let _loadingTimer = null;
 let _loadingStart = 0;
+let _loadingPhase = 'connecting';  // 'connecting' | 'thinking' | 'streaming'
 
 // ── 取消当前请求 ──
 function cancelCurrentRequest() {
@@ -37,6 +38,7 @@ function showLoading(show) {
     }
     cancelBtn.style.display = '';
     _loadingStart = Date.now();
+    _loadingPhase = 'connecting';
     _updateLoadingText();
     _loadingTimer = setInterval(_updateLoadingText, 1000);
   } else {
@@ -46,11 +48,24 @@ function showLoading(show) {
 }
 
 function _updateLoadingText() {
-  const elapsed = Math.floor((Date.now() - _loadingStart) / 1000);
-  const roundNum = Math.max(1, gameState.fullHistory.filter(m => m.role === 'user').length);
-  const textEl = dom.loadingIndicator.querySelector('.spinner')?.nextSibling;
-  if (textEl) textEl.textContent = '第' + roundNum + '回合 · 已等待' + elapsed + '秒';
+  var elapsed = Math.floor((Date.now() - _loadingStart) / 1000);
+  var roundNum = Math.max(1, gameState.fullHistory.filter(function(m) { return m.role === 'user'; }).length);
+  var textEl = dom.loadingIndicator.querySelector('.spinner')?.nextSibling;
+  if (!textEl) return;
+  // 阶段化提示：连接中 → AI思考中 → 文字流出
+  if (_loadingPhase === 'connecting' && elapsed >= 2) _loadingPhase = 'thinking';
+  if (_loadingPhase === 'connecting') {
+    textEl.textContent = '第' + roundNum + '回合 · 已连接服务器...';
+  } else if (_loadingPhase === 'thinking') {
+    textEl.textContent = '第' + roundNum + '回合 · AI 正在构思...已等' + elapsed + '秒';
+  } else {
+    textEl.textContent = '第' + roundNum + '回合 · 已等待' + elapsed + '秒';
+  }
 }
+
+// 供 _streamResponse 调用，标记进入流式阶段
+function _setLoadingPhase(phase) { _loadingPhase = phase; }
+
 
 // ── 错误提示 ──
 function showError(msg) {
@@ -100,14 +115,20 @@ function updateOptionButtons(options) {
       let resourceBlocked = fullText.indexOf('【资源不足】') >= 0;
       if (!resourceBlocked) {
         for (const label in resValues) {
-          let cur = resValues[label];
+          var cur = resValues[label];
           // 防御：cur 必须是有效数字
           if (typeof cur !== 'number' || isNaN(cur)) continue;
-          const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const re = new RegExp(escaped + '[：:\\s]*[xX×\\-–]?\\s*(\\d+)');
-          const m = costText.match(re) || actionText.match(re);
+          var escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          // 匹配模式1：label 紧邻数字（如 "情报碎片5"、"情报碎片：3"、"情报碎片-2"）
+          var re1 = new RegExp(escaped + '[：:\\s]*[xX×\\-–]?\\s*(\\d+)');
+          var m = costText.match(re1) || actionText.match(re1);
+          // 匹配模式2：label 与数字之间有少许文字（如"消耗情报碎片x3"、"需要情报碎片 5 个"）
+          if (!m) {
+            var re2 = new RegExp(escaped + '[\\s\\S]{0,8}?(\\d+)');
+            m = costText.match(re2) || actionText.match(re2);
+          }
           if (m) {
-            const needed = parseInt(m[1]);
+            var needed = parseInt(m[1]);
             if (!isNaN(needed) && cur < needed) { resourceBlocked = true; break; }
           }
         }
@@ -209,14 +230,15 @@ function updateAllDynamicFields(fieldValues, template) {
     const value = fieldValues[field.id] ?? '—';
     el.textContent = value;
 
-    // 数值高亮 + 变化闪烁
+    // 数值高亮 + 变化闪烁 + 色盲友好前缀
     el.className = 'status-value';
     if (field.type === 'number') {
       var num = parseInt(value);
       if (!isNaN(num)) {
-        if (num >= 70) el.classList.add('pressure-danger');
-        else if (num >= 40) el.classList.add('pressure-warn');
-        else el.classList.add('pressure-safe');
+        // 色盲友好：颜色 + 文字前缀双重传达
+        if (num >= 70) { el.classList.add('pressure-danger'); el.setAttribute('data-level', 'high'); }
+        else if (num >= 40) { el.classList.add('pressure-warn'); el.setAttribute('data-level', 'mid'); }
+        else { el.classList.add('pressure-safe'); el.setAttribute('data-level', 'low'); }
         // 检测数值变化并闪烁
         var oldVal = el.getAttribute('data-prev-value');
         if (oldVal !== null && oldVal !== String(num)) {
@@ -235,10 +257,39 @@ function updateAllDynamicFields(fieldValues, template) {
 
 // ── 从 fieldHistory 恢复字段显示 ──
 function updateAllDynamicFieldsFromHistory() {
-  const tpl = getActiveTemplate();
-  const fieldValues = {};
-  for (const [fieldId, hist] of Object.entries(gameState.fieldHistory || {})) {
-    fieldValues[fieldId] = hist.currentText || (hist.current != null ? String(hist.current) : '—');
+  var tpl = getActiveTemplate();
+  var fieldValues = {};
+  var lastParsed = gameState._lastParsedFields || {};
+  var fh = gameState.fieldHistory || {};
+  // 收集所有字段ID
+  var allIds = [];
+  for (var sk in tpl.outputSections) {
+    if (!tpl.outputSections.hasOwnProperty(sk)) continue;
+    var fs = tpl.outputSections[sk].fields || [];
+    for (var fi = 0; fi < fs.length; fi++) allIds.push(fs[fi].id);
+  }
+  for (var i = 0; i < allIds.length; i++) {
+    var fid = allIds[i];
+    var hist = fh[fid];
+    // 优先 fieldHistory，兜底 _lastParsedFields
+    if (hist) {
+      var v = (hist.currentText != null) ? hist.currentText : (hist.current != null ? String(hist.current) : null);
+      if (v != null && v !== '—') {
+        fieldValues[fid] = v;
+      } else if (lastParsed[fid] && lastParsed[fid] !== '—') {
+        fieldValues[fid] = lastParsed[fid];
+        // 自愈：回填到 fieldHistory
+        var num = parseInt(lastParsed[fid]);
+        if (!isNaN(num)) { hist.current = num; hist.max = Math.max(hist.max || 0, num); delete hist.currentText; }
+        else { hist.currentText = lastParsed[fid]; delete hist.current; }
+      } else {
+        fieldValues[fid] = v || '—';
+      }
+    } else if (lastParsed[fid] && lastParsed[fid] !== '—') {
+      fieldValues[fid] = lastParsed[fid];
+    } else {
+      fieldValues[fid] = '—';
+    }
   }
   updateAllDynamicFields(fieldValues, tpl);
 }
@@ -539,6 +590,8 @@ async function selectSave(saveId) {
     localStorage.setItem(LS_KEYS.lastSaveId, saveId);
     const theme = localStorage.getItem(LS_KEYS.theme(saveId)) || template.theme || 'dark';
     applyTheme(theme);
+    var savedFont = localStorage.getItem(LS_KEYS.font(saveId)) || 'sans';
+    if (typeof applyFont === 'function') applyFont(savedFont);
     refreshSystemPrompt();
     renderStatusContainers(template);
     localStorage.setItem(LS_KEYS.activeTemplateId, saveId);

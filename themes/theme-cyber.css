@@ -8,7 +8,7 @@
   --option-1:#00e8ff;--option-2:#e040ff;--option-3:#00e870;--option-4:#ff4860;
   --radius:0px;--shadow:0 4px 40px rgba(0,0,0,.85);
 }
-body{font-family:'Consolas','Cascadia Code','Courier New','Microsoft YaHei',monospace;font-size:13px;background:var(--bg);letter-spacing:0}
+body{background:var(--bg);}
 
 /* CRT 扫描线 */
 #game-container::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px)}

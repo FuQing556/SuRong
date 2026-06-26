@@ -1,50 +1,171 @@
-/* 🌸 樱花 — 象牙白暖底 + 深黛青撞色 + 花瓣飘落 + 柔圆画框 */
+/* 🌸🏮📜 桜·和風·古韵 v4 */
 :root {
-  --bg:#f8f0ec;--bg-panel:#fef8f4;--bg-card:#fef6f0;--bg-hover:#fdf0e4;
-  --border:#e0d0c8;--border-focus:#688090;
-  --text:#3a2828;--text-dim:#908080;--text-bright:#180808;
-  --gold:#c87078;--gold-dim:#885058;--purple:#487080;--purple-hover:#588898;
-  --red:#d04850;--green:#589868;--red-dim:#fce4e8;
-  --option-1:#c87078;--option-2:#487080;--option-3:#589868;--option-4:#a06888;
-  --radius:24px;--shadow:0 4px 20px rgba(0,0,0,.05);
+  --bg:#f7efe8;--bg-panel:#fef9f4;--bg-card:#fdf5ef;--bg-hover:#fbf0e4;
+  --border:#d8c8bc;--border-focus:#5a7a8a;
+  --text:#382820;--text-dim:#786058;--text-bright:#180808;
+  --gold:#b8505a;--gold-dim:#885058;--purple:#3d6070;--purple-hover:#507888;
+  --red:#c84048;--green:#509060;--red-dim:#fce8e8;
+  --option-1:#c06870;--option-2:#3d6070;--option-3:#509060;--option-4:#906878;
+  --radius:6px;--shadow:0 2px 16px rgba(0,0,0,.04);
 }
-body{font-family:Georgia,'Noto Serif SC','Times New Roman','Microsoft YaHei',serif;font-size:15px;font-weight:300;background:var(--bg);color:var(--text)}
+body{background:var(--bg);color:var(--text)}
 
-/* 花瓣飘落 */
-body::before{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-size:22px;animation:petal1 9s linear infinite;left:10%;top:-50px;opacity:.5}
-body::after{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-size:17px;animation:petal2 11s linear infinite;left:30%;top:-70px;opacity:.4}
+/* ── 6瓣飘落 ── */
+body::before{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-size:22px;animation:petal1 12s cubic-bezier(.42,0,.58,1) infinite;left:8%;top:-40px;opacity:.5;will-change:transform}
+body::after{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-size:17px;animation:petal2 14s cubic-bezier(.45,0,.55,1) infinite;left:25%;top:-60px;opacity:.4;will-change:transform}
 #game-container{position:relative}
-#game-container::before{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-size:24px;animation:petal3 10s linear infinite;left:55%;top:-55px;opacity:.45}
-#game-container::after{content:'💮';position:fixed;pointer-events:none;z-index:0;font-size:15px;animation:petal4 12s linear infinite;left:78%;top:-40px;opacity:.35}
-@keyframes petal1{0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:.5}50%{transform:translateY(50vh) translateX(80px) rotate(200deg);opacity:.3}100%{transform:translateY(105vh) translateX(-30px) rotate(400deg);opacity:0}}
-@keyframes petal2{0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:.4}40%{transform:translateY(40vh) translateX(-50px) rotate(-140deg);opacity:.25}100%{transform:translateY(105vh) translateX(40px) rotate(-380deg);opacity:0}}
-@keyframes petal3{0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:.45}60%{transform:translateY(60vh) translateX(60px) rotate(220deg);opacity:.28}100%{transform:translateY(105vh) translateX(-50px) rotate(420deg);opacity:0}}
-@keyframes petal4{0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:.35}30%{transform:translateY(30vh) translateX(-40px) rotate(-100deg);opacity:.2}100%{transform:translateY(105vh) translateX(30px) rotate(-350deg);opacity:0}}
+#game-container::before{content:'💮';position:fixed;pointer-events:none;z-index:0;font-size:14px;animation:petal3 16s cubic-bezier(.4,0,.6,1) infinite;left:45%;top:-35px;opacity:.35;will-change:transform}
+#game-container::after{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-size:16px;animation:petal4 11s cubic-bezier(.43,0,.57,1) infinite 3s;left:62%;top:-50px;opacity:.4;will-change:transform}
+#content-panel::before{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-size:20px;animation:petal5 15s cubic-bezier(.44,0,.56,1) infinite 5s;left:78%;top:-45px;opacity:.3;will-change:transform}
+#content-panel::after{content:'💮';position:fixed;pointer-events:none;z-index:0;font-size:12px;animation:petal6 18s cubic-bezier(.46,0,.54,1) infinite 7s;left:90%;top:-30px;opacity:.25;will-change:transform}
 
-/* 故事框 — 粉白柔焦 + 黛青左边线 */
-#story-box{border:2px solid var(--border);border-radius:28px;background:var(--bg-panel);box-shadow:inset 0 0 50px rgba(200,112,120,.03);border-left:3px solid var(--purple)}
-#story-box::before{color:var(--gold);content:'🌸 现状';font-family:Georgia,serif}
-.story-fade-in{animation:sakuraFloat .7s cubic-bezier(.25,.46,.45,.94)}
-@keyframes sakuraFloat{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes petal1{0%{transform:translate(0,0) rotate(0deg)}20%{transform:translate(40px,20vh) rotate(80deg)}40%{transform:translate(-30px,40vh) rotate(190deg)}60%{transform:translate(70px,60vh) rotate(280deg)}80%{transform:translate(-20px,80vh) rotate(370deg)}100%{transform:translate(30px,105vh) rotate(480deg);opacity:0}}
+@keyframes petal2{0%{transform:translate(0,0) rotate(0deg)}20%{transform:translate(-60px,18vh) rotate(-60deg)}40%{transform:translate(20px,36vh) rotate(-170deg)}60%{transform:translate(-80px,54vh) rotate(-260deg)}80%{transform:translate(40px,72vh) rotate(-350deg)}100%{transform:translate(-30px,105vh) rotate(-450deg);opacity:0}}
+@keyframes petal3{0%{transform:translate(0,0) rotate(0deg)}25%{transform:translate(-35px,25vh) rotate(120deg)}50%{transform:translate(50px,50vh) rotate(240deg)}75%{transform:translate(-45px,75vh) rotate(360deg)}100%{transform:translate(20px,105vh) rotate(500deg);opacity:0}}
+@keyframes petal4{0%{transform:translate(0,0) rotate(0deg)}30%{transform:translate(80px,28vh) rotate(-100deg)}55%{transform:translate(-40px,55vh) rotate(-220deg)}80%{transform:translate(60px,80vh) rotate(-340deg)}100%{transform:translate(-20px,105vh) rotate(-460deg);opacity:0}}
+@keyframes petal5{0%{transform:translate(0,0) rotate(0deg)}20%{transform:translate(-50px,15vh) rotate(90deg)}50%{transform:translate(30px,45vh) rotate(210deg)}70%{transform:translate(-70px,65vh) rotate(310deg)}100%{transform:translate(40px,105vh) rotate(430deg);opacity:0}}
+@keyframes petal6{0%{transform:translate(0,0) rotate(0deg)}30%{transform:translate(60px,30vh) rotate(-80deg)}60%{transform:translate(-30px,60vh) rotate(-200deg)}85%{transform:translate(50px,85vh) rotate(-320deg)}100%{transform:translate(-10px,105vh) rotate(-420deg);opacity:0}}
 
-/* 图片框 — 柔圆镜框 */
-.image-frame{border:3px solid var(--border);border-radius:50%;overflow:hidden;box-shadow:0 0 30px rgba(200,112,120,.15);aspect-ratio:1;max-width:280px;margin:0 auto}
-.image-frame img{border-radius:50%;filter:brightness(1.05) saturate(.88)}
+.overlay.active~body::before,.overlay.active~body::after{opacity:.1!important}
+.overlay.active~#game-container::before,.overlay.active~#game-container::after,
+.overlay.active~#content-panel::before,.overlay.active~#content-panel::after{opacity:.08!important}
 
-.game-title{font-family:Georgia,serif;font-weight:300;letter-spacing:10px;color:var(--gold);font-size:21px;font-style:italic}
-.option-btn{border-radius:30px;border:2px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.03);transition:all .3s ease;background:var(--bg-card)}
-.option-btn:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(200,112,120,.18);border-color:var(--gold)}
-.option-btn .option-num{border-radius:50%;color:#fff;font-weight:700;font-size:12px;width:24px;height:24px;line-height:24px}
+/* ══════════════════════════════════════
+   🏮 掛け軸画框 — 卷杆比绢布宽一圈
+   ══════════════════════════════════════ */
+.image-frame{
+  position:relative;
+  border:none;border-radius:0;overflow:visible;box-shadow:none;
+  margin:22px 12px 24px;
+  padding:10px 14px;
+  background:linear-gradient(to bottom, #faf4ec 0%, #f6ede4 40%, #f8f0e8 60%, #faf4ec 100%);
+  box-shadow:inset 0 0 40px rgba(160,120,80,.05),inset 0 0 2px rgba(160,120,80,.08);
+  border-left:1px solid #d4c4b4;border-right:1px solid #d4c4b4
+}
+/* 天杆（上卷轴）— 比画布宽 */
+.image-frame::before{
+  content:'';
+  position:absolute;top:-14px;left:-8px;right:-8px;height:16px;
+  background:linear-gradient(to bottom, #b09880 0%, #c8b098 25%, #d8c8b0 50%, #c4b098 75%, #a08870 100%);
+  border-radius:8px;
+  box-shadow:0 2px 4px rgba(0,0,0,.12),0 4px 10px rgba(0,0,0,.05);
+  z-index:2
+}
+/* 地杆（下卷轴）— 比天杆稍粗 */
+.image-frame::after{
+  content:'';
+  position:absolute;bottom:-16px;left:-10px;right:-10px;height:18px;
+  background:linear-gradient(to bottom, #a08870 0%, #b8a088 20%, #d0c0a8 50%, #c0a890 80%, #987860 100%);
+  border-radius:9px;
+  box-shadow:0 2px 4px rgba(0,0,0,.12),0 6px 14px rgba(0,0,0,.06);
+  z-index:2
+}
+.image-frame img{
+  display:block;width:100%;aspect-ratio:9/16;
+  object-fit:cover;object-position:bottom;
+  border-radius:0;
+  filter:brightness(1.02) saturate(.82) contrast(.98);
+  transition:filter .4s;
+  position:relative;z-index:1
+}
+.image-frame img:hover{filter:brightness(1.06) saturate(.92) contrast(1)}
+
+/* 图片标题 — 与图片等宽，嵌入绢布底部 */
+.image-caption{
+  position:relative;z-index:1;
+  display:block;width:100%;margin:0;
+  text-align:center;padding:6px 0 0;
+  font-size:10px;color:var(--text-dim);
+  background:linear-gradient(to bottom,transparent 0%,rgba(250,244,236,.85) 25%);
+  letter-spacing:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.6
+}
+
+/* ── 和紙纹理故事框 ── */
+#story-box{
+  border:1px solid var(--border);border-left:4px solid var(--gold);
+  border-radius:4px 14px 14px 4px;background:var(--bg-panel);
+  box-shadow:inset 0 0 50px rgba(160,120,80,.04),0 2px 12px rgba(0,0,0,.04)
+}
+#story-box::before{color:var(--gold);content:'◌ 物語';font-size:10px;letter-spacing:4px;font-style:normal}
+.story-fade-in{animation:sakuraFloat .7s ease}
+@keyframes sakuraFloat{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ── 结算框 ── */
+.settlement-box{border:1px solid var(--border);border-left:4px solid var(--purple);border-radius:2px 10px 10px 2px;background:var(--bg-card);box-shadow:inset 0 0 20px rgba(160,120,80,.03)}
+.settlement-box::before{content:'◌ 前回';color:var(--purple);font-size:10px;letter-spacing:4px;font-style:normal}
+
+/* ── 选项 ── */
+.option-btn{border-radius:6px 20px 6px 20px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.03);transition:all .3s cubic-bezier(.25,.46,.45,.94);background:var(--bg-card)}
+.option-btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(184,80,90,.12);border-color:var(--gold)}
+.option-btn:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+.option-btn:disabled{opacity:.35;box-shadow:none;transform:none}
+.option-btn .option-num{border-radius:4px 12px 4px 12px;color:#fff;font-weight:600;font-size:11px;width:22px;height:22px;line-height:22px}
 .option-btn:nth-child(1) .option-num{background:var(--option-1)}.option-btn:nth-child(2) .option-num{background:var(--option-2)}
 .option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
 
-.modal,.save-card{border-radius:28px;border:1px solid var(--border);background:var(--bg-panel)}.save-card:hover{border-color:var(--gold)}
-.settlement-box{border-radius:18px;border-left:4px solid var(--gold);background:var(--bg-card)}
-.overlay{background:rgba(0,0,0,.12)}.overlay .modal{background:var(--bg-panel);border:1px solid var(--border)}
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:18px!important}
-input:focus,textarea:focus{border-color:var(--purple)!important;box-shadow:0 0 8px rgba(72,112,128,.15)}
-.chip.selected{background:var(--gold);color:#fff;font-weight:600;border-radius:24px}.tab-btn.active{color:var(--purple);border-bottom-color:var(--purple)}
-.btn-primary{background:var(--purple);border-color:var(--purple);color:#fff;border-radius:24px;font-weight:600}.btn-primary:hover{background:var(--purple-hover)}
-.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(200,112,120,.1);color:var(--gold);border-radius:16px}
-.status-label{color:var(--text-dim)}.status-value{color:var(--text)}
-.save-card-upload{background:rgba(200,112,120,.08);border-color:var(--gold-dim);color:var(--gold);border-radius:20px}
+/* ── 按钮全局锁死 — 不受 body font-size 影响 ── */
+.btn{font-size:12px!important;line-height:1.3!important}
+.btn-small{font-size:11px!important;padding:4px 10px!important;line-height:1.2!important}
+.btn-tiny{font-size:10px!important;padding:2px 6px!important;line-height:1.2!important}
+#btn-audio{font-size:11px!important;padding:4px 10px!important;width:auto!important;text-align:center!important;transform:none!important}
+#btn-audio:active{transform:none!important}
+
+/* ── 游戏标题 ── */
+.game-title{font-weight:400;letter-spacing:8px;color:var(--gold);font-size:20px}
+.game-title::before{content:'❀ ';color:var(--purple);font-size:14px}
+.game-title::after{content:' ❀';color:var(--purple);font-size:14px}
+
+/* ── 弹窗/卡片 ── */
+.modal,.save-card{border-radius:4px;border:1px solid var(--border);background:var(--bg-panel)}
+.save-card{border-left:3px solid var(--gold);transition:all .25s ease}
+.save-card:hover{border-color:var(--gold);border-left-width:6px;transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.06)}
+.overlay{background:rgba(0,0,0,.15)}.overlay .modal{background:var(--bg-panel);border:1px solid var(--border)}
+
+/* ── 表单 ── */
+input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:4px!important;font-family:inherit;font-size:13px!important}
+input:focus,textarea:focus{border-color:var(--purple)!important;box-shadow:0 0 6px rgba(61,96,112,.12)}
+:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+
+/* ── 标签/芯片 ── */
+.chip{border-radius:4px}.chip.selected{background:var(--gold);color:#fff;font-weight:600}
+.tab-btn{font-size:13px}.tab-btn.active{color:var(--purple);border-bottom-color:var(--purple)}
+.tab-bar{border-bottom:1px solid var(--border)}
+.btn-primary{background:var(--purple);border-color:var(--purple);color:#fff;border-radius:4px;font-weight:600}
+.btn-primary:hover{background:var(--purple-hover)}.btn-ghost:hover{color:var(--purple)}
+
+/* ── 细节 ── */
+.ach-progress-fill{background:var(--gold)}.story-round-badge{background:rgba(184,80,90,.08);color:var(--gold);border-radius:4px;font-size:10px;letter-spacing:1px}
+.status-label{color:var(--text-dim);font-size:10px;letter-spacing:1px}.status-value{color:var(--text)}
+.save-card-upload{background:rgba(184,80,90,.06);border:1px dashed var(--gold-dim);color:var(--gold);border-radius:4px}
+.achievement-toast{border:1px solid var(--gold);background:var(--bg-panel);border-radius:4px 16px 4px 16px}
+.ending-modal{border-top:4px solid var(--gold);border-radius:4px}
+#ending-narrative{border-left:3px solid var(--gold);border-radius:4px 10px 10px 4px}
+
+/* ── 滚动条 ── */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#d8c8b8;border-radius:0}::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+
+/* ── 加载/错误 ── */
+.spinner{border-color:var(--border);border-top-color:var(--gold)}
+#loading-indicator span{color:var(--text-dim)}
+#error-box{background:var(--red-dim);border-color:var(--red);border-left:4px solid var(--red);border-radius:4px}
+#status-panel{border:1px solid var(--border);border-radius:4px 14px 4px 14px;background:var(--bg-panel)}
+.vars-toggle{font-size:11px;letter-spacing:1px}
+.status-value{cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s}
+.status-value:hover{border-bottom-color:var(--gold)}
+
+/* ═══════════ 响应式 ═══════════ */
+@media (max-width:900px){
+  .image-frame{margin:18px 6px 20px;padding:8px 10px}
+  .image-frame::before{top:-12px;left:-6px;right:-6px;height:13px;border-radius:6px}
+  .image-frame::after{bottom:-14px;left:-8px;right:-8px;height:15px;border-radius:7px}
+  .game-title{font-size:16px;letter-spacing:4px}.game-title::before,.game-title::after{font-size:11px}
+}
+@media (max-width:480px){
+  .image-frame{margin:14px 4px 18px;padding:6px 8px}
+  .image-frame::before{top:-10px;left:-4px;right:-4px;height:11px;border-radius:5px}
+  .image-frame::after{bottom:-12px;left:-6px;right:-6px;height:13px;border-radius:6px}
+  .option-btn{border-radius:4px 16px 4px 16px}.game-title{font-size:14px}
+}

@@ -3,49 +3,61 @@
    依赖：state.js
    ═══════════════════════════════════════════ */
 
-// ── 通用对话框 ──
-let _pendingDialogDone = null;  // 追踪当前活跃对话框，防止重叠
+// ── 通用对话框（队列化防竞争）──
+let _dialogQueue = [];
+let _dialogActive = false;
 
 function showDialog(message, options = {}) {
-  // 关闭上一个未完成的对话框
-  if (_pendingDialogDone) { _pendingDialogDone(null); _pendingDialogDone = null; }
-
   const { type = 'alert', placeholder = '', defaultValue = '' } = options;
   return new Promise((resolve) => {
-    _pendingDialogDone = resolve;
-    const overlay = $('#dialog-overlay');
-    if (!overlay) { _pendingDialogDone = null; resolve(null); return; }
-    $('#dialog-message').textContent = message;
-    const inputRow = $('#dialog-input-row');
-    const input = $('#dialog-input');
-    if (type === 'prompt') {
-      inputRow.style.display = '';
-      input.value = defaultValue;
-      input.placeholder = placeholder;
-      input.focus();
-    } else {
-      inputRow.style.display = 'none';
-    }
-    $('#dialog-cancel').style.display = (type === 'alert') ? 'none' : '';
-    $('#dialog-ok').textContent = (type === 'alert') ? '关闭' : '确定';
-    overlay.classList.add('active');
-
-    function done(value) {
-      _pendingDialogDone = null;
-      overlay.classList.remove('active');
-      resolve(value);
-    }
-    $('#dialog-ok').onclick = function() { done(type === 'prompt' ? input.value : true); };
-    $('#dialog-cancel').onclick = function() {
-      done(type === 'confirm' ? false : (type === 'prompt' ? null : undefined));
-    };
-    overlay.onclick = function(e) {
-      if (e.target === overlay) done(type === 'confirm' ? false : (type === 'prompt' ? null : undefined));
-    };
-    input.onkeydown = function(e) {
-      if (e.key === 'Enter') done(type === 'prompt' ? input.value : true);
-    };
+    _dialogQueue.push({ message, type, placeholder, defaultValue, resolve });
+    if (!_dialogActive) _processDialogQueue();
   });
+}
+
+function _processDialogQueue() {
+  if (_dialogQueue.length === 0) { _dialogActive = false; return; }
+  _dialogActive = true;
+  var item = _dialogQueue.shift();
+
+  const overlay = $('#dialog-overlay');
+  if (!overlay) { item.resolve(null); _processDialogQueue(); return; }
+  $('#dialog-message').textContent = item.message;
+  const inputRow = $('#dialog-input-row');
+  const input = $('#dialog-input');
+  if (item.type === 'prompt') {
+    inputRow.style.display = '';
+    input.value = item.defaultValue;
+    input.placeholder = item.placeholder;
+    input.focus();
+  } else {
+    inputRow.style.display = 'none';
+  }
+  $('#dialog-cancel').style.display = (item.type === 'alert') ? 'none' : '';
+  $('#dialog-ok').textContent = (item.type === 'alert') ? '关闭' : '确定';
+  overlay.classList.add('active');
+
+  function done(value) {
+    overlay.classList.remove('active');
+    // 清理事件绑定：克隆节点替换以移除所有监听器
+    var newOk = $('#dialog-ok').cloneNode(true);
+    var newCancel = $('#dialog-cancel').cloneNode(true);
+    var newOverlay = overlay.cloneNode(true);
+    if ($('#dialog-ok').parentNode) $('#dialog-ok').parentNode.replaceChild(newOk, $('#dialog-ok'));
+    if ($('#dialog-cancel').parentNode) $('#dialog-cancel').parentNode.replaceChild(newCancel, $('#dialog-cancel'));
+    item.resolve(value);
+    _processDialogQueue();
+  }
+  $('#dialog-ok').onclick = function() { done(item.type === 'prompt' ? input.value : true); };
+  $('#dialog-cancel').onclick = function() {
+    done(item.type === 'confirm' ? false : (item.type === 'prompt' ? null : undefined));
+  };
+  overlay.onclick = function(e) {
+    if (e.target === overlay) done(item.type === 'confirm' ? false : (item.type === 'prompt' ? null : undefined));
+  };
+  input.onkeydown = function(e) {
+    if (e.key === 'Enter') done(item.type === 'prompt' ? input.value : true);
+  };
 }
 
 // ── 便捷方法 ──

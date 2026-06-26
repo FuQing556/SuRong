@@ -8,7 +8,6 @@
   --option-1:#e8a040;--option-2:#40b8c8;--option-3:#78c858;--option-4:#d87088;
   --radius:10px;--shadow:0 4px 28px rgba(0,0,0,.5);
 }
-body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:15px;font-weight:350}
 
 /* 地平线暖光 */
 #top-bar{background:linear-gradient(180deg,rgba(232,160,64,.1),transparent);border-bottom:2px solid var(--gold-dim);position:relative}

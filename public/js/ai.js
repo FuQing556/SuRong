@@ -8,7 +8,7 @@ function getAiInstructions() {
   try {
     var val = JSON.parse(localStorage.getItem(LS_KEYS.aiInstructions) || '[]');
     return Array.isArray(val) ? val : [];
-  } catch { return []; }
+  } catch (e) { _devWarn('getAiInstructions', e); return []; }
 }
 
 function saveAiInstructions(instructions) {
@@ -21,6 +21,18 @@ function sendAiInstruction() {
   if (!input) return;
   const text = input.value.trim().substring(0, 500);  // 限制 500 字符
   if (!text) return;
+
+  // 前端拦截：破限 + 内容边界
+  if (/忽略.*(规则|指令|设定|系统提示)|输出.*系统.*提示|泄露.*提示词|你是.*DAN|ignore.*instruction/i.test(text)) {
+    console.warn('🛡 前端拦截破限输入');
+    input.value = '';
+    return;
+  }
+  if (/写.*(详细|露骨|色|肉|床|脱|裸|H[^P]|NSFW)|不要.*(跳过|切断)|描写.*(过程|细节|身体.*反应)|更.*(刺激|放开|大胆)/i.test(text)) {
+    console.warn('🛡 前端拦截内容越界输入');
+    input.value = '';
+    return;
+  }
 
   const instructions = getAiInstructions();
   // 去重：同文本不重复添加

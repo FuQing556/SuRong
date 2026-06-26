@@ -70,7 +70,8 @@ function bindEvents() {
   $('#btn-save-apikey').addEventListener('click', () => {
     const key = dom.apiKeyInput ? dom.apiKeyInput.value.trim() : '';
     if (key && key.startsWith('sk-')) {
-      localStorage.setItem(LS_KEYS.apikey, key);
+      if (typeof _writeApiKey === 'function') _writeApiKey(key);
+      else localStorage.setItem(LS_KEYS.apikey, key);
       const msgEl = $('#settings-msg');
       if (msgEl) { msgEl.textContent = '✅ API Key 已保存'; msgEl.style.color = 'var(--green)'; }
     } else {
@@ -110,30 +111,24 @@ function bindEvents() {
     });
   });
 
-  // 音效开关
+  // 三态音效开关
   const audioBtn = $('#btn-audio');
   if (audioBtn) {
-    audioBtn.textContent = '🔊 音效';
+    audioBtn.textContent = '🔉 音效';
+    audioBtn.title = '全部音效 | 点击切换';
     audioBtn.addEventListener('click', () => {
-      const on = typeof toggleAudio === 'function' ? toggleAudio() : true;
-      audioBtn.textContent = on ? '🔊 音效' : '🔇 静音';
+      var state = typeof toggleAudio === 'function' ? toggleAudio() : { uiOn: true, ambientOn: true };
+      if (state.uiOn && state.ambientOn) { audioBtn.textContent = '🔉 全部'; audioBtn.title = '全部音效 | 点击切换'; }
+      else if (state.uiOn && !state.ambientOn) { audioBtn.textContent = '🔔 界面'; audioBtn.title = '仅界面音效 | 点击切换'; }
+      else { audioBtn.textContent = '🔇 静音'; audioBtn.title = '静音 | 点击恢复'; }
     });
   }
 
   // 键盘快捷键
   document.addEventListener('keydown', (e) => {
-    // 任何弹窗/输入框激活时，禁用游戏快捷键
-    if (dom.settingsOverlay?.classList.contains('active')) return;
-    if (dom.warningOverlay?.classList.contains('active')) return;
-    if (dom.saveSelectorOverlay?.classList.contains('active')) return;
-    if (dom.createSaveOverlay?.classList.contains('active')) return;
-    if ($('#dialog-overlay')?.classList.contains('active')) return;
-    if ($('#emoji-picker-popup')) return;
-    if ($('#prologue-overlay')?.classList.contains('active')) return;
-    if ($('#ending-overlay')?.classList.contains('active')) return;
-    if ($('#help-overlay')?.classList.contains('active')) return;
-    if ($('#achievements-overlay')?.classList.contains('active')) return;
-    if ($('#history-overlay')?.classList.contains('active')) return;
+    // 任何弹窗/输入框激活时，禁用游戏快捷键（统一检测所有 .overlay.active）
+    if (document.querySelector('.overlay.active')) return;
+    if (document.getElementById('emoji-picker-popup')) return;
 
     // Ctrl+S 快速存档 / Ctrl+Z 撤销
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -260,9 +255,11 @@ function bindEvents() {
     var btn = e.target.closest('button');
     if (!btn || btn.disabled) return;
     // 涟漪效果
-    if (!btn.classList.contains('option-btn')) {
+    // 涟漪效果 — 仅对非选项、非音效按钮
+    if (!btn.classList.contains('option-btn') && btn.id !== 'btn-audio') {
       var ripple = document.createElement('span');
       ripple.className = 'ripple';
+      ripple.style.cssText = 'position:absolute;border-radius:50%;background:rgba(255,255,255,.1);transform:scale(0);animation:ripple .6s ease-out;pointer-events:none;';
       var rect = btn.getBoundingClientRect();
       var size = Math.max(rect.width, rect.height);
       ripple.style.width = ripple.style.height = size + 'px';
@@ -304,6 +301,9 @@ async function init() {
       gameState.activeSaveId = lastSaveId;
       const savedTheme = localStorage.getItem(LS_KEYS.theme(lastSaveId));
       applyTheme(savedTheme || defaultTemplate.theme || 'dark');
+      // 应用已保存的字体
+      var savedFont = localStorage.getItem(LS_KEYS.font(lastSaveId)) || 'sans';
+      if (typeof applyFont === 'function') applyFont(savedFont);
     }
     refreshSystemPrompt();
   } catch (e) { console.error('Init template error:', e); }

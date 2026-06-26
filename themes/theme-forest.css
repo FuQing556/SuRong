@@ -8,7 +8,6 @@
   --option-1:#e8a840;--option-2:#50a8d0;--option-3:#c870d0;--option-4:#e05848;
   --radius:14px;--shadow:0 4px 28px rgba(0,16,8,.55);
 }
-body{font-family:Georgia,'Noto Serif SC','Times New Roman','Microsoft YaHei',serif;font-size:15px;font-weight:400}
 
 /* 落叶粒子 — 暖金色调 */
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;

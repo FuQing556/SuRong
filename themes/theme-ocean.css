@@ -8,7 +8,6 @@
   --option-1:#f0a060;--option-2:#40a8e0;--option-3:#50d090;--option-4:#e058a0;
   --radius:18px;--shadow:0 4px 28px rgba(0,0,0,.5);
 }
-body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:14px;font-weight:350;letter-spacing:.3px}
 
 /* 气泡粒子 — 暖色点缀 */
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;

@@ -1,13 +1,14 @@
 /* ═══════════════════════════════════════════
    audio.js — Web Audio API 合成音效 + 主题氛围
    依赖：state.js
-   v2: 统一路由、null安全、柔化音色、主题贴合
+   v3: 三态开关(🔉全部/🔔仅UI/🔇静音) + 全主题音量标准化 + 樱花新音色
    ═══════════════════════════════════════════ */
 
 let _audioCtx = null;
 let _ambientNode = null;
 let _ambientGain = null;
-let _audioOn = true;
+let _uiAudioOn = true;     // UI 点击音效
+let _ambientOn = true;      // 氛围背景音
 let _userGestured = false;
 
 // ── 全局用户手势门控 ──
@@ -17,8 +18,7 @@ let _userGestured = false;
     if (_audioCtx && _audioCtx.state === 'suspended') {
       _audioCtx.resume().catch(() => {});
     }
-    // 手势解锁后，如果音频开关是开的，启动氛围音效
-    if (_audioOn && !_ambientNode) {
+    if (_ambientOn && !_ambientNode) {
       var t = (typeof gameState !== 'undefined' && gameState._currentTheme) || 'dark';
       startAmbient(t);
     }
@@ -40,17 +40,14 @@ function getCtx() {
   } catch (e) { return null; }
 }
 
-// ── 辅助：安全获取ctx，失败静默 ──
-function _safeCtx() {
-  if (!_audioOn) return null;
-  return getCtx();
-}
+// ── 辅助：UI音效仅检查 _uiAudioOn；氛围音效检查 _ambientOn ──
+function _safeCtx() { return _uiAudioOn ? getCtx() : null; }
+function _safeAmbientCtx() { return _ambientOn ? getCtx() : null; }
 
 // ═══════════════════════════════════════════
-//  UI 音效
+//  UI 音效（不受氛围开关影响）
 // ═══════════════════════════════════════════
 
-// 通用UI按钮点击 — 极轻的咔嗒声（600Hz，0.03s），与游戏选项区分
 function playUIClick() {
   const ctx = _safeCtx();
   if (!ctx) return;
@@ -66,7 +63,6 @@ function playUIClick() {
   } catch (e) { /* audio not available */ }
 }
 
-// 游戏选项点击 — 短促明亮的"咔嗒"声（1200Hz正弦，0.05s）
 function playClick() {
   const ctx = _safeCtx();
   if (!ctx) return;
@@ -83,12 +79,11 @@ function playClick() {
   } catch (e) { /* audio not available */ }
 }
 
-// 成就解锁 — C-E-G 大三和弦，三角波，温暖明亮
 function playAchievement() {
   const ctx = _safeCtx();
   if (!ctx) return;
   try {
-    const notes = [523, 659, 784];  // C5 E5 G5
+    const notes = [523, 659, 784];
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -104,7 +99,6 @@ function playAchievement() {
   } catch (e) { /* audio not available */ }
 }
 
-// 错误音效 — 柔和的低音三角波下行（替代刺耳锯齿波）
 function playError() {
   const ctx = _safeCtx();
   if (!ctx) return;
@@ -122,7 +116,7 @@ function playError() {
 }
 
 // ═══════════════════════════════════════════
-//  氛围音效（按主题）
+//  氛围音效（v3: 统一基准增益 0.012 + 白噪声类降内部增益）
 // ═══════════════════════════════════════════
 
 function stopAmbient() {
@@ -132,41 +126,39 @@ function stopAmbient() {
 
 function startAmbient(themeName) {
   stopAmbient();
-  const ctx = _safeCtx();
+  const ctx = _safeAmbientCtx();
   if (!ctx) return;
 
   try {
-    // 统一的主增益节点 — 所有氛围音效都经过此节点
+    // 统一主增益 — 所有氛围音效经此节点，基准 0.012（约为UI点击的15%）
     _ambientGain = ctx.createGain();
-    _ambientGain.gain.value = 0.02;  // 基准音量（下调，原来0.025偏高）
+    _ambientGain.gain.value = 0.06;
     _ambientGain.connect(ctx.destination);
 
     switch (themeName) {
 
-      // ── 🌿 森林：柔和风吟（宽带低通滤波白噪声，模拟树叶沙沙）──
+      // ── 🌿 森林：柔风（白噪声降增益）──
       case 'forest': {
         const buf = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate);
         const data = buf.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.08;
         const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
-        // 低频为主的柔和风声 — lowpass 400Hz, 窄Q模拟自然风
         const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass'; filter.frequency.value = 400; filter.Q.value = 0.5;
-        const fGain = ctx.createGain(); fGain.gain.value = 0.7;
+        filter.type = 'lowpass'; filter.frequency.value = 350; filter.Q.value = 0.5;
+        const fGain = ctx.createGain(); fGain.gain.value = 0.25;
         src.connect(filter); filter.connect(fGain); fGain.connect(_ambientGain); src.start();
         _ambientNode = src;
         break;
       }
 
-      // ── 🌊 深海：低频潮汐调制噪声 ──
+      // ── 🌊 深海：低频潮汐（降噪声幅度）──
       case 'ocean': {
         const buf = ctx.createBuffer(1, ctx.sampleRate * 6, ctx.sampleRate);
         const data = buf.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.25;
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.07;
         const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass'; filter.frequency.value = 200; filter.Q.value = 0.3;
-        // LFO 调制模拟潮汐涨落
         const lfo = ctx.createOscillator(); lfo.frequency.value = 0.1;
         const lfoGain = ctx.createGain(); lfoGain.gain.value = 100;
         lfo.connect(lfoGain); lfoGain.connect(filter.frequency);
@@ -176,7 +168,7 @@ function startAmbient(themeName) {
         break;
       }
 
-      // ── 💜 赛博：低嗡科技感底噪 ──
+      // ── 💜 赛博：低嗡科技感（不变，本身很安静）──
       case 'cyber': {
         const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 55;
         const gain2 = ctx.createGain(); gain2.gain.value = 0.02;
@@ -188,22 +180,20 @@ function startAmbient(themeName) {
         break;
       }
 
-      // ── 🏯 修仙：柔和持续底嗡 + 稀疏低音风铃（替代随机高频刺耳风铃）──
+      // ── 🏯 修仙：温暖pad + 稀疏风铃 ──
       case 'xianxia': {
-        // 持续嗡鸣底音 — 温暖的pad
         const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 65;
-        const osc2 = ctx.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = 98; // 五度泛音
+        const osc2 = ctx.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = 98;
         const gPad = ctx.createGain(); gPad.gain.value = 0.015;
         osc.connect(gPad); osc2.connect(gPad); gPad.connect(_ambientGain);
         osc.start(); osc2.start();
 
-        // 稀疏的柔和风铃 — 每次只发一个音，间隔更长（4-7秒），音量更低
-        const bells = [523, 587, 659, 784, 880]; // C5-D5-E5-G5-A5 五声音阶
+        const bells = [523, 587, 659, 784, 880];
         let bellTimer = null;
         const chime = () => {
-          if (!_audioOn || !_ambientGain) return;
+          if (!_ambientOn || !_ambientGain) return;
           const o = ctx.createOscillator(); o.type = 'sine';
-          o.frequency.value = bells[Math.floor(Math.random() * bells.length)]; // 不升八度，原始频率更柔和
+          o.frequency.value = bells[Math.floor(Math.random() * bells.length)];
           const g = ctx.createGain();
           g.gain.setValueAtTime(0.015, ctx.currentTime);
           g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.5);
@@ -212,19 +202,15 @@ function startAmbient(themeName) {
         };
         bellTimer = setInterval(chime, 4000 + Math.random() * 3000);
         _ambientNode = {
-          stop: () => {
-            clearInterval(bellTimer);
-            try { osc.stop(); osc2.stop(); } catch (e) {}
-          }
+          stop: () => { clearInterval(bellTimer); try { osc.stop(); osc2.stop(); } catch (e) {} }
         };
         break;
       }
 
-      // ── 🌃 子夜：55Hz低频 + 极慢LFO调制（替代28Hz不可闻频率）──
+      // ── 🌃 子夜：55Hz + 极慢LFO ──
       case 'midnight': {
         const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 55;
         const gain2 = ctx.createGain(); gain2.gain.value = 0.018;
-        // 极慢LFO调制频率，产生宇宙背景的"呼吸感"
         const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05;
         const lfoGain = ctx.createGain(); lfoGain.gain.value = 8;
         lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
@@ -235,10 +221,10 @@ function startAmbient(themeName) {
         break;
       }
 
-      // ── ✨ 鎏金：110Hz基频 + 弱五度泛音（金属共鸣感）──
+      // ── ✨ 鎏金：110Hz + 五度泛音 ──
       case 'golden': {
         const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 110;
-        const osc2 = ctx.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = 165; // 纯五度泛音
+        const osc2 = ctx.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = 165;
         const gain2 = ctx.createGain(); gain2.gain.value = 0.016;
         const gain3 = ctx.createGain(); gain3.gain.value = 0.006;
         osc.connect(gain2); osc2.connect(gain3);
@@ -248,17 +234,32 @@ function startAmbient(themeName) {
         break;
       }
 
-      // ── 🌸 樱花：柔风（低频宽带风吟，替代原来偏高频的bandpass）──
+      // ── 🌸 樱花 v3：柔光五度pad + 稀疏高音风铃（无白噪声）──
       case 'sakura': {
-        const buf = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
-        const d = buf.getChannelData(0);
-        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.1;
-        const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
-        // 低通滤波，只保留250Hz以下 → 温暖柔和的微风
-        const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 250; f.Q.value = 0.4;
-        const fGain2 = ctx.createGain(); fGain2.gain.value = 0.6;
-        src.connect(f); f.connect(fGain2); fGain2.connect(_ambientGain); src.start();
-        _ambientNode = src;
+        // 极柔的纯四度泛音垫 — 330Hz + 392Hz，模拟花瓣落在水面的静谧
+        const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 330;
+        const osc2 = ctx.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = 392;
+        const gPad = ctx.createGain(); gPad.gain.value = 0.03;  // 轻柔可闻的底音垫
+        osc.connect(gPad); osc2.connect(gPad); gPad.connect(_ambientGain);
+        osc.start(); osc2.start();
+
+        // 稀疏高音风铃 — 比修仙更高更轻更稀疏（5-8秒间隔）
+        const bells = [659, 784, 880, 988, 1047];  // E5 G5 A5 B5 C6
+        let bellTimer = null;
+        const chime = () => {
+          if (!_ambientOn || !_ambientGain) return;
+          const o = ctx.createOscillator(); o.type = 'sine';
+          o.frequency.value = bells[Math.floor(Math.random() * bells.length)];
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.035, ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.0);
+          o.connect(g); g.connect(_ambientGain);
+          o.start(); o.stop(ctx.currentTime + 1.9);
+        };
+        bellTimer = setInterval(chime, 5000 + Math.random() * 3000);
+        _ambientNode = {
+          stop: () => { clearInterval(bellTimer); try { osc.stop(); osc2.stop(); } catch (e) {} }
+        };
         break;
       }
 
@@ -279,14 +280,34 @@ function startAmbient(themeName) {
   } catch (e) { /* audio not available */ }
 }
 
+// ═══════════════════════════════════════════
+//  三态音效开关
+// ═══════════════════════════════════════════
+
 function toggleAudio() {
-  _audioOn = !_audioOn;
-  if (!_audioOn) { stopAmbient(); }
-  else { const t = gameState._currentTheme || 'dark'; startAmbient(t); }
-  return _audioOn;
+  // 循环: 全部 → 仅UI → 静音 → 全部
+  if (_uiAudioOn && _ambientOn) {
+    // 当前全部开 → 仅UI
+    _ambientOn = false;
+    stopAmbient();
+  } else if (_uiAudioOn && !_ambientOn) {
+    // 当前仅UI → 静音
+    _uiAudioOn = false;
+    _ambientOn = false;
+    stopAmbient();
+  } else {
+    // 当前静音 → 全部开
+    _uiAudioOn = true;
+    _ambientOn = true;
+    const t = (typeof gameState !== 'undefined' && gameState._currentTheme) || 'dark';
+    startAmbient(t);
+  }
+  return { uiOn: _uiAudioOn, ambientOn: _ambientOn };
 }
 
-function isAudioOn() { return _audioOn; }
+function isAudioOn() { return _uiAudioOn || _ambientOn; }
+function isAmbientOn() { return _ambientOn; }
+function isUiAudioOn() { return _uiAudioOn; }
 
-console.log('🔊 audio.js v2 已加载');
+console.log('🔊 audio.js v3 已加载');
 window.XIXI.modulesLoaded = (window.XIXI.modulesLoaded || []).concat('audio');

@@ -9,32 +9,54 @@ function getSaveKey(templateId, slot) {
 }
 
 // ── 自动/手动存档 ──
+// v5: fullHistory 截断到最近 30 轮 + requestIdleCallback 异步写入
 function saveGameState(slot) {
   if (!gameState.gameStarted || gameState.fullHistory.length < 2) return;
   const tpl = getActiveTemplate();
   const saveSlot = (slot !== undefined) ? slot : 0;
   const saveKey = getSaveKey(gameState.activeSaveId || tpl.id || 'default', saveSlot);
+
+  // 截断 fullHistory 到最近 30 轮（60条消息），防止 localStorage 膨胀
+  const MAX_STORED_ROUNDS = 30;
+  var wasTruncated = gameState.fullHistory.length > MAX_STORED_ROUNDS * 2;
+  var truncatedHistory = wasTruncated
+    ? gameState.fullHistory.slice(-MAX_STORED_ROUNDS * 2)
+    : gameState.fullHistory;
+  // 截断后重置摘要索引，防止 summarisedCount 越界
+  var clampedSummarisedCount = wasTruncated ? 0 : gameState.summarisedCount;
+  var clampedSummary = wasTruncated ? '' : gameState.summary;
+
   const saveData = {
+    dataVersion: 2,  // 存档格式版本，continueGame时做兼容迁移
     templateId: gameState.activeSaveId || tpl.id || 'default',
     slot: saveSlot,
-    fullHistory: gameState.fullHistory,
-    summary: gameState.summary,
-    summarisedCount: gameState.summarisedCount,
+    fullHistory: truncatedHistory,
+    summary: clampedSummary,
+    summarisedCount: clampedSummarisedCount,
     currentOptions: gameState.currentOptions,
     lastPlayed: Date.now(),
-    roundNumber: gameState.fullHistory.filter(m => m.role === 'user').length,
+    roundNumber: gameState.fullHistory.filter(function(m) { return m.role === 'user'; }).length,
     theme: gameState._currentTheme || tpl.theme || 'dark',
     fieldHistory: gameState.fieldHistory,
     achievementFlags: gameState.achievementFlags,
   };
-  try { localStorage.setItem(saveKey, JSON.stringify(saveData)); gameState._saveFailed = false; }
-  catch (e) {
-    console.error('💾 存档失败！localStorage 可能已满:', e.message,
-      '存档:', saveKey, '大小:', JSON.stringify(saveData).length, '字符');
-    gameState._saveFailed = true;  // 供 UI 层检测并提醒用户
+
+  // 异步写入 localStorage，避免阻塞 UI 线程
+  var _doSave = function() {
+    try { localStorage.setItem(saveKey, JSON.stringify(saveData)); gameState._saveFailed = false; }
+    catch (e) {
+      console.error('💾 存档失败！localStorage 可能已满:', e.message,
+        '存档:', saveKey, '大小:', JSON.stringify(saveData).length, '字符');
+      gameState._saveFailed = true;
+    }
+    updateSaveIndicator();
+  };
+
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(_doSave, { timeout: 2000 });
+  } else {
+    setTimeout(_doSave, 0);
   }
-  // 更新保存时间指示器
-  updateSaveIndicator();
 }
 
 // ── 读取存档（纯读取，不修改 gameState）──
@@ -45,7 +67,7 @@ function loadGameState(templateId, slot) {
     if (data && data.fullHistory && data.fullHistory.length > 0) {
       return data;
     }
-  } catch (e) { /* corrupt data */ }
+  } catch (e) { _devWarn('loadGameState corrupted', e); }
   return null;
 }
 
@@ -87,8 +109,7 @@ function loadSaves() {
     const userSaves = Array.isArray(raw) ? raw : [];
     return [...saves, ...userSaves];
   } catch (e) {
-    console.error('📂 存档列表损坏:', e.message);
-    // 尝试保留旧数据，不清空；下次保存时会自然修复
+    _devWarn('loadSaves corrupted', e);
     return saves;
   }
 }

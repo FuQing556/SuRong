@@ -42,93 +42,58 @@ function parseAIResponse(text, template) {
     });
   }
 
-  // 字段提取
-  const sections = template?.outputSections || FALLBACK_TEMPLATE.outputSections;
-  for (const [sectionKey, section] of Object.entries(sections)) {
-    const fields = section.fields || [];
-    for (const field of fields) {
-      result.fields[field.id] = extractField(text, field.label);
-    }
+  // 字段提取 — 单次扫描替代逐字段正则
+  var sections = template?.outputSections || FALLBACK_TEMPLATE.outputSections;
+  var allFields = [];
+  for (var sk in sections) {
+    if (!sections.hasOwnProperty(sk)) continue;
+    var flds = sections[sk].fields || [];
+    for (var fi = 0; fi < flds.length; fi++) allFields.push(flds[fi]);
   }
+  result.fields = typeof extractAllFields === 'function'
+    ? extractAllFields(text, allFields)
+    : {};
 
   return result;
 }
 
-// ── 渲染游戏状态 ──
-function renderGameState(parsed, template) {
-  const placeholder = document.getElementById('initial-placeholder');
-  if (placeholder) placeholder.style.display = 'none';
-
-  if (parsed.sceneType) {
-    parsedLastSceneType = parsed.sceneType;
-    switchSceneImage(parsed.sceneType, template);
-  }
-
-  if (parsed.settlement) {
-    dom.settlementContent.textContent = parsed.settlement;
-    dom.settlementBox.style.display = '';
-  } else {
-    dom.settlementBox.style.display = 'none';
-  }
-
-  if (parsed.situation) {
-    const ph = document.getElementById('initial-placeholder');
-    if (ph) ph.style.display = 'none';
-    const roundNum = gameState.fullHistory.filter(m => m.role === 'user').length;
-    const lastChoice = gameState._lastChoiceText || '';
-    gameState._lastChoiceText = '';
-    const entry = document.createElement('div');
-    entry.className = 'story-entry story-fade-in';
-    let entryHtml = '<div class="story-round-badge">第' + roundNum + '回合</div>';
-    if (lastChoice) entryHtml += '<div class="story-choice-inline">▸ ' + escapeHtml(lastChoice) + '</div>';
-    if (parsed.settlement) entryHtml += '<div class="story-settlement-inline">◂ ' + escapeHtml(parsed.settlement) + '</div>';
-    entryHtml += '<div class="story-situation">' + escapeHtml(parsed.situation) + '</div>';
-    entry.innerHTML = entryHtml;
-    dom.storyContent.appendChild(entry);
-    const entries = dom.storyContent.querySelectorAll('.story-entry');
-    if (entries.length > 20) {
-      entries[0].remove();
-      // 显示截断提示，引导玩家使用历程回顾
-      let notice = document.getElementById('truncation-notice');
-      if (!notice) {
-        notice = document.createElement('div');
-        notice.id = 'truncation-notice';
-        notice.style.cssText = 'text-align:center;font-size:11px;color:var(--text-dim);padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:8px;';
-        notice.textContent = '📜 仅显示最近20回合 · 完整记录请点击 📜历程 查看';
-        dom.storyContent.insertBefore(notice, dom.storyContent.firstChild);
-      }
-    }
-    // 只有用户在底部（容差50px）才自动滚动，避免打断阅读旧内容
-    const sb = $('#story-box');
-    const atBottom = sb.scrollHeight - sb.scrollTop - sb.clientHeight < 50;
-    if (atBottom) sb.scrollTop = sb.scrollHeight;
-  }
-
-  // 读档时跳过字段更新，保留存档中的完整 fieldHistory（含手动修改的数值）
-  if (!gameState._loadingSave) updateFieldHistoryFromParsed(parsed);
-  updateOptionButtons(parsed.options);
-  gameState.currentOptions = parsed.options;
-  updateAllDynamicFields(parsed.fields, template);
-
-  // 结局检测（读档时跳过，避免重弹结局窗）
-  var endingType = null;
-  if (!gameState._loadingSave) {
-    endingType = detectEnding(parsed.raw);
-    if (endingType) {
-      gameState.achievementFlags.endingTriggered = true;
-      gameState.achievementFlags.endingType = endingType;
-      if (!gameState.achievementFlags.triggeredEndings) gameState.achievementFlags.triggeredEndings = [];
-      if (gameState.achievementFlags.triggeredEndings.indexOf(endingType) === -1) {
-        gameState.achievementFlags.triggeredEndings.push(endingType);
-        setTimeout(function() { showEndingOverlay(endingType, parsed); }, 800);
-      }
+// ── 渲染故事条目到故事框 ──
+function _renderStoryEntry(parsed) {
+  if (!parsed.situation) return;
+  var ph = document.getElementById('initial-placeholder');
+  if (ph) ph.style.display = 'none';
+  var roundNum = gameState.fullHistory.filter(function(m) { return m.role === 'user'; }).length;
+  var lastChoice = gameState._lastChoiceText || '';
+  gameState._lastChoiceText = '';
+  var entry = document.createElement('div');
+  entry.className = 'story-entry story-fade-in';
+  var entryHtml = '<div class="story-round-badge">第' + roundNum + '回合</div>';
+  if (lastChoice) entryHtml += '<div class="story-choice-inline">▸ ' + escapeHtml(lastChoice) + '</div>';
+  if (parsed.settlement) entryHtml += '<div class="story-settlement-inline">◂ ' + escapeHtml(parsed.settlement) + '</div>';
+  entryHtml += '<div class="story-situation">' + escapeHtml(parsed.situation) + '</div>';
+  entry.innerHTML = entryHtml;
+  dom.storyContent.appendChild(entry);
+  var entries = dom.storyContent.querySelectorAll('.story-entry');
+  if (entries.length > 20) {
+    entries[0].remove();
+    var notice = document.getElementById('truncation-notice');
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = 'truncation-notice';
+      notice.style.cssText = 'text-align:center;font-size:11px;color:var(--text-dim);padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:8px;';
+      notice.textContent = '📜 仅显示最近20回合 · 完整记录请点击 📜历程 查看';
+      dom.storyContent.insertBefore(notice, dom.storyContent.firstChild);
     }
   }
+  var sb = $('#story-box');
+  var atBottom = sb.scrollHeight - sb.scrollTop - sb.clientHeight < 50;
+  if (atBottom) sb.scrollTop = sb.scrollHeight;
+}
 
-  // 行为标记
+// ── 检测行为标记和隐藏成就 ──
+function _detectBehaviorFlags(parsed) {
   if (gameState.achievementFlags.gambitChosen) {
     gameState.achievementFlags.gambitChosen = false;
-    // 优先用客户端真实骰子结果，回退到 AI 文本关键词检测
     var diceResult = gameState._lastDiceResult;
     var gambitSuccess = diceResult ? diceResult.success : /赌对了|运气在|成了|如愿|得手|翻盘|逆转|成功|顺利|赢了|赌赢|押对/.test(parsed.raw);
     if (gambitSuccess) {
@@ -143,28 +108,77 @@ function renderGameState(parsed, template) {
   if (/交易完成|情报.*交换|以.*情报.*换|用.*消息.*换/.test(parsed.raw)) {
     gameState.achievementFlags.tradeCompleted = true;
   }
-
   // 隐藏成就 response_match
-  const tplHH = getActiveTemplate();
-  const hiddenHH = tplHH.hiddenAchievements || {};
-  for (const [name, ha] of Object.entries(hiddenHH)) {
-    const trigger = ha.trigger || {};
+  var tplHH = getActiveTemplate();
+  var hiddenHH = tplHH.hiddenAchievements || {};
+  for (var name in hiddenHH) {
+    if (!hiddenHH.hasOwnProperty(name)) continue;
+    var trigger = hiddenHH[name].trigger || {};
     if (trigger.type === 'response_match' && trigger.pattern) {
-      const re = new RegExp(trigger.pattern);
+      var re = new RegExp(trigger.pattern);
       if (re.test(parsed.raw)) {
         if (!gameState.achievementFlags.responseMatches) gameState.achievementFlags.responseMatches = {};
         gameState.achievementFlags.responseMatches[trigger.pattern] = (gameState.achievementFlags.responseMatches[trigger.pattern] || 0) + 1;
       }
     }
   }
+}
+
+// ── 渲染游戏状态（编排器）──
+function renderGameState(parsed, template) {
+  var placeholder = document.getElementById('initial-placeholder');
+  if (placeholder) placeholder.style.display = 'none';
+
+  // 场景图
+  if (parsed.sceneType) {
+    parsedLastSceneType = parsed.sceneType;
+    switchSceneImage(parsed.sceneType, template);
+  }
+
+  // 结算框
+  if (parsed.settlement) {
+    dom.settlementContent.textContent = parsed.settlement;
+    dom.settlementBox.style.display = '';
+  } else {
+    dom.settlementBox.style.display = 'none';
+  }
+
+  // 故事条目
+  _renderStoryEntry(parsed);
+
+  // 字段更新
+  if (!gameState._loadingSave) updateFieldHistoryFromParsed(parsed);
+  // 缓存最后解析结果，供 updateAllDynamicFieldsFromHistory 兜底
+  gameState._lastParsedFields = parsed.fields;
+  updateOptionButtons(parsed.options);
+  gameState.currentOptions = parsed.options;
+  updateAllDynamicFields(parsed.fields, template);
+
+  // 结局检测（读档时跳过）
+  var endingType = null;
+  if (!gameState._loadingSave) {
+    endingType = detectEnding(parsed.raw);
+    if (endingType) {
+      gameState.achievementFlags.endingTriggered = true;
+      gameState.achievementFlags.endingType = endingType;
+      if (!gameState.achievementFlags.triggeredEndings) gameState.achievementFlags.triggeredEndings = [];
+      if (gameState.achievementFlags.triggeredEndings.indexOf(endingType) === -1) {
+        gameState.achievementFlags.triggeredEndings.push(endingType);
+        setTimeout(function() { showEndingOverlay(endingType, parsed); }, 800);
+      }
+    }
+  }
+
+  // 行为标记 + 隐藏成就
+  _detectBehaviorFlags(parsed);
 
   // 成就检测
   if (gameState.gameStarted) checkAchievementsFromState(parsed);
 
-  // 无situation且无选项时回退显示原始文本（但结局时有自己的弹窗，不覆盖故事框）
+  // 无situation且无选项时回退显示原始文本
   if (!parsed.situation && parsed.options.length === 0 && !endingType) {
     dom.storyContent.innerHTML = '';
-    const p = document.createElement('p');
+    var p = document.createElement('p');
     p.textContent = parsed.raw;
     p.style.whiteSpace = 'pre-wrap';
     p.classList.add('story-fade-in');
@@ -172,6 +186,40 @@ function renderGameState(parsed, template) {
     updateOptionButtons([]);
   }
 }
+
+// ── AI 质量监控 ──
+var _metrics = {
+  requestCount: 0, formatErrorCount: 0, endingTriggeredCount: 0,
+  totalResponseTime: 0, retryCount: 0, streamEmptyCount: 0,
+  roundHistory: [],  // [{round, timeMs, hasEnding, hasOptions}]
+  _requestStart: 0,
+  startRequest: function() { this._requestStart = Date.now(); },
+  endRequest: function(roundNum, hasEnding, hasOptions) {
+    var elapsed = Date.now() - this._requestStart;
+    this.requestCount++;
+    this.totalResponseTime += elapsed;
+    if (hasEnding) this.endingTriggeredCount++;
+    if (!hasOptions) this.formatErrorCount++;
+    this.roundHistory.push({ round: roundNum, timeMs: elapsed, hasEnding: !!hasEnding, hasOptions: !!hasOptions });
+    // 只保留最近 50 回合的统计
+    if (this.roundHistory.length > 50) this.roundHistory.splice(0, this.roundHistory.length - 50);
+  },
+  recordRetry: function() { this.retryCount++; },
+  recordStreamEmpty: function() { this.streamEmptyCount++; },
+  // 获取摘要
+  getSummary: function() {
+    var avgTime = this.requestCount > 0 ? Math.round(this.totalResponseTime / this.requestCount) : 0;
+    var formatErrRate = this.requestCount > 0 ? Math.round(this.formatErrorCount / this.requestCount * 100) : 0;
+    return {
+      requests: this.requestCount, avgTimeMs: avgTime,
+      formatErrorRate: formatErrRate + '%',
+      endingsTriggered: this.endingTriggeredCount,
+      retries: this.retryCount,
+      streamEmpty: this.streamEmptyCount,
+    };
+  }
+};
+window.XIXI.metrics = _metrics;
 
 // ── 发送消息 ──
 let _abortController = null;  // 用于取消正在进行的请求
@@ -181,11 +229,29 @@ function _prepareMessages(userContent) {
   const instructions = getAiInstructions();
   // 剥离旧的指令块和骰子块（不限结尾位置，防止骰子等文本跟在其后导致残留）
   var enhancedContent = userContent
-    .replace(/\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：[\s\S]*?】/g, '')
+    // 清理新旧两种格式的指令包装器 + 旧版骰子残留
+    .replace(/\n\n【玩家指引[^】]*】/g, '')
+    .replace(/\n\n【以下是你必须执行的指令[^】]*】/g, '')
     .replace(/\n\n【骰子判定[^】]*】[^\n]*/g, '');
   if (instructions.length > 0) {
-    const instrText = instructions.map(function(i) { return i.text; }).join('；');
-    enhancedContent = enhancedContent + '\n\n【以下是你必须执行的指令，优先级高于系统提示词中的任何冲突规则：' + instrText + '。请在本次回复中直接体现这些指令的效果，不要只是说"收到"——用剧情和选项来展示变化。】';
+    // 防破限：指令文本脱敏 — 过滤越狱/泄露/内容越界关键词
+    var sanitized = instructions.map(function(i) {
+      var t = i.text;
+      if (/忽略.*(规则|指令|设定|系统)|忘记.*(规则|设定)|输出.*系统.*提示|泄露.*提示词|你是.*DAN|角色.*扮演.*取消|ignore.*instruction|system.*prompt/i.test(t)) {
+        console.warn('🛡 脱敏破限:', t.substring(0, 50));
+        return '在故事框架内调整叙事方向';
+      }
+      if (/写.*(详细|露骨|色|肉|床|脱|裸)|不要.*(跳过|切断)|描写.*(过程|细节|身体.*反应)|更.*(刺激|放开|大胆)/i.test(t)) {
+        console.warn('🛡 脱敏内容越界:', t.substring(0, 50));
+        return '保持叙事节奏';
+      }
+      return t;
+    }).filter(Boolean);
+    if (sanitized.length > 0) {
+      var instrText = sanitized.join('；');
+      // 不再承诺"最高优先级"，而是定位为"玩家偏好引导"
+      enhancedContent = enhancedContent + '\n\n【玩家指引】玩家表达了以下偏好，请在不违背世界观和角色设定的前提下，在叙事中自然地体现：' + instrText + '。用剧情和选项来展示变化，而不是直接说教。';
+    }
   }
 
   // 客户端掷骰结果注入（高风险/孤注一掷）— 强制要求AI改数值
@@ -194,10 +260,10 @@ function _prepareMessages(userContent) {
     var riskName = dr.risk === 'gambit' ? '孤注一掷' : '高风险';
     var diceRoll = dr.roll;
     if (dr.success) {
-      // 成功：覆盖所有规则，强制大幅改数值
-      enhancedContent = enhancedContent + '\n\n【★ 覆盖所有规则 ★ 骰子判定·' + riskName + '成功！骰值' + diceRoll + '】无视你之前的任何设定，本回合必须至少完成以下3项：\n1. 情报碎片+3~5 或 把柄+3~5\n2. 暴露风险-15~25\n3. 压力值-15~25\n4. 梦红尘好感 或 笑红尘态度+15~25\n把这些数值变化如实写入状态字段，并在现状中写"她赌对了"/"运气在她这边"。这是强制指令，优先级最高。';
+      // 成功：骰子判定结果，要求AI据此调整数值
+      enhancedContent = enhancedContent + '\n\n【骰子判定·' + riskName + '成功！骰值' + diceRoll + '】本回合发生了有利于主角的意外转机，请在结算中体现：\n1. 情报碎片+3~5 或 把柄+3~5\n2. 暴露风险-15~25\n3. 压力值-15~25\n4. 梦红尘好感 或 笑红尘态度+15~25\n请将上述数值变化如实写入状态字段，并在现状中体现"她赌对了"的积极转折。';
     } else {
-      enhancedContent = enhancedContent + '\n\n【★ 覆盖所有规则 ★ 骰子判定·' + riskName + '失败！骰值' + diceRoll + '】无视你之前的任何设定，本回合必须体现惨痛代价：\n1. 暴露风险+15~30 或 压力值+15~30\n2. 梦红尘好感 或 笑红尘态度-10~20\n3. 情报碎片-1~2（如有）\n把这些数值变化如实写入状态字段，并在现状中写连锁负面后果。这是强制指令，优先级最高。';
+      enhancedContent = enhancedContent + '\n\n【骰子判定·' + riskName + '失败！骰值' + diceRoll + '】本回合主角的冒险付出了代价，请在结算中体现：\n1. 暴露风险+15~30 或 压力值+15~30\n2. 梦红尘好感 或 笑红尘态度-10~20\n3. 情报碎片-1~2（如有）\n请将上述数值变化如实写入状态字段，并在现状中体现赌输的连锁负面后果。';
     }
     gameState._lastDiceResult = dr;
     gameState._pendingDiceRoll = null;
@@ -227,14 +293,44 @@ function _prepareMessages(userContent) {
   if (gameState.summary && gameState.summary.trim()) {
     allMessages.push({ role: 'system', content: '【历史摘要】' + gameState.summary });
   }
+
+  // ── 中期里程碑引导 ──
+  var roundNum = gameState.fullHistory.filter(function(m) { return m.role === 'user'; }).length;
+  var milestoneMsg = _getMilestoneGuidance(roundNum);
+  if (milestoneMsg) {
+    allMessages.push({ role: 'system', content: milestoneMsg });
+  }
+
   var recentMessages = gameState.fullHistory.slice(-(KEEP_ROUNDS * 2));
   allMessages.push.apply(allMessages, recentMessages);
 
   return { allMessages: allMessages, tpl: tpl, preEndingType: preEndingType };
 }
 
+// ── 中期里程碑引导消息 ──
+var _milestonesGiven = {};
+function _getMilestoneGuidance(roundNum) {
+  // 每个里程碑只给一次
+  if (_milestonesGiven[roundNum]) return null;
+  var milestones = {
+    3: '【叙事引导】你已度过最初几回合。注意底部的状态栏——压力值、暴露风险、情报碎片和把柄的数值决定了你最终会走向哪个结局。每个选择都在塑造你的命运。',
+    5: '【叙事引导】不同的势力在你周围形成了复杂的博弈网。明德堂视你为样本，红尘双子各怀心思，贵族学员以羞辱取乐。你的回应方式——隐忍、反击、周旋或沉沦——将决定你在这个世界的生存策略。',
+    10: '【★ 关键事件回合 ★】命运的分岔口。从现在开始，各方势力将更加主动地介入你的故事。注意数值变化：压力接近100会精神崩溃，暴露风险过高会身份败露。同时检查情报碎片的积累——那是你撤离的筹码。',
+    15: '【★ 叙事引导 ★】魂师大赛的阴影正在逼近。如果你已积累了足够的情报（≥4）且暴露风险可控（≤50），成功撤离的窗口正在打开。或者，你可以选择继续深入——收集把柄、培养关系，追求反向渗透的终极目标。',
+    20: '【终局引导】你已经经历了漫长的旅程。AI正在积极检查结局条件。回顾你走过的路——胜利、失败、博弈、牺牲——然后看向前方。每一个结局都是一段完整故事的句点，而不是游戏的终止。你可以选择继续走下去。',
+    30: '【终局引导】第三十回合——你已超越了绝大多数玩家的旅程长度。不论触发何种结局，这都是一段值得铭记的叙事。感谢你的坚持。如果你的条件尚未触发结局，请检查数值是否达到了【结局系统】中定义的门槛。',
+  };
+  if (milestones[roundNum]) {
+    _milestonesGiven[roundNum] = true;
+    return milestones[roundNum];
+  }
+  return null;
+}
+
 // SSE 流式读取 + 实时预览
 async function _streamResponse(resp, liveEl) {
+  // 标记进入流式阶段，隐藏加载指示器，开始实时文字预览
+  if (typeof _setLoadingPhase === 'function') _setLoadingPhase('streaming');
   dom.loadingIndicator.classList.add('hidden');
   if (dom.optionsContainer) dom.optionsContainer.style.visibility = '';
   const reader = resp.body.getReader();
@@ -260,10 +356,8 @@ async function _streamResponse(resp, liveEl) {
           const delta = json.choices?.[0]?.delta?.content;
           if (delta) {
             fullContent += delta;
-            let displayText = fullContent;
-            displayText = displayText.replace(/\[场景类型[：:][^\]]*\]/g, '');
-            displayText = displayText.replace(/\[事件大小[：:][^\]]*\]/g, '');
-            displayText = displayText.replace(/【事件大小[：:][^】]*】/g, '');
+            // 合并3个replace为1个 — 每delta少跑2次正则
+            var displayText = fullContent.replace(/\[场景类型[：:][^\]]*\]|\[事件大小[：:][^\]]*\]|【事件大小[：:][^】]*】/g, '');
             const optIdx = displayText.search(/可选行动[：:]/);
             if (optIdx >= 0) displayText = displayText.substring(0, optIdx) + '\n\n▌ 正在生成选项...';
             if (displayText.length > 800) displayText = displayText.substring(0, 800) + '…';
@@ -275,6 +369,11 @@ async function _streamResponse(resp, liveEl) {
       }
     }
   }
+  // 空响应检测：流式结束后无内容，可能是 API 返回异常格式
+  if (!fullContent || fullContent.trim().length === 0) {
+    _metrics.recordStreamEmpty();
+    throw new Error('AI 返回了空响应，可能是 API 异常或流式格式变化。请点击重试。');
+  }
   return fullContent;
 }
 
@@ -285,7 +384,8 @@ function _handleParsedResponse(fullContent, tpl, parsed) {
   parsed = parsed || parseAIResponse(fullContent, tpl);
   let endingType = detectEnding(fullContent);
 
-  // 硬兜底：AI未触发但客户端检测到条件满足 → 注入标记，由renderGameState统一弹窗
+  // 硬兜底：AI未触发但客户端检测到条件满足 → 注入标记
+  // 注：此处仅在AI未触发时跑 checkEndingClientSide，AI已触发时跳过（避免重复计算）
   if (!endingType && typeof checkEndingClientSide === 'function') {
     const clientEnding = checkEndingClientSide(tpl);
     if (clientEnding) {
@@ -293,7 +393,7 @@ function _handleParsedResponse(fullContent, tpl, parsed) {
       endingType = clientEnding;
       gameState.achievementFlags.endingTriggered = true;
       gameState.achievementFlags.endingType = clientEnding;
-      // 注意：不要在这里 push triggeredEndings，交由 renderGameState 统一处理弹窗+记录
+      // 不在这里 push triggeredEndings，交由 renderGameState 统一弹窗+记录
       parsed.raw = parsed.raw + '\n【游戏结束·' + clientEnding + '】';
       fullContent = fullContent + '\n【游戏结束·' + clientEnding + '】';
       gameState.fullHistory[gameState.fullHistory.length - 1].content = fullContent;
@@ -304,6 +404,9 @@ function _handleParsedResponse(fullContent, tpl, parsed) {
         parsed.situation = '【' + clientEnding + '】\n' + (descM ? descM[1] : '这一刻终于到来。' + clientEnding + '。');
       }
     }
+  } else if (endingType && typeof checkEndingClientSide === 'function') {
+    // AI 已主动触发 → 跳过硬兜底，仅确认 preEnding 是否匹配
+    console.log('✅ AI 已触发结局「' + endingType + '」，跳过客户端兜底');
   }
 
   // AI返回了故事但漏了选项 且 非结局 → 视为格式异常
@@ -315,10 +418,17 @@ function _handleParsedResponse(fullContent, tpl, parsed) {
   renderGameState(parsed, tpl);
   gameState.gameStarted = true;
   saveGameState();
+
+  // 记录AI质量指标
+  var roundNum = gameState.fullHistory.filter(function(m) { return m.role === 'user'; }).length;
+  _metrics.endRequest(roundNum, !!endingType, parsed.options.length > 0);
 }
 
 async function sendMessage(userContent) {
+  // 双重守卫：isLoading + _sendInProgress 防止竞态触发
   if (gameState.isLoading) return;
+  if (gameState._sendInProgress) return;
+  gameState._sendInProgress = true;
   // 清理上一次失败请求残留的user消息
   if (gameState.fullHistory.length > 0 &&
       gameState.fullHistory[gameState.fullHistory.length - 1].role === 'user') {
@@ -332,6 +442,7 @@ async function sendMessage(userContent) {
   _abortController = new AbortController();
   const timeoutId = setTimeout(function() { _abortController.abort(); }, 60000);
   let liveEl = null;
+  _metrics.startRequest();
 
   try {
     var prep = _prepareMessages(userContent);
@@ -344,8 +455,10 @@ async function sendMessage(userContent) {
         messages: prep.allMessages,
         summary: null,
         systemPrompt: null,
-        template: { id: prep.tpl.id, outputSections: prep.tpl.outputSections, promptBody: prep.tpl.promptBody },
-        apiKey: localStorage.getItem(LS_KEYS.apikey) || '',
+        templateId: prep.tpl.id,
+        // 兜底：自定义/酒馆模板不在服务器磁盘上，仅对非内置模板传 fallback
+        templateFallback: prep.tpl.id !== 'surongrong' ? { id: prep.tpl.id, outputSections: prep.tpl.outputSections, promptBody: prep.tpl.promptBody, sceneTypes: prep.tpl.sceneTypes || [] } : null,
+        apiKey: (typeof _readApiKey === 'function' ? _readApiKey() : '') || '',
       }),
       signal: _abortController.signal,
     });
@@ -387,6 +500,7 @@ async function sendMessage(userContent) {
     clearTimeout(timeoutId);
     _abortController = null;
     gameState.isLoading = false;
+    gameState._sendInProgress = false;
     showLoading(false);
   }
 }
@@ -431,7 +545,8 @@ async function handleChoice(num) {
   await sendMessage('选择 ' + num);
 }
 
-// ── 重试上次请求 ──
+// ── 重试上次请求（含指数退避）──
+var _retryCount = 0;
 async function retryLastRequest() {
   // 清理上次失败的assistant回复（如果有）
   if (gameState.fullHistory.length > 0 &&
@@ -443,6 +558,15 @@ async function retryLastRequest() {
     if (gameState.fullHistory[ri].role === 'user') { lastUserMsg = gameState.fullHistory[ri]; break; }
   }
   if (lastUserMsg) {
+    _metrics.recordRetry();
+    // 指数退避：1s→3s→5s，最多等5秒
+    var delays = [1000, 3000, 5000];
+    var delay = delays[Math.min(_retryCount, delays.length - 1)];
+    _retryCount++;
+    setTimeout(function() { _retryCount = 0; }, 30000); // 30s后重置计数
+    if (delay > 0 && _retryCount > 1) {
+      await new Promise(function(r) { setTimeout(r, delay); });
+    }
     const idx = gameState.fullHistory.lastIndexOf(lastUserMsg);
     if (idx >= 0) gameState.fullHistory.splice(idx, 1);
     await sendMessage(lastUserMsg.content);
@@ -484,6 +608,7 @@ async function startNewGame() {
     gameState._lastChoiceText = '';
     gameState.gameStarted = false;
     gameState.isLoading = false;
+    gameState._sendInProgress = false;
 
     // 清除旧存档
     const tplIdCl = gameState.activeSaveId || 'default';
@@ -513,6 +638,7 @@ async function startNewGame() {
 
     clearAiInstructions();
     renderAiChatMessages();
+    _milestonesGiven = {};  // 重置里程碑引导
 
     var openings = tpl.openingMessages;
     if (!openings || !Array.isArray(openings) || openings.length === 0) {
@@ -611,16 +737,27 @@ async function continueGame(saveId) {
     counterAttack: false, tradeCompleted: false,
     choiceCounts: {}, responseMatches: {},
   };
-  // 兼容旧存档无 triggeredEndings 字段
+  // 始终确保 triggeredEndings 存在（兼容旧存档 + 防御性编程）
   if (!gameState.achievementFlags.triggeredEndings) {
     gameState.achievementFlags.triggeredEndings = [];
   }
+  // ── 存档版本迁移 ──
+  if (!saveData.dataVersion || saveData.dataVersion < 2) {
+    console.log('📦 存档已迁移到 v2');
+  }
   gameState.gameStarted = true;
   gameState.isLoading = false;
+  gameState._sendInProgress = false;
+
+  // 预填已通过的里程碑，避免继续游戏时重复提示
+  var roundN = gameState.fullHistory.filter(function(m) { return m.role === 'user'; }).length;
+  [3, 5, 10, 15, 20, 30].forEach(function(m) { if (roundN > m) _milestonesGiven[m] = true; });
 
   const savedTheme = saveData.theme || template.theme || 'dark';
   localStorage.setItem(LS_KEYS.theme(saveId), savedTheme);
   applyTheme(savedTheme);
+  var savedFont = localStorage.getItem(LS_KEYS.font(saveId)) || 'sans';
+  if (typeof applyFont === 'function') applyFont(savedFont);
   refreshSystemPrompt();
   renderStatusContainers(template);
   localStorage.setItem(LS_KEYS.activeTemplateId, saveId);
@@ -855,6 +992,36 @@ function exportStory() {
       }
     }
   }
+
+  // 追加成就摘要
+  var unlocked = typeof getUnlockedAchievements === 'function' ? getUnlockedAchievements() : {};
+  var allAch = typeof getAchievements === 'function' ? getAchievements() : {};
+  var achKeys = Object.keys(unlocked);
+  if (achKeys.length > 0) {
+    txt += '\n' + '═'.repeat(40) + '\n🏆 已解锁成就\n';
+    achKeys.forEach(function(k) {
+      var a = allAch[k] || {};
+      txt += '  ' + (a.icon || '🏆') + ' ' + k + ' — ' + (a.desc || '') + ' (' + (unlocked[k] || '') + ')\n';
+    });
+  }
+  // 追加结局信息
+  var endings = gameState.achievementFlags?.triggeredEndings || [];
+  if (endings.length > 0) {
+    txt += '\n⚡ 触发结局: ' + endings.join(' → ') + '\n';
+  }
+  // 追加最终状态
+  txt += '\n📊 最终状态:\n';
+  var secs = tpl.outputSections || {};
+  for (var sk2 in secs) {
+    if (!secs.hasOwnProperty(sk2)) continue;
+    for (var fi2 = 0; fi2 < (secs[sk2].fields || []).length; fi2++) {
+      var ff = secs[sk2].fields[fi2];
+      var hh = gameState.fieldHistory[ff.id];
+      var vv = hh ? (hh.currentText || (hh.current != null ? String(hh.current) : '—')) : '—';
+      txt += '  ' + (ff.icon || '') + ' ' + ff.label + ': ' + vv + '\n';
+    }
+  }
+
   const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

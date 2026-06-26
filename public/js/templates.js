@@ -158,7 +158,7 @@ async function generatePrompt() {
       if (attempt > 1 && msgEl) { msgEl.textContent = '⏳ 第' + attempt + '次尝试生成...'; }
       const resp = await fetch('/api/generate-prompt', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, world, protagonist, conflict, extra, styles, gameLength, apiKey: localStorage.getItem(LS_KEYS.apikey) || '' }),
+        body: JSON.stringify({ name, world, protagonist, conflict, extra, styles, gameLength, apiKey: (typeof _readApiKey === 'function' ? _readApiKey() : '') || '' }),
         signal: AbortSignal.timeout(120000),
       });
       if (!resp.ok) throw new Error((await resp.json()).error || '生成失败');
