@@ -468,4 +468,7 @@ input:focus,textarea:focus{
   #left-panel::before{width:20px;opacity:.6}
   /* 小屏归鸟减到两只 */
   #content-panel::after{display:none}
+  /* 顶部栏按钮防换行 */
+  #top-bar .btn{font-size:10px!important;padding:2px 6px!important;white-space:nowrap}
+  #top-bar{flex-wrap:nowrap;gap:2px}
 }

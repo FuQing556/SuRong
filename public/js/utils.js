@@ -41,7 +41,8 @@ function extractAllFields(text, allFields) {
   if (!text) return result;
 
   // 按 label 长度降序排序，确保 "笑红尘态度" 优先于 "红尘" 这类短匹配
-  var sorted = allFields.slice().sort(function(a, b) { return b.label.length - a.label.length; });
+  // 防御：过滤掉无 label 的字段，防止 .length 崩溃
+  var sorted = allFields.filter(function(f) { return f && f.label; }).slice().sort(function(a, b) { return b.label.length - a.label.length; });
 
   // 从末尾往前扫描 — AI 回复末尾是实际数值，开头是格式提示。先碰到的锁住
   var lines = text.split('\n');
@@ -159,10 +160,28 @@ function repairEndingSection(body, originalTemplate) {
 var _promptCache = { id: '', bodyHash: '', base: '' };
 
 // ── 构建完整系统提示词（格式 + 叙事指南 + 正文 + 状态快照）──
+// ⚠ 同步注释：此函数与 server.js 中的 buildSystemPrompt 逻辑必须一致。
+// 客户端版本额外生成【状态快照】（含具体字段数值）。服务端版本不含状态快照。
+// 修改任一处时，务必同步更新另一处。
 // v5: 缓存静态部分（格式+法则+正文），每回合只重建状态快照
 function buildSystemPrompt(template) {
   if (!template) return gameState.originalPrompt || '';
-  var body = repairEndingSection(template.promptBody || '', gameState._originalTemplate);
+
+  // 如果模板有结构化 endings 数组，用它生成【命运转折系统】章节替换 promptBody 中的旧章节
+  var body = template.promptBody || '';
+  if (template.endings && Array.isArray(template.endings) && template.endings.length > 0) {
+    var newEndingSection = generateEndingsSection(template.endings);
+    // 替换旧结局/命运转折章节（或追加到末尾）
+    var oldSectionRe = /【(?:结局系统|命运转折系统)】[\s\S]*?(?=【(?!游戏结束|命运转折)[^】]+】|$)/;
+    if (oldSectionRe.test(body)) {
+      body = body.replace(oldSectionRe, newEndingSection);
+    } else {
+      body = body + '\n\n' + newEndingSection;
+    }
+  } else {
+    // 回退：从原始模板修复结局章节
+    body = repairEndingSection(body, gameState._originalTemplate);
+  }
   var bodyHash = body.length + '_' + (template.id || '');
 
   // 仅模板变化时重建静态部分
@@ -206,7 +225,8 @@ function collectEligibleEndings(template) {
   var body = template.promptBody || '';
   var fh = gameState.fieldHistory || {};
 
-  // 1. 构建 字段label → 当前数值 的映射
+  // 1. 构建 字段label + 字段id → 当前数值 的双索引映射
+  //    （AI可能在条件中用中文label如"妖血觉醒"，也可能用英文id如"wakening"）
   var vals = {};
   var allSecs = template.outputSections || {};
   for (var sk in allSecs) {
@@ -218,12 +238,18 @@ function collectEligibleEndings(template) {
       if (!h) continue;
       var v = (h.current != null) ? Number(h.current) : NaN;
       if (isNaN(v) && h.currentText && h.currentText !== '—') v = Number(h.currentText);
-      if (!isNaN(v)) vals[f.label] = v;
-      else if (h.currentText && h.currentText !== '—') vals[f.label] = h.currentText;
+      if (!isNaN(v)) {
+        vals[f.label] = v;
+        vals[f.id] = v;       // 双索引：英文id也可匹配
+      } else if (h.currentText && h.currentText !== '—') {
+        vals[f.label] = h.currentText;
+        vals[f.id] = h.currentText;  // 双索引
+      }
     }
   }
   var roundNum = gameState.fullHistory.filter(function(m){return m.role==='user';}).length;
   vals['轮次'] = roundNum;
+  vals['round'] = roundNum;  // 英文id也可匹配
 
   // 提取关系字段的 label 列表（用于判断条件中是否含关系条件）
   var relLabels = [];
@@ -269,11 +295,21 @@ function collectEligibleEndings(template) {
       if (vals.hasOwnProperty(chk.label)) {
         actual = vals[chk.label];
       } else {
-        // 模糊匹配（包含关系），打warning便于排查
+        // 模糊匹配（包含关系 + 中文语义重叠），打warning便于排查
         var fuzzyKey = null;
         for (var vk in vals) {
           if (!vals.hasOwnProperty(vk)) continue;
+          // 一级：子串包含
           if (vk.indexOf(chk.label) >= 0 || chk.label.indexOf(vk) >= 0) {
+            fuzzyKey = vk; actual = vals[vk]; break;
+          }
+          // 二级：中文语义重叠 — 双字词或单字核心词重叠≥50%
+          var overlap = 0;
+          var shorter = chk.label.length < vk.length ? chk.label : vk;
+          for (var ci = 0; ci < shorter.length; ci++) {
+            if (vk.indexOf(shorter[ci]) >= 0 && chk.label.indexOf(shorter[ci]) >= 0) overlap++;
+          }
+          if (overlap >= Math.min(chk.label.length, vk.length) * 0.5) {
             fuzzyKey = vk; actual = vals[vk]; break;
           }
         }
@@ -297,36 +333,51 @@ function collectEligibleEndings(template) {
     return { ok: true, roundReq: roundReq, hasRelation: hasRel };
   }
 
-  // 2. 遍历所有【命运转折·XXX】或【游戏结束·XXX】标记，收集满足条件的
-  var markerRe = /【(?:游戏结束|命运转折)[·：:\s]*([^】]+)】/g;
-  var mm;
+    // 2. 优先使用结构化 endings 数组（v9），回退到 promptBody 正则解析
   var results = [];
   var idx = 0;
-  while ((mm = markerRe.exec(body)) !== null) {
-    var name = mm[1].trim();
-    // 向前搜索最近的括号条件（200字符窗口）
-    var before = body.substring(Math.max(0, mm.index - 200), mm.index);
-	    var parenM = before.match(/[（(]([^）)]+)[）)]/g);
-	    if (!parenM || parenM.length === 0) continue;
-	    // 从后往前试所有括号，取第一个能解析为条件的（避免误取叙事文本中的括号）
-	    var parsed = null;
-	    var condText = "";
-	    for (var pi = parenM.length - 1; pi >= 0; pi--) {
-	      var tryCond = parenM[pi].replace(/^[（(]/, "").replace(/[）)]$/, "");
-	      parsed = parseAndCheck(tryCond);
-	      if (parsed.ok) { condText = tryCond; break; }
-	    }
-	    if (!parsed || !parsed.ok) continue;
-	    results.push({
-	      name: name,
-	      condText: condText,
-	      roundReq: parsed.roundReq,
-	      hasRelation: parsed.hasRelation,
-	      index: idx,
-	    });
-	    idx++;
+  if (template.endings && Array.isArray(template.endings) && template.endings.length > 0) {
+    for (var ei = 0; ei < template.endings.length; ei++) {
+      var ending = template.endings[ei];
+      if (!ending.condition) continue;
+      var parsed = parseAndCheck(ending.condition);
+      if (!parsed.ok) continue;
+      results.push({
+        name: ending.name,
+        condText: ending.condition,
+        roundReq: parsed.roundReq,
+        hasRelation: parsed.hasRelation,
+        index: ei,
+      });
+    }
+  } else {
+    // 回退：从 promptBody 正则解析
+    var markerRe = /【(?:游戏结束|命运转折)[·：:s]*([^】]+)】/g;
+    var mm;
+    while ((mm = markerRe.exec(body)) !== null) {
+      var name = mm[1].trim();
+      var before = body.substring(Math.max(0, mm.index - 200), mm.index);
+      var parenM = before.match(/[（(]([^）)]+)[）)]/g);
+      if (!parenM || parenM.length === 0) continue;
+      var parsedFb = null;
+      var condText = "";
+      for (var pi = parenM.length - 1; pi >= 0; pi--) {
+        var tryCond = parenM[pi].replace(/^[（(]/, "").replace(/[）)]$/, "");
+        parsedFb = parseAndCheck(tryCond);
+        if (parsedFb.ok) { condText = tryCond; break; }
+      }
+      if (!parsedFb || !parsedFb.ok) continue;
+      results.push({
+        name: name,
+        condText: condText,
+        roundReq: parsedFb.roundReq,
+        hasRelation: parsedFb.hasRelation,
+        index: idx,
+      });
+      idx++;
+    }
   }
-  return results;
+  return results;  return results;
 }
 
 /**
@@ -373,60 +424,60 @@ function checkEndingClientSide(template) {
 function buildEndingInjection(endingName, template) {
   if (!template || !endingName) return '';
 
-  var body = template.promptBody || '';
-  // 在模板正文中找结局描述：从结局名向前后各扩展一些上下文
-  var escapeName = endingName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // 尝试多种模式匹配结局描述文本
+  // 优先从结构化 endings 查找
   var descText = '';
-
-  // 模式1: "结局X·名称...描述" 或 "名称）...描述"（兼容快速撤离变体等不以"结局"开头的情况）
-  var re1 = new RegExp('(?:结局[^。：:]*)?' + escapeName + '[^。\\n]{0,200}\\s*(?:。|：|:)', 'g');
-  var m1;
-  while ((m1 = re1.exec(body)) !== null) {
-    var found = m1[0];
-    var descM = found.match(/[：:]([^。，]+)/);
-    if (descM) { descText = descM[1].trim(); break; }
-    descM = found.match(/[)）]\s*(.+)/);
-    if (descM) { descText = descM[1].trim().replace(/标注.*$/, '').replace(/【(?:游戏结束|命运转折).*$/, ''); break; }
-  }
-
-  // 模式2: 直接搜"名称"附近的描述文本
-  if (!descText) {
-    var idx = body.indexOf(endingName);
-    if (idx >= 0) {
-      var snippet = body.substring(Math.max(0, idx - 100), Math.min(body.length, idx + 200));
-      // 使用 [^)）]* 同时排除 ASCII 和全角右括号
-      var descM2 = snippet.match(new RegExp(escapeName + '[^)）]*[)）]\\s*[：:]\\s*([^。]+)'));
-      if (descM2) descText = descM2[1].trim();
-      else {
-        descM2 = snippet.match(new RegExp(escapeName + '[^)）]*[)）]\\s*([^。]+)'));
-        if (descM2) descText = descM2[1].trim().replace(/标注.*$/, '');
-      }
-      if (!descText && snippet.indexOf('：') >= 0) {
-        var parts = snippet.split(/[：:]/);
-        if (parts.length > 1) descText = parts[1].replace(/标注.*$/, '').replace(/【(?:游戏结束|命运转折).*$/, '').trim().substring(0, 100);
+  if (template.endings && Array.isArray(template.endings)) {
+    for (var ei = 0; ei < template.endings.length; ei++) {
+      if (template.endings[ei].name === endingName) {
+        descText = template.endings[ei].narrative || '';
+        break;
       }
     }
   }
 
-  // 后备：通用描述
+  // 回退：从 promptBody 搜索
   if (!descText) {
-    descText = endingName;
+    var body = template.promptBody || '';
+    var escapeName = endingName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var re1 = new RegExp('(?:结局[^。：:]*)?' + escapeName + '[^。\\n]{0,200}\\s*(?:。|：|:)', 'g');
+    var m1;
+    while ((m1 = re1.exec(body)) !== null) {
+      var found = m1[0];
+      var descM = found.match(/[：:]([^。，]+)/);
+      if (descM) { descText = descM[1].trim(); break; }
+      descM = found.match(/[)）]\s*(.+)/);
+      if (descM) { descText = descM[1].trim().replace(/标注.*$/, '').replace(/【(?:游戏结束|命运转折).*$/, ''); break; }
+    }
+    if (!descText) {
+      var idx = body.indexOf(endingName);
+      if (idx >= 0) {
+        var snippet = body.substring(Math.max(0, idx - 100), Math.min(body.length, idx + 200));
+        var descM2 = snippet.match(new RegExp(escapeName + '[^)）]*[)）]\\s*[：:]\\s*([^。]+)'));
+        if (descM2) descText = descM2[1].trim();
+        else {
+          descM2 = snippet.match(new RegExp(escapeName + '[^)）]*[)）]\\s*([^。]+)'));
+          if (descM2) descText = descM2[1].trim().replace(/标注.*$/, '');
+        }
+        if (!descText && snippet.indexOf('：') >= 0) {
+          var parts = snippet.split(/[：:]/);
+          if (parts.length > 1) descText = parts[1].replace(/标注.*$/, '').replace(/【(?:游戏结束|命运转折).*$/, '').trim().substring(0, 100);
+        }
+      }
+    }
   }
 
-  var endingNarrative = descText && descText !== endingName ? descText : endingName;
-  // 构建注入消息
-  return '【★ 命运转折回合 ★ 最高优先级 ★】'
-    + '本回合必须触发命运转折「' + endingName + '」。'
-    + '命运转折主题：' + endingNarrative + '。'
-    + '请围绕此主题写8-12句命运转折叙事场景。'
-    + '末尾必须输出【命运转折·' + endingName + '】。'
-    + '然后照常给4选项（至少含1个"继续走下去"选项）。'
-    + '格式规则本回合放宽——优先写好命运转折场景。'
+  if (!descText) descText = endingName;
+
+  var endingNarrative = descText !== endingName ? descText : endingName;
+  return '【★ 命运转折回合 ★】'
+    + '本回合的现状就是「' + endingName + '」的命运转折场景。不需要额外切换场景。'
+    + '结算上回合的后果后，现状直接写命运转折叙事（8-12句）：' + endingNarrative + '。'
+    + '末尾输出【命运转折·' + endingName + '】。'
+    + '然后照常给4个选项（至少含1个"继续走下去"选项）。'
     + '不要在命运转折叙事中提及魂师大赛——除非本命运转折就是魂师大赛。';
 }
 
-// ── 更新系统提示词（模板变化时调用）──
+// ── 更新系统提示词（模板变化时调用）──// ── 更新系统提示词（模板变化时调用）──
 function refreshSystemPrompt() {
   const tpl = getActiveTemplate();
   gameState.activeSystemPrompt = buildSystemPrompt(tpl);
@@ -451,6 +502,180 @@ function detectEnding(text) {
     return em[1].trim();
   }
   return null;
+}
+
+// ── 模板结构校验修复（每次加载模板时调用，防御所有来源的脏数据）──
+function validateAndRepairTemplate(template) {
+  if (!template) return template;
+  var repaired = false;
+
+  // 1. 确保 outputSections 为对象
+  if (!template.outputSections || typeof template.outputSections !== 'object' || Array.isArray(template.outputSections)) {
+    console.warn('🔧 validateAndRepairTemplate: outputSections 缺失或格式错误，重建为空结构');
+    template.outputSections = {
+      statusTop: { label: '状态栏', display: 'inline', fields: [] },
+      taskLine:  { label: null, display: 'inline', fields: [] },
+      resources: { label: '资源', display: 'inline', fields: [] },
+      variables: { label: '关系', display: 'grid', fields: [] },
+    };
+    repaired = true;
+  }
+
+  // 2. 确保4个section都存在且结构正确
+  var SECTION_DEFAULTS = {
+    statusTop:  { label: '状态栏', display: 'inline' },
+    taskLine:   { label: null,     display: 'inline' },
+    resources:  { label: '资源',   display: 'inline' },
+    variables:  { label: '关系',   display: 'grid' },
+  };
+  var SECTION_KEYS = ['statusTop', 'taskLine', 'resources', 'variables'];
+  for (var ki = 0; ki < SECTION_KEYS.length; ki++) {
+    var key = SECTION_KEYS[ki];
+    var raw = template.outputSections[key];
+    // 缺失或非对象或数组 → 重建
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      console.warn('🔧 validateAndRepairTemplate: outputSections.' + key + ' 缺失/数组，重建');
+      template.outputSections[key] = { label: SECTION_DEFAULTS[key].label, display: SECTION_DEFAULTS[key].display, fields: [] };
+      repaired = true;
+      raw = template.outputSections[key];
+    }
+    // 补 label/display
+    if (!raw.hasOwnProperty('label')) { raw.label = SECTION_DEFAULTS[key].label; repaired = true; }
+    if (!raw.hasOwnProperty('display')) { raw.display = SECTION_DEFAULTS[key].display; repaired = true; }
+    // 确保 fields 为数组
+    if (!Array.isArray(raw.fields)) {
+      console.warn('🔧 validateAndRepairTemplate: outputSections.' + key + '.fields 非数组，重建');
+      raw.fields = [];
+      repaired = true;
+    }
+    // 3. 逐字段修复
+    for (var fi = 0; fi < raw.fields.length; fi++) {
+      var f = raw.fields[fi];
+      if (!f || typeof f !== 'object') {
+        console.warn('🔧 validateAndRepairTemplate: outputSections.' + key + '.fields[' + fi + '] 非对象，移除');
+        raw.fields.splice(fi, 1);
+        fi--;
+        repaired = true;
+        continue;
+      }
+      if (!f.id || typeof f.id !== 'string' || !f.id.trim()) {
+        f.id = 'field_' + key + '_' + fi;
+        console.warn('🔧 validateAndRepairTemplate: 字段缺id，生成 ' + f.id);
+        repaired = true;
+      }
+      if (!f.label || typeof f.label !== 'string' || !f.label.trim()) {
+        f.label = f.id;
+        console.warn('🔧 validateAndRepairTemplate: 字段 ' + f.id + ' 缺label，用id代替');
+        repaired = true;
+      }
+      if (!f.icon) { f.icon = '📌'; repaired = true; }
+      if (!f.formatHint) { f.formatHint = (f.type === 'number') ? '[0-100]' : '[状态]'; repaired = true; }
+      if (!f.type || (f.type !== 'number' && f.type !== 'text')) { f.type = 'text'; repaired = true; }
+    }
+  }
+
+  // 4. 确保 taskLine 含 round 字段
+  var tlFields = template.outputSections.taskLine.fields;
+  if (!tlFields.some(function(f) { return f.id === 'round' || f.label === '轮次'; })) {
+    tlFields.unshift({ id: 'round', label: '轮次', icon: '🔄', formatHint: '[数字]', type: 'number' });
+    console.warn('🔧 validateAndRepairTemplate: taskLine 缺轮次字段，自动补充');
+    repaired = true;
+  }
+
+  // 5. 确保 achievements 和 hiddenAchievements 为对象（防御AI输出数组）
+  if (!template.achievements || typeof template.achievements !== 'object' || Array.isArray(template.achievements)) {
+    console.warn('🔧 validateAndRepairTemplate: achievements 缺失/为数组，重建');
+    template.achievements = {};
+    repaired = true;
+  }
+  if (!template.hiddenAchievements || typeof template.hiddenAchievements !== 'object' || Array.isArray(template.hiddenAchievements)) {
+    console.warn('🔧 validateAndRepairTemplate: hiddenAchievements 缺失/为数组，重建');
+    template.hiddenAchievements = {};
+    repaired = true;
+  }
+
+  // 6. 确保 initialState 为对象
+  if (!template.initialState || typeof template.initialState !== 'object') {
+    template.initialState = {};
+    repaired = true;
+  }
+
+  // 7. 确保 endings 为数组（v9 新增：命运转折结构化，与成就同级）
+  if (!template.endings || !Array.isArray(template.endings)) {
+    // 从 promptBody 的【命运转折系统】/【结局系统】章节迁移
+    var body = template.promptBody || '';
+    var endingSec = body.match(/【(?:命运转折系统|结局系统)】([\s\S]*?)(?=【(?!命运转折|游戏结束)[^】]+】|$)/);
+    if (endingSec) {
+      template.endings = parseEndingsFromPromptBody(endingSec[0]);
+      if (template.endings.length > 0) {
+        console.log('🔧 从 promptBody 迁移了 ' + template.endings.length + ' 个命运转折到结构化 endings 字段');
+        repaired = true;
+      }
+    }
+    if (!template.endings || !Array.isArray(template.endings)) {
+      template.endings = [];
+    }
+  }
+
+  if (repaired) {
+    console.log('🔧 validateAndRepairTemplate: 模板已修复，详情见上方 warn 日志');
+  }
+  return template;
+}
+
+// ── 从 promptBody 的【命运转折系统】章节解析 endings 数组 ──
+function parseEndingsFromPromptBody(sectionText) {
+  var endings = [];
+  // 匹配每个命运转折条目：命运转折N·名称（条件）：描述。标注【命运转折·名称】
+  var entryRe = /命运转折\d+[·：:]\s*([^\n（(]+?)\s*[（(]([^）)]+)[）)][：:]\s*([^\n]+)/g;
+  var m;
+  while ((m = entryRe.exec(sectionText)) !== null) {
+    endings.push({
+      name: (m[1] || '').trim(),
+      condition: (m[2] || '').trim(),
+      narrative: (m[3] || '').trim().replace(/标注\s*【(?:游戏结束|命运转折)[^】]*】/, '').trim(),
+      icon: '🎭',
+    });
+  }
+  // 如果上面的正则没匹配到（格式变体），尝试更宽松的匹配
+  if (endings.length === 0) {
+    var looseRe = /【(?:游戏结束|命运转折)[·：:\s]*([^】]+)】/g;
+    var lm;
+    while ((lm = looseRe.exec(sectionText)) !== null) {
+      var name = lm[1].trim();
+      // 向前找条件括号
+      var before = sectionText.substring(Math.max(0, lm.index - 200), lm.index);
+      var parenM = before.match(/[（(]([^）)]+)[）)]/g);
+      var condition = '';
+      if (parenM && parenM.length > 0) {
+        condition = parenM[parenM.length - 1].replace(/^[（(]/, '').replace(/[）)]$/, '');
+      }
+      // 向后找叙事描述
+      var after = sectionText.substring(lm.index + lm[0].length, Math.min(sectionText.length, lm.index + lm[0].length + 200));
+      var narrative = after.split(/[。\n]/)[0] || '';
+      endings.push({
+        name: name,
+        condition: condition,
+        narrative: narrative.trim(),
+        icon: '🎭',
+      });
+    }
+  }
+  return endings;
+}
+
+// ── 从 endings 数组生成【命运转折系统】章节文本 ──
+function generateEndingsSection(endings) {
+  if (!endings || endings.length === 0) return '';
+  var lines = ['【命运转折系统】'];
+  for (var i = 0; i < endings.length; i++) {
+    var e = endings[i];
+    var cond = e.condition ? '（' + e.condition + '）' : '';
+    var narrative = e.narrative || e.name;
+    lines.push('命运转折' + (i + 1) + '·' + e.name + cond + '：' + narrative + '。标注【命运转折·' + e.name + '】');
+  }
+  lines.push('轮次≥5后积极推命运转折。命运转折触发后保留继续选项——这不是游戏终止，是故事的新阶段。');
+  return lines.join('\n');
 }
 
 // ── 加载模板并合并编辑版（selectSave 和 continueGame 共用）──
@@ -482,6 +707,8 @@ async function loadAndMergeTemplate(saveId) {
       if (ed.hiddenAchievements) template.hiddenAchievements = ed.hiddenAchievements;
     } catch (e) { _devWarn('loadAndMergeTemplate parse edited', e); }
   }
+  // 🔧 最终防线：校验修复模板结构（不管来源是服务器、localStorage还是编辑版）
+  template = validateAndRepairTemplate(template);
   return template;
 }
 

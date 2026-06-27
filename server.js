@@ -103,7 +103,35 @@ function generateOutputFormat(sections, sceneTypes) {
   return lines.join('\n');
 }
 
+// ── 格式化消息为自然对话格式（用于摘要）──
+function formatMessagesForSummary(messages) {
+  if (!messages || !Array.isArray(messages)) return '';
+  var lines = [];
+  for (var i = 0; i < messages.length; i++) {
+    var m = messages[i];
+    if (m.role === 'user') {
+      var content = (m.content || '').replace(/^选择\s*/, '');
+      // 截断超长用户消息（如含完整提示词的）
+      if (content.length > 200) content = content.substring(0, 200) + '…';
+      lines.push('玩家：' + content);
+    } else if (m.role === 'assistant') {
+      var c = (m.content || '').substring(0, 300);
+      // 提取关键部分：现状
+      var sitMatch = c.match(/现状[：:]\s*([\s\S]{0,150})/);
+      if (sitMatch) {
+        lines.push('AI：' + sitMatch[1].trim().substring(0, 150));
+      } else {
+        lines.push('AI：' + c.substring(0, 150));
+      }
+    }
+  }
+  return lines.join('\n');
+}
+
 // ── 构建完整系统提示词（与客户端 utils.js 保持一致）──
+// ⚠ 同步注释：此函数与 public/js/utils.js 中的 buildSystemPrompt 逻辑必须一致。
+// 客户端版本额外生成【状态快照】（含具体字段数值）。服务端版本不含状态快照。
+// 修改任一处时，务必同步更新另一处。
 function buildSystemPrompt(template) {
   if (!template) return gamePrompt || '';
 
@@ -380,6 +408,7 @@ app.post('/api/generate-prompt', async (req, res) => {
 
   const styleText = (styles && styles.length > 0) ? styles.join('、') : '综合平衡';
   const length = gameLength || 'medium';
+  const difficulty = req.body.difficulty || 'standard';
 
   // 根据游戏长度联动所有参数
   const lengthGuide = {
@@ -388,8 +417,23 @@ app.post('/api/generate-prompt', async (req, res) => {
     long:     { early:'8-12',mid:'15-25', late:'25-40', epic:'40+',  openings:'5-6', endings:'6-8',  achievements:'10-12',hiddenAch:'5-6', promptBudget:'4000-6000', longRoad:'30' },
     immersive:{ early:'10-15',mid:'20-30',late:'35-50', epic:'50+',  openings:'6',   endings:'7-8',  achievements:'12-14',hiddenAch:'6-7', promptBudget:'5000-7000', longRoad:'40' },
   }[length];
+  // 从范围字符串提取下限数字（"6-8"→6, "3-5"→3, "15+"→15）
+  const _min = (s) => parseInt(String(s).split('-')[0].replace(/\D/g,'')) || 0;
+  const MIN = {
+    endings: _min(lengthGuide.endings),
+    achievements: _min(lengthGuide.achievements),
+    hiddenAch: _min(lengthGuide.hiddenAch),
+    openings: _min(lengthGuide.openings),
+  };
 
   const metaPrompt = `你是互动叙事游戏设计AI。输出纯JSON，不要markdown包裹。
+
+【★ 最高铁律：使用玩家输入】
+你必须基于玩家的世界观、主角和冲突来设计。不要生成通用/默认内容。
+· 玩家说"修仙"→ 生成修仙世界，不是中世纪骑士
+· 玩家说"赛博朋克"→ 生成赛博朋克，不是古代武侠
+· 所有 NPC 名、地点名、事件名必须来自或契合玩家给定的世界观
+如果玩家输入是中文，所有内容（NPC名、地名、成就名）必须是中文。
 
 【玩家需求】
 名称：${name} | 世界观：${world} | 主角：${protagonist}
@@ -397,10 +441,18 @@ app.post('/api/generate-prompt', async (req, res) => {
 ${extra ? '★ 额外要求：' + extra : ''}
 
 【字段架构 outputSections — 弹性化】
-固定4段key。字段数量按故事需求决定（谍战要多个关系值但只需1个资源，生存游戏要3个资源但只需1个关系）：
-  statusTop(状态栏,inline): ${lengthGuide.openings}个字段 — 2-3个数字(0-100)+0-1个文本状态
+固定4段key。字段数量按故事需求决定（谍战要多个关系值但只需1个资源，生存游戏要3个资源但只需1个关系）。
+★ outputSections 中每个 key 的值是对象 {label, display, fields:[...]}，不要直接写数组！
+示例：
+"outputSections": {
+  "statusTop": {"label":"状态栏","display":"inline","fields":[{"id":"hp","label":"生命","icon":"❤️","formatHint":"[0-100]","type":"number"}]},
+  "taskLine": {"label":null,"display":"inline","fields":[{"id":"round","label":"轮次","icon":"🔄","formatHint":"[数字]","type":"number"},{"id":"progress","label":"主线进度","icon":"📈","formatHint":"[0-5]","type":"number"}]},
+  "resources": {"label":"资源","display":"inline","fields":[{"id":"gold","label":"金币","icon":"💰","formatHint":"[数量]","type":"number"}]},
+  "variables": {"label":"关系","display":"grid","fields":[{"id":"rep","label":"声望","icon":"👑","formatHint":"[-100~100]","type":"number"}]}
+}
+  statusTop(状态栏,inline): ${MIN.openings}个字段 — 2-3个数字(0-100)+0-1个文本状态
   taskLine(null,inline): 2字段 — 固定含 round(轮次,number) + 主线进度(0-5数字)
-  resources(资源,inline): 1-3个可消耗数字资源，每个必须在选项代价/收益中体现且叙事中有对应事件（获取情报→写出获取过程，消耗把柄→写出用在了谁身上）
+  resources(资源,inline): 1-3个可消耗数字资源，每个必须在选项代价/收益中体现且叙事中有对应事件
   variables(关系,grid): 1-4个数值(-100~100)，每个必须被至少1个命运转折条件引用
 字段格式: {"id":"camelCase","label":"2-4字中文","icon":"emoji","formatHint":"[范围]","type":"number或text"}
 
@@ -447,7 +499,7 @@ ${extra ? '★ 额外要求：' + extra : ''}
 · 禁止"等待/观察/不反应"类选项——除非当前是关键大拍且确实需要停顿。
 · 失败选项的后果不是"扣分+骂一句"。要引出新的困境：你选了忍→对方觉得你好欺负→下次更过分。你选了打→短期赢了但惹了更大麻烦。每条路都通向新困境，没有死胡同。
 
-【命运转折系统】（原"结局系统" — 自由设计${lengthGuide.endings}个命运转折）
+【命运转折系统】（必须至少${MIN.endings}个，多写不限）
 ★ 每个命运转折必须引用具体字段标签+数值+运算符（≥ ≤ = > < >= <=），条件括号紧挨标记（≤50字符）。=100自动放宽为≥95。
 ★ 每个命运转折必须附带1-2句具体叙事描述（如"苏蓉蓉发现守卫换岗空隙，当机立断孤身越过边界"），使AI能据此展开8-12句完整场景。
 ★ 条件必须引用具体字段标签和数值。轮次≥${lengthGuide.early}后积极推命运转折。命运转折触发后保留继续选项——这不是游戏终止，是故事的新阶段。
@@ -461,28 +513,52 @@ ${extra ? '★ 额外要求：' + extra : ''}
 示例：压力值（0-100）：≥50→外在反应可见 | ≥70→手抖/失眠/沉默 | ≥90→濒临崩溃
 AI必须在NPC行为和叙事中体现这些阈值——好感度70的NPC和好感度20时是不同的两个人。阈值效应不是命运转折——到100才触发命运转折，但在此之前，数值变化必须有可见的叙事后果。
 
+【难度调整】当前难度：${difficulty}。
+· easy简单：NPC初始敌意低，资源获取量+30%，选项代价较小，软阈值偏向有利方向。命运转折门槛轮次延后20%。
+· standard标准：平衡设计，选项代价与收益对等。
+· hard困难：NPC初始敌意高，资源稀缺（获取量-30%），每个选项代价更大，至少2个选项标注【代价沉重】。命运转折更易触发。
+· nightmare噩梦：每题都是陷阱。安全选项不存在，每个选项都有沉重代价。NPC主动施压，资源极度稀缺。命运转折触发门槛提前30%。
+请在【选项设计】和【命运转折系统】中体现对应难度。
+
 【资源系统】1-3个资源，每个列3种获取+3种消耗方式。每个资源变化必须在叙事中有对应事件。资源不足→标的【代价沉重】→选择后体现失败后果（选项仍可选，但代价更大）。
 
 【选项设计】每回合4选项 = 动作+代价+风险(低/中/高/孤注)。≥3个带玩家离开当前场景。≥2条不同策略路线。禁止无代价。选项之间形成真正的两难——没有明显最优解。
 
-【开局系统】${lengthGuide.openings}个开局(编号1-${lengthGuide.openings})，不同场景+不同初始数值+明确叙事钩子。openingMessages:["开始游戏。【开局编号：1】",...]
+【开局系统】${MIN.openings}个开局(编号1-${MIN.openings})，不同场景+不同初始数值+明确叙事钩子。openingMessages:["开始游戏。【开局编号：1】",...]
 同时定义initialState对象，列出所有数字字段的初始值。
 
-【成就 achievements — ${lengthGuide.achievements}个】
-全部世界观定制，禁止通用名（"孤注一掷""长路漫漫""命运之轮"由系统兜底自动生成，你不需要写）。每个含字段+阈值，desc必须嵌入具体字段名+数字阈值。按叙事/关系/资源/行为四类均匀分布。格式:{"名":{"icon":"emoji","desc":"含字段名+数字阈值"}}
+【成就 achievements — 必须至少${MIN.achievements}个】
+★ 格式是对象 { "成就名": { "icon":"emoji", "desc":"含字段label+数字阈值" } }，不是数组！
+全部世界观定制。每个含字段+阈值，desc必须嵌入具体字段名+数字阈值。按叙事/关系/资源/行为四类均匀分布。
+★ 命名规则：可以写"情报达人""逆天改命""以身为饵"等世界观定制的成就名。不要写"孤注一掷""长路漫漫""命运之轮""天选之人""淬火成钢"——这些是系统兜底成就，会自动追加。
+格式:{"成就名":{"icon":"emoji","desc":"含字段label+数字阈值，如 灵石达到50"}}
 
-【隐藏成就 hiddenAchievements — ${lengthGuide.hiddenAch}个】
+【隐藏成就 hiddenAchievements — 必须至少${MIN.hiddenAch}个】
+★ 格式也是对象 { "成就名": {...} }，不是数组！
 每个含trigger。类型: choice(pattern+count)/gambit(count)/rounds_under(round)/field_zero(字段label)/field_max_under(字段label+阈值)/response_match(pattern+count)。至少2种不同trigger类型。
 
 【编辑参考】（新增 — 追加到promptBody末尾，帮助玩家修改时不出错）
 当前模板字段清单：列出所有字段的label
 命运转折条件格式：字段label 运算符 数值（多条件用 且/，/、 连接，括号紧挨标记≤50字符）
-开局格式：开始游戏。【开局编号：N】（N=1~${lengthGuide.openings}）
+开局格式：开始游戏。【开局编号：N】（N=1~${MIN.openings}）
 可见成就格式：desc含「字段label+数字阈值」
 隐藏成就触发类型：choice(pattern+count)/gambit(count)/rounds_under(round)/field_zero(字段label)/field_max_under(字段label+阈值)/response_match(pattern+count)
 
 【其他】
+★ 必须包含 "name" 字段，值使用玩家输入的名称"${name}"。
+★ "endings" 数组 — 每个命运转折一个对象: {"name":"命运转折名","condition":"字段中文标签≥阈值 且 字段中文标签≤阈值","narrative":"1-2句叙事描述","icon":"emoji"}。至少${MIN.endings}个。
+   ★★★ condition 里必须用 outputSections 中的中文标签（如"妖血觉醒≥80"），禁止用英文id（如"wakening≥80"）！
 sceneTypes:5-7中文。description:≤20字。worldSetting/protagonist/conflict:各200-400字,\n\n分段。theme:"dark"。styles:标签数组。initialState:对象，列出所有数字字段的初始键值对。
+
+【★ 输出前自我检查清单 ★】
+1. name 字段存在？→ 用玩家输入的名称"${name}"
+2. outputSections 的 4 个 key 各是 {label, display, fields:[...]}（不是数组！）
+3. promptBody 含所有必含章节：叙事哲学 → 你的身份 → 叙事风格 → 叙事节拍 → 场景跳跃 → 主角设定 → 世界观 → 核心冲突 → 两难设计 → 命运转折系统(${MIN.endings}个) → 字段叙事效应 → 资源系统 → 选项设计 → 开局系统(${MIN.openings}个) → 编辑参考
+4. endings 数组 ≥ ${MIN.endings} 个？每个有 name+condition+narrative+icon？
+5. achievements ≥ ${MIN.achievements} 个？每个 desc 含字段名+数字？
+6. hiddenAchievements ≥ ${MIN.hiddenAch} 个？至少2种 trigger 类型？
+7. openingMessages 有 ${MIN.openings} 条？initialState 覆盖所有数字字段？
+8. 所有NPC名/地名/事件名都契合"${world}"的世界观？没有生成西方名/日式名/通用名？
 
 输出纯JSON:`;
 
@@ -494,6 +570,27 @@ sceneTypes:5-7中文。description:≤20字。worldSetting/protagonist/conflict:
       ], apiKey, 0.5, 8192, true); // jsonMode=true
 
       const template = JSON.parse(content);
+
+      // ── 生成后数量校验 ──
+      const achCount = Object.keys(template.achievements || {}).length;
+      const hiddenCount = Object.keys(template.hiddenAchievements || {}).length;
+      const endingMarkers = (template.promptBody || '').match(/【(?:游戏结束|命运转折)[·：:\s]*([^】]+)】/g) || [];
+      const endingCount = endingMarkers.length;
+      const openingsCount = (template.openingMessages || []).length;
+
+      var validationWarnings = [];
+      if (achCount < MIN.achievements) validationWarnings.push('可见成就: ' + achCount + '/' + MIN.achievements);
+      if (hiddenCount < MIN.hiddenAch) validationWarnings.push('隐藏成就: ' + hiddenCount + '/' + MIN.hiddenAch);
+      if (endingCount < MIN.endings) validationWarnings.push('命运转折: ' + endingCount + '/' + MIN.endings);
+      if (openingsCount < MIN.openings) validationWarnings.push('开局: ' + openingsCount + '/' + MIN.openings);
+
+      if (validationWarnings.length > 0) {
+        console.warn('⚠ AI生成模板数量不足 [' + (template.name || '?') + ']: ' + validationWarnings.join(', ') + ' — 将使用生成的版本，建议用户在设置中手动补充');
+        // 在 promptBody 末尾追加警告标记，客户端可据此提示用户
+        // （不阻断生成——即使数量不足也比什么都没有好）
+      } else {
+        console.log('✅ 模板数量校验通过 [' + (template.name || '?') + ']: 成就' + achCount + '/' + MIN.achievements + ' 隐藏' + hiddenCount + '/' + MIN.hiddenAch + ' 结局' + endingCount + '/' + MIN.endings);
+      }
 
       template.id = 'custom_' + Date.now();
       template.author = 'AI生成';
@@ -509,19 +606,33 @@ sceneTypes:5-7中文。description:≤20字。worldSetting/protagonist/conflict:
       template.styles = template.styles && template.styles.length > 0 ? template.styles : (styles || []);
       template.extra = template.extra || extra || '';
 
-      // 规范化 outputSections（新架构：statusTop=3, taskLine=2, resources=2, variables=2）
+      // 规范化 outputSections（新架构：statusTop/taskLine/resources/variables 各为 {label,display,fields}）
+      // ⚠ AI 有时会将 section 直接输出为字段数组，需兜底包裹
       const SECTION_KEYS = ['statusTop', 'taskLine', 'resources', 'variables'];
+      const SECTION_DEFAULTS = {
+        statusTop:  { label: '状态栏', display: 'inline' },
+        taskLine:   { label: null,     display: 'inline' },
+        resources:  { label: '资源',   display: 'inline' },
+        variables:  { label: '关系',   display: 'grid' },
+      };
       if (template.outputSections) {
         for (const key of SECTION_KEYS) {
-          if (!template.outputSections[key] || typeof template.outputSections[key] !== 'object') {
-            template.outputSections[key] = {
-              label: key === 'taskLine' ? null : (key === 'variables' ? '关系' : key),
-              display: key === 'variables' ? 'grid' : 'inline',
-              fields: []
-            };
+          let raw = template.outputSections[key];
+          // 兜底1：缺失或非对象 → 空节
+          if (!raw || typeof raw !== 'object') {
+            template.outputSections[key] = { ...SECTION_DEFAULTS[key], fields: [] };
+            continue;
           }
-          const sec = template.outputSections[key];
+          // 兜底2：AI 直接输出了字段数组 → 包裹为 {fields: [...]}
+          if (Array.isArray(raw)) {
+            console.warn('⚠ outputSections.' + key + ' 是数组，自动包裹为 {fields:[...]}');
+            template.outputSections[key] = { ...SECTION_DEFAULTS[key], fields: raw };
+            raw = template.outputSections[key];
+          }
+          // 兜底3：有 label/display 但无 fields → 补空数组
+          const sec = raw;
           if (!Array.isArray(sec.fields)) sec.fields = [];
+          // 兜底4：fields 元素可能是原始字符串 → 跳过
           sec.fields = sec.fields.filter(f => f && typeof f === 'object').map(f => ({
             id: f.id || ('field_' + Math.random().toString(36).slice(2,8)),
             label: f.label || f.id || '未命名字段',
@@ -535,21 +646,22 @@ sceneTypes:5-7中文。description:≤20字。worldSetting/protagonist/conflict:
           }
         }
       }
-      // 规范化 achievements
-      if (template.achievements && typeof template.achievements === 'object') {
+      // 规范化 achievements（防御AI输出数组而非对象）
+      if (!template.achievements || typeof template.achievements !== 'object' || Array.isArray(template.achievements)) {
+        console.warn('⚠ achievements 缺失/为数组，重建为空对象（原值:', typeof template.achievements, Array.isArray(template.achievements) ? 'array' : '') + ')';
+        template.achievements = {};
+      } else {
         for (const [name, ach] of Object.entries(template.achievements)) {
-          if (!ach || typeof ach !== 'object') {
+          if (!ach || typeof ach !== 'object' || Array.isArray(ach)) {
             template.achievements[name] = { icon: '🏆', desc: name };
           } else {
             ach.icon = ach.icon || '🏆';
             ach.desc = ach.desc || ach.description || name;
           }
         }
-      } else {
-        template.achievements = {};
       }
-      // 规范化 hiddenAchievements
-      if (!template.hiddenAchievements || typeof template.hiddenAchievements !== 'object') {
+      // 规范化 hiddenAchievements（防御AI输出数组）
+      if (!template.hiddenAchievements || typeof template.hiddenAchievements !== 'object' || Array.isArray(template.hiddenAchievements)) {
         template.hiddenAchievements = {};
       } else {
         for (const [name, ha] of Object.entries(template.hiddenAchievements)) {
@@ -562,6 +674,14 @@ sceneTypes:5-7中文。description:≤20字。worldSetting/protagonist/conflict:
           }
         }
       }
+      // 规范化 endings（v9 新增：命运转折结构化）
+      if (!template.endings || !Array.isArray(template.endings)) template.endings = [];
+      template.endings = template.endings.filter(e => e && typeof e === 'object').map((e, i) => ({
+        name: e.name || ('命运转折' + (i + 1)),
+        condition: e.condition || '',
+        narrative: e.narrative || '',
+        icon: e.icon || '🎭',
+      }));
       template.sceneImages = {};
       if (template.sceneTypes) template.sceneTypes.forEach(t => { template.sceneImages[t] = '日常.png'; });
       template.sceneImages['日常'] = '日常.png';
@@ -571,6 +691,61 @@ sceneTypes:5-7中文。description:≤20字。worldSetting/protagonist/conflict:
       console.error('生成失败:', err.message, content?.substring(0, 100));
       res.status(500).json({ error: 'AI生成失败: ' + err.message });
     }
+});
+
+// ── API: 从故事文本反向解析生成模板 ──
+app.post('/api/parse-story', async (req, res) => {
+  const { storyText } = req.body;
+  if (!storyText || typeof storyText !== 'string' || storyText.trim().length < 50) {
+    return res.status(400).json({ error: '故事文本太短，至少需要50字' });
+  }
+
+  const parsePrompt = `你是互动叙事模板解析AI。从以下故事文本中提取结构化信息，输出纯JSON：
+
+{
+  "name": "2-6字标题",
+  "description": "≤20字简介",
+  "worldSetting": "200-400字世界观（\\n\\n分段）",
+  "protagonist": "200-400字主角设定",
+  "conflict": "200-400字核心冲突（≥3重困境）",
+  "styles": ["风格标签"],
+  "theme": "dark",
+  "outputSections": { "statusTop":{"label":"状态栏","display":"inline","fields":[...]}, "taskLine":{"label":null,"display":"inline","fields":[...]}, "resources":{"label":"资源","display":"inline","fields":[...]}, "variables":{"label":"变量追踪","display":"grid","fields":[...]} },
+  "promptBody": "3000-5000字系统提示词，含【你的身份】【世界观】【主角设定】【核心冲突】【场景跳跃】【选项设计】【命运转折系统】【开局系统】【成就】等章节",
+  "achievements": {"成就名":{"icon":"🏆","desc":"描述"}},
+  "hiddenAchievements": {},
+  "sceneTypes": ["场景1","场景2"],
+  "openingMessages": ["开始游戏。【开局编号：1】"],
+  "initialState": {}
+}
+
+故事文本：
+${storyText.trim()}`;
+
+  try {
+    const apiKey = getApiKey(req.body);
+    var content = await callDeepSeek([
+      { role: 'system', content: '你是模板解析AI，输出必须是合法JSON对象，不要任何额外文字。' },
+      { role: 'user', content: parsePrompt },
+    ], apiKey, 0.3, 8192, true);
+
+    const template = JSON.parse(content);
+    template.id = 'custom_' + Date.now();
+    template.author = '从故事解析';
+    template.version = '1.0.0';
+    template.defaultSceneImage = '日常.png';
+    template.sceneImages = {};
+    if (template.sceneTypes) template.sceneTypes.forEach(t => { template.sceneImages[t] = '日常.png'; });
+    template.sceneImages['日常'] = '日常.png';
+    template.openingMessages = template.openingMessages?.length > 0
+      ? template.openingMessages
+      : ['开始游戏。【开局编号：1】'];
+
+    res.json({ template });
+  } catch (err) {
+    console.error('故事解析失败:', err.message);
+    res.status(500).json({ error: 'AI解析失败: ' + err.message });
+  }
 });
 
 // ── API: 对话摘要 ──
@@ -591,7 +766,7 @@ app.post('/api/summarize', async (req, res) => {
       content:
         '你是一个剧情摘要工具。用200字以内的中文总结以下互动叙事的关键事件。只写事实：主角经历了什么羞辱事件、做出了什么选择、状态栏有什么变化、潜伏任务有无进展、重要NPC的互动。不要写感受，不要评论。',
     },
-    { role: 'user', content: `${prevContext}\n\n对话片段：\n${JSON.stringify(messages)}` },
+    { role: 'user', content: `${prevContext}\n\n对话片段：\n${formatMessagesForSummary(messages)}` },
   ];
 
   try {

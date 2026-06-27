@@ -48,7 +48,11 @@ function parseAIResponse(text, template) {
   for (var sk in sections) {
     if (!sections.hasOwnProperty(sk)) continue;
     var flds = sections[sk].fields || [];
-    for (var fi = 0; fi < flds.length; fi++) allFields.push(flds[fi]);
+    for (var fi = 0; fi < flds.length; fi++) {
+      var f = flds[fi];
+      // 防御：跳过无id或无label的无效字段，防止 extractAllFields 排序崩溃
+      if (f && f.id && f.label) allFields.push(f);
+    }
   }
   result.fields = typeof extractAllFields === 'function'
     ? extractAllFields(text, allFields)
@@ -272,17 +276,20 @@ function _prepareMessages(userContent) {
   refreshSystemPrompt();
   const tpl = getActiveTemplate();
 
-  // 结局预检：条件满足则追加到用户消息（不是system），AI必须在本回合处理
+  // 结局预检：条件满足时作为独立 system 消息注入
+  // 放在 user 消息之前、所有 system 消息之后——覆盖效应让 AI 无法忽视
   var preEndingType = null;
+  var preEndingInjection = null;
   if (typeof checkEndingClientSide === 'function') {
     preEndingType = checkEndingClientSide(tpl);
   }
   if (preEndingType) {
-    console.log('🔔 结局预检触发: 「' + preEndingType + '」— 追加到用户消息末尾');
-    var endingInjection = typeof buildEndingInjection === 'function'
+    console.log('🔔 结局预检触发: 「' + preEndingType + '」— 直接拼入用户消息');
+    preEndingInjection = typeof buildEndingInjection === 'function'
       ? buildEndingInjection(preEndingType, tpl)
-      : '触发结局「' + preEndingType + '」，写结局叙事+输出标记+4选项';
-    enhancedContent = enhancedContent + '\n\n' + endingInjection;
+      : '触发命运转折「' + preEndingType + '」，写命运转折叙事+输出标记+4选项';
+    // 🔧 v9: 拼到用户消息最前面，AI无法忽略（system消息经常被跳过）
+    enhancedContent = preEndingInjection + '\n\n' + enhancedContent;
   }
 
   gameState.fullHistory.push({ role: 'user', content: enhancedContent });
@@ -583,7 +590,15 @@ async function maybeSummarize() {
   const totalMessages = gameState.fullHistory.length;
   const unsummarised = totalMessages - gameState.summarisedCount;
   const TRIGGER = KEEP_ROUNDS * 2 + 4;
-  if (unsummarised <= TRIGGER) return;
+  // 额外 token 估算阈值：中文~1.5字符/token，DeepSeek上下文~128K
+  // 保守估计每轮对话~800字符，加上系统提示词~6000字符
+  var totalChars = 6000;  // system prompt
+  for (var ti = 0; ti < gameState.fullHistory.length; ti++) {
+    totalChars += (gameState.fullHistory[ti].content || '').length;
+  }
+  var estimatedTokens = Math.ceil(totalChars / 1.5);
+  // 在消息数量达标 OR token估算超过80K时触发摘要
+  if (unsummarised <= TRIGGER && estimatedTokens < 80000) return;
   const keepStart = Math.max(0, totalMessages - KEEP_ROUNDS * 2);
   const toSummarise = gameState.fullHistory.slice(gameState.summarisedCount, keepStart);
   if (toSummarise.length < 4) return;
@@ -618,7 +633,7 @@ async function startNewGame() {
     // 清除旧存档
     const tplIdCl = gameState.activeSaveId || 'default';
     localStorage.removeItem(getSaveKey(tplIdCl, 0));
-    gameState.fieldHistory = {};
+    gameState.fieldHistory = {};  // 临时空对象，等 tpl 加载后从 initialState 初始化
     gameState._pendingDiceRoll = null;
     gameState._lastDiceResult = null;
     gameState.achievementFlags = {
@@ -636,6 +651,20 @@ async function startNewGame() {
 
     const tpl = getActiveTemplate();
     console.log('startNewGame: template', tpl?.name, 'openingMessages:', tpl?.openingMessages?.length || 0);
+
+    // 从模板 initialState 初始化 fieldHistory（替代空 {}）
+    var initialState = tpl.initialState || {};
+    for (var _fk in initialState) {
+      if (!initialState.hasOwnProperty(_fk)) continue;
+      var _fv = initialState[_fk];
+      if (typeof _fv === 'number') {
+        gameState.fieldHistory[_fk] = { current: _fv, max: _fv };
+      } else if (typeof _fv === 'string') {
+        gameState.fieldHistory[_fk] = { currentText: _fv };
+      }
+      // 跳过对象（如 favors: {meng, xiao, ju} 等嵌套结构）
+    }
+
     renderStatusContainers(tpl);
     updateAllDynamicFields({}, tpl);
     updateOptionButtons([]);
@@ -922,6 +951,12 @@ function showEndingOverlay(endingType, parsed) {
 
 function closeEndingOverlay() {
   $('#ending-overlay').classList.remove('active');
+  // 通知 AI 命运转折已完成，避免下一回合重复触发
+  var endingType = gameState.achievementFlags.endingType || '未知';
+  gameState.fullHistory.push({
+    role: 'user',
+    content: '【系统通知】命运转折「' + endingType + '」已触发。故事继续，请推进后续剧情。不要再次触发同一命运转折。'
+  });
 }
 
 // ── 历程回顾弹窗 ──

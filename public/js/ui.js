@@ -319,8 +319,9 @@ function updateAllDynamicFieldsFromHistory() {
 // ── 场景图片切换 ──
 function switchSceneImage(sceneType, template) {
   // 先检查自定义图片
+  var saveId = gameState.activeSaveId || 'default';
   var customImages = {};
-  try { customImages = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}'); } catch (e) { /* corrupt */ }
+  try { customImages = JSON.parse(localStorage.getItem(LS_KEYS.customImages(saveId)) || '{}'); } catch (e) { /* corrupt */ }
   if (customImages[sceneType]) {
     const img = dom.characterImage;
     if (!img) return;
@@ -522,9 +523,9 @@ function renderMySavesPanel() {
   const footer = document.querySelector('#panel-my-saves .save-selector-footer');
   if (footer) {
     if (gameState.gameStarted) {
-      footer.innerHTML = '<button id="btn-return-game" class="btn btn-secondary">↩ 返回游戏</button> <button id="btn-create-save" class="btn btn-primary">＋ 创建新存档</button>';
+      footer.innerHTML = '<button id="btn-return-game" class="btn btn-secondary">↩ 返回游戏</button> <button id="btn-create-save" class="btn btn-primary">＋ 创建新模板</button>';
     } else {
-      footer.innerHTML = '<button id="btn-create-save" class="btn btn-primary">＋ 创建新存档</button>';
+      footer.innerHTML = '<button id="btn-create-save" class="btn btn-primary">＋ 创建新模板</button>';
     }
     const createBtn = document.querySelector('#btn-create-save');
     if (createBtn) createBtn.addEventListener('click', openCreateSave);
@@ -594,6 +595,27 @@ async function selectSave(saveId) {
 
     const ov = $('#save-selector-overlay');
     if (ov) ov.classList.remove('active');
+
+    // 检查是否有现有存档进度，有则弹确认
+    var existingSaves = [];
+    for (let s = 0; s < 10; s++) {
+      if (localStorage.getItem(getSaveKey(saveId, s))) existingSaves.push(s);
+    }
+    if (existingSaves.length > 0) {
+      var latestData = null;
+      for (var es = 0; es < existingSaves.length; es++) {
+        var d = loadGameState(saveId, existingSaves[es]);
+        if (d && (!latestData || d.lastPlayed > latestData.lastPlayed)) latestData = d;
+      }
+      var rn = latestData ? latestData.roundNumber : '?';
+      var confirmMsg = '「' + (template.name || '该存档') + '」已有游戏进度（' + existingSaves.length + '个槽位，最新第' + rn + '回合）。\n\n开始新游戏将清除所有进度。确定？';
+      var proceed = await dlConfirm(confirmMsg);
+      if (!proceed) {
+        // 回到存档选择页
+        showSaveSelector();
+        return;
+      }
+    }
 
     // 清除所有槽位的旧存档（0-9）防止残留手动存档干扰
     for (let s = 0; s < 10; s++) localStorage.removeItem(getSaveKey(saveId, s));

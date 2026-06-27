@@ -3,16 +3,18 @@
    依赖：state.js, utils.js
    ═══════════════════════════════════════════ */
 
-// ── 指令存储 ──
+// ── 指令存储（按存档隔离）──
 function getAiInstructions() {
   try {
-    var val = JSON.parse(localStorage.getItem(LS_KEYS.aiInstructions) || '[]');
+    var saveId = gameState.activeSaveId || 'default';
+    var val = JSON.parse(localStorage.getItem(LS_KEYS.aiInstructions(saveId)) || '[]');
     return Array.isArray(val) ? val : [];
   } catch (e) { _devWarn('getAiInstructions', e); return []; }
 }
 
 function saveAiInstructions(instructions) {
-  localStorage.setItem(LS_KEYS.aiInstructions, JSON.stringify(instructions));
+  var saveId = gameState.activeSaveId || 'default';
+  localStorage.setItem(LS_KEYS.aiInstructions(saveId), JSON.stringify(instructions));
 }
 
 // ── 发送指令 ──

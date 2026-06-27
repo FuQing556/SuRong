@@ -406,10 +406,80 @@ async function addNewAchievement(isHidden) {
 
   if (isHidden) {
     if (!tpl.hiddenAchievements) tpl.hiddenAchievements = {};
+    // ── 触发器类型选择 ──
+    var triggerType = 'gambit';
+    var triggerParams = { count: 1 };
+    var typeChoice = await dlPrompt(
+      '触发类型（输入数字）：\n' +
+      '1. choice — 选择含特定关键词的选项N次\n' +
+      '2. gambit — 孤注一掷成功N次（默认）\n' +
+      '3. rounds_under — N回合内触发结局\n' +
+      '4. field_zero — 某字段数值归零\n' +
+      '5. field_max_under — 结局时某字段最高值≤阈值\n' +
+      '6. response_match — AI回复含特定模式N次'
+    );
+    var tc = parseInt(typeChoice);
+    // 收集模板所有字段供选择
+    var allFieldOpts = [];
+    for (var _sk in (tpl.outputSections || {})) {
+      if (!tpl.outputSections.hasOwnProperty(_sk)) continue;
+      for (var _fi = 0; _fi < (tpl.outputSections[_sk].fields || []).length; _fi++) {
+        var _f = tpl.outputSections[_sk].fields[_fi];
+        allFieldOpts.push(_f);
+      }
+    }
+
+    switch (tc) {
+      case 1: // choice
+        triggerType = 'choice';
+        var pat = await dlPrompt('匹配关键词（正则）：', '反杀|反击');
+        if (pat === null) return;
+        triggerParams = { pattern: pat.trim() || '反杀', count: 1 };
+        var cnt1 = await dlPrompt('需匹配次数：', '1');
+        if (cnt1 !== null) triggerParams.count = Math.max(1, parseInt(cnt1) || 1);
+        break;
+      case 3: // rounds_under
+        triggerType = 'rounds_under';
+        var rnd = await dlPrompt('在多少回合内触发结局？', '10');
+        if (rnd === null) return;
+        triggerParams = { round: Math.max(1, parseInt(rnd) || 10) };
+        break;
+      case 4: // field_zero
+        triggerType = 'field_zero';
+        var fzList = allFieldOpts.map(function(f, i) { return (i + 1) + '. ' + f.label; }).join('\n');
+        var fzChoice = await dlPrompt('选择归零的字段：\n' + fzList);
+        if (fzChoice === null) return;
+        var fzIdx = (parseInt(fzChoice) || 1) - 1;
+        triggerParams = { fieldLabel: (allFieldOpts[fzIdx] || allFieldOpts[0]).label };
+        break;
+      case 5: // field_max_under
+        triggerType = 'field_max_under';
+        var fmList = allFieldOpts.map(function(f, i) { return (i + 1) + '. ' + f.label; }).join('\n');
+        var fmChoice = await dlPrompt('选择最高值字段：\n' + fmList);
+        if (fmChoice === null) return;
+        var fmIdx = (parseInt(fmChoice) || 1) - 1;
+        triggerParams = { fieldLabel: (allFieldOpts[fmIdx] || allFieldOpts[0]).label, threshold: 50 };
+        var thr = await dlPrompt('最高值阈值（≤此值触发）：', '50');
+        if (thr !== null) triggerParams.threshold = Math.max(0, parseInt(thr) || 50);
+        break;
+      case 6: // response_match
+        triggerType = 'response_match';
+        var rp = await dlPrompt('匹配关键词（正则）：', '赌对了|运气在');
+        if (rp === null) return;
+        triggerParams = { pattern: rp.trim() || '赌对了', count: 1 };
+        var cnt2 = await dlPrompt('需匹配次数：', '1');
+        if (cnt2 !== null) triggerParams.count = Math.max(1, parseInt(cnt2) || 1);
+        break;
+      default: // 2 = gambit
+        triggerType = 'gambit';
+        var gc = await dlPrompt('孤注一掷成功次数：', '1');
+        if (gc === null) return;
+        triggerParams = { count: Math.max(1, parseInt(gc) || 1) };
+    }
     tpl.hiddenAchievements[nm] = {
       icon: icon.trim() || '🎭',
       desc: desc.trim() || nm,
-      trigger: { type: 'gambit', count: 1 }
+      trigger: Object.assign({ type: triggerType }, triggerParams)
     };
   } else {
     if (!tpl.achievements) tpl.achievements = {};

@@ -59,7 +59,19 @@ async function uploadToTavern(saveId) {
     await dlAlert('存档数据不完整，无法上传');
     return;
   }
-  const confirmed = await dlConfirm('确定要将「' + save.name + '」分享到酒馆吗？\n\n分享后其他玩家可以下载你的故事设定。');
+
+  // 检查是否有玩家补充规则残留
+  var hasPlayerRules = false;
+  var tplCheck = save.template;
+  var editKeyChk = LS_KEYS.editedTemplate(saveId);
+  try {
+    var edChk = JSON.parse(localStorage.getItem(editKeyChk) || '{}');
+    if ((edChk.promptBody || tplCheck.promptBody || '').indexOf('【玩家补充规则') >= 0) hasPlayerRules = true;
+  } catch (e) {}
+
+  var confirmMsg = '确定要将「' + save.name + '」分享到酒馆吗？\n\n分享后其他玩家可以下载你的故事设定。';
+  if (hasPlayerRules) confirmMsg += '\n\n⚠ 检测到提示词中含有【玩家补充规则】残留。建议先在设置页清理后再上传。';
+  const confirmed = await dlConfirm(confirmMsg);
   if (!confirmed) return;
 
   // 深克隆模板 + 合并编辑版（确保上传的是最新版本）
@@ -76,6 +88,31 @@ async function uploadToTavern(saveId) {
     } catch (e) { /* corrupt */ }
   }
 
+  // ── 清理运行时属性 ──
+  delete uploadTemplate._preEditFields;
+  delete uploadTemplate._originalTemplate;
+  // 清理【玩家补充规则】章节
+  var prIdx = uploadTemplate.promptBody.indexOf('【玩家补充规则');
+  if (prIdx >= 0) {
+    var nextSection = uploadTemplate.promptBody.indexOf('【', prIdx + 8);
+    uploadTemplate.promptBody = (uploadTemplate.promptBody.substring(0, prIdx) +
+      (nextSection >= 0 ? uploadTemplate.promptBody.substring(nextSection) : '')).trim();
+  }
+
+  // ── 版本号递增 ──
+  var currentVersion = uploadTemplate.version || '1.0.0';
+  var parts = currentVersion.split('.').map(Number);
+  parts[2] = (parts[2] || 0) + 1;
+  uploadTemplate.version = parts.join('.');
+
+  // 自定义图片可选打包
+  var customImgs = {};
+  try { customImgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages(saveId)) || '{}'); } catch (e) {}
+  if (Object.keys(customImgs).length > 0) {
+    var includeImgs = await dlConfirm('检测到 ' + Object.keys(customImgs).length + ' 张自定义场景图片。是否包含在上传中？（会增加文件大小）');
+    if (includeImgs) uploadTemplate._customImages = customImgs;
+  }
+
   try {
     const resp = await fetch('/api/shared', {
       method: 'POST',
@@ -86,7 +123,7 @@ async function uploadToTavern(saveId) {
       const err = await resp.json();
       throw new Error(err.error || '上传失败');
     }
-    await dlAlert('✅ 「' + save.name + '」已成功分享到酒馆！');
+    await dlAlert('✅ 「' + save.name + '」已成功分享到酒馆！（v' + uploadTemplate.version + '）');
   } catch (err) {
     dlAlert('❌ 上传失败: ' + err.message);
   }

@@ -45,15 +45,27 @@ function bindEvents() {
   $('#btn-generate-prompt').addEventListener('click', generatePrompt);
   $('#btn-confirm-save').addEventListener('click', confirmCreateSave);
   $('#btn-regenerate').addEventListener('click', generatePrompt);
+  $('#btn-parse-story').addEventListener('click', toggleParseStoryPanel);
+  $('#btn-parse-start').addEventListener('click', parseStoryToTemplate);
+  $('#btn-parse-cancel').addEventListener('click', function() {
+    var panel = $('#parse-story-panel');
+    if (panel) panel.style.display = 'none';
+  });
   bindOverlayClose('create-save-overlay', closeCreateSave);
 
-  // 风格/长度芯片
+  // 风格/长度/难度芯片
   $('#style-chips').addEventListener('click', function(e) {
     if (e.target.classList.contains('chip')) { e.target.classList.toggle('selected'); }
   });
   $('#length-chips').addEventListener('click', function(e) {
     if (e.target.classList.contains('chip')) {
       document.querySelectorAll('#length-chips .chip').forEach(c => c.classList.remove('selected'));
+      e.target.classList.add('selected');
+    }
+  });
+  $('#difficulty-chips').addEventListener('click', function(e) {
+    if (e.target.classList.contains('chip')) {
+      document.querySelectorAll('#difficulty-chips .chip').forEach(c => c.classList.remove('selected'));
       e.target.classList.add('selected');
     }
   });
@@ -184,6 +196,26 @@ function bindEvents() {
     if (overlay) overlay.classList.remove('active');
   });
 
+  // 命运转折面板
+  $('#btn-endings').addEventListener('click', () => {
+    try {
+      renderEndingsPanel();
+      const overlay = $('#endings-overlay');
+      if (overlay) overlay.classList.add('active');
+    } catch (e) {
+      console.error('Failed to open endings:', e);
+    }
+  });
+  $('#btn-close-endings').addEventListener('click', () => {
+    const overlay = $('#endings-overlay');
+    if (overlay) overlay.classList.remove('active');
+  });
+  $('#btn-add-ending').addEventListener('click', addEnding);
+  bindOverlayClose('endings-overlay', () => {
+    const overlay = $('#endings-overlay');
+    if (overlay) overlay.classList.remove('active');
+  });
+
   // 帮助弹窗
   $('#btn-help').addEventListener('click', () => { $('#help-overlay').classList.add('active'); });
   $('#btn-close-help').addEventListener('click', () => { $('#help-overlay').classList.remove('active'); });
@@ -227,7 +259,8 @@ function bindEvents() {
     const fid = ve.id?.replace('field-', '');
     if (!fid) return;
     const cv = ve.textContent;
-    dlPrompt('修改「' + (ve.previousElementSibling?.textContent?.trim() || '') + '」的当前值：', cv).then(nv => {
+    const fieldLabel = ve.previousElementSibling?.textContent?.trim() || '';
+    dlPrompt('修改「' + fieldLabel + '」的当前值：', cv).then(nv => {
       if (nv === null || nv === cv) return;
       if (!gameState.fieldHistory[fid]) gameState.fieldHistory[fid] = {};
       const num = parseInt(nv, 10);
@@ -246,7 +279,14 @@ function bindEvents() {
         else if (num >= 40) ve.classList.add('pressure-warn');
         else ve.classList.add('pressure-safe');
       }
-      if (gameState.gameStarted) saveGameState();
+      if (gameState.gameStarted) {
+        saveGameState();
+        // 通知 AI 数值被手动调整
+        gameState.fullHistory.push({
+          role: 'user',
+          content: '【系统通知】玩家手动调整了「' + fieldLabel + '」的值为 ' + nv + '。请在后续叙事中合理衔接。'
+        });
+      }
     });
   });
 

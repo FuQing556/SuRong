@@ -665,7 +665,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
   /* 状态面板 — 双列 */
   .status-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
-  .resources-row { flex-wrap: wrap; gap: 6px; }
+  #resources-row { grid-template-columns: 1fr 1fr; gap: 6px; }
   .vars-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
 
   /* 弹窗 — 全宽 */
@@ -850,14 +850,13 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   padding: 8px;
 }
 #resources-row {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px 16px;
   margin-top: 8px;
 }
 #resources-row .resource-item {
-  flex: 1;
-  min-width: 100px;
+  justify-self: start;
 }
 
 /* ── 存档选择器 ── */

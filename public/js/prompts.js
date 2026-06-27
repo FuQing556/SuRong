@@ -107,6 +107,48 @@ async function savePrompt() {
     return;
   }
 
+  const tpl = getActiveTemplate();
+
+  // ── 字段引用校验：扫描 promptBody 中条件引用的字段标签 ──
+  var allFieldLabels = [];
+  var labelToField = {};
+  for (var _sk2 in (tpl.outputSections || {})) {
+    if (!tpl.outputSections.hasOwnProperty(_sk2)) continue;
+    for (var _fi2 = 0; _fi2 < (tpl.outputSections[_sk2].fields || []).length; _fi2++) {
+      var _f2 = tpl.outputSections[_sk2].fields[_fi2];
+      allFieldLabels.push(_f2.label);
+      labelToField[_f2.label] = _f2;
+    }
+  }
+  // 扫描条件中的字段引用：中文+运算符+数字 模式
+  var condRe = /([一-鿿]{1,8})\s*[≥≤=><]=?\s*\d+/g;
+  var unknownLabels = [];
+  var cm;
+  while ((cm = condRe.exec(prompt)) !== null) {
+    var candidate = cm[1];
+    // 排除已知非字段词汇
+    if (/^(?:轮次|回合|且|或|则|第|此|该|当前|最大|最小|以上|以下|不超过|不低于)$/.test(candidate)) continue;
+    if (allFieldLabels.indexOf(candidate) === -1 && unknownLabels.indexOf(candidate) === -1) {
+      unknownLabels.push(candidate);
+    }
+  }
+  if (unknownLabels.length > 0) {
+    var warnRef = '⚠ 检测到以下条件引用了不存在的字段：\n\n' +
+      unknownLabels.map(function(l) { return '• ' + l; }).join('\n') +
+      '\n\n这些命运转折条件将无法被客户端识别和触发。\n当前模板字段：' + allFieldLabels.join('、') +
+      '\n\n确定继续保存？';
+    var proceedRef = await dlConfirm(warnRef);
+    if (!proceedRef) return;
+  }
+
+  // ── 游戏中编辑警告 ──
+  if (gameState.gameStarted) {
+    var roundN2 = gameState.fullHistory.filter(function(m) { return m.role === 'user'; }).length;
+    var warnGame = '⚠ 当前游戏已进行 ' + roundN2 + ' 回合。修改提示词设定后，已有的对话历史可能与新设定不一致。建议开新游戏。\n\n确定继续修改？';
+    var proceedGame = await dlConfirm(warnGame);
+    if (!proceedGame) return;
+  }
+
   // ── v2: 检查结局标记是否完整 ──
   const origBody = gameState._originalTemplate?.promptBody || '';
   if (origBody) {
@@ -130,7 +172,6 @@ async function savePrompt() {
   gameState.customPrompt = prompt;
 
   // 持久化——只保存 promptBody，不覆盖字段/成就等其他编辑
-  const tpl = getActiveTemplate();
   const saveId = gameState.activeSaveId || tpl.id || 'default';
   tpl.promptBody = prompt;
   gameState.activeTemplate.promptBody = prompt;
@@ -166,48 +207,92 @@ async function reloadPrompt() {
   }
 }
 
-// ── 恢复原始提示词 ──
+// ── 恢复原始设定（多选范围）──
 async function resetPrompt() {
   const tpl = getActiveTemplate();
   const saveId = gameState.activeSaveId || tpl.id || 'default';
-
-  // 优先用 _originalTemplate，回退到服务器提示词
-  let originalPromptBody = gameState._originalTemplate?.promptBody || '';
-  if (!originalPromptBody && gameState.originalPrompt) {
-    originalPromptBody = gameState.originalPrompt;
-  }
-  if (!originalPromptBody) {
-    dom.settingsMsg.textContent = '⚠ 没有可恢复的原始提示词';
+  const orig = gameState._originalTemplate;
+  if (!orig) {
+    dom.settingsMsg.textContent = '⚠ 没有可恢复的原始模板';
     dom.settingsMsg.style.color = 'var(--red)';
     return;
   }
 
-  dom.promptEditor.value = originalPromptBody;
-  dom.promptLength.textContent = '字数: ' + originalPromptBody.length;
-  gameState.customPrompt = '';
+  // 多选恢复范围
+  var scopeStr = await dlPrompt(
+    '恢复原始设定（输入数字组合，如 1234 全选）：\n\n' +
+    '1. 提示词正文' + (orig.promptBody ? '（' + orig.promptBody.length + '字）' : '（无）') + '\n' +
+    '2. 字段结构' + (orig.outputSections ? '（' + Object.keys(orig.outputSections).length + '区段）' : '（无）') + '\n' +
+    '3. 可见成就' + (orig.achievements ? '（' + Object.keys(orig.achievements).length + '个）' : '（无）') + '\n' +
+    '4. 隐藏成就' + (orig.hiddenAchievements ? '（' + Object.keys(orig.hiddenAchievements).length + '个）' : '（无）') + '\n\n' +
+    '留空=取消恢复'
+  );
+  if (!scopeStr || !scopeStr.trim()) return;
+  var scope = scopeStr.trim();
 
-  // 清除编辑版模板中该存档的 promptBody，保留字段/成就编辑
-  const editKey = LS_KEYS.editedTemplate(saveId);
-  const savedTpl = localStorage.getItem(editKey);
-  if (savedTpl) {
-    try {
-      const ed = JSON.parse(savedTpl);
-      ed.promptBody = originalPromptBody;
-      safeSetItem(editKey, ed);
-    } catch (e) {
-      _devWarn('resetPrompt parse', e);
-      safeSetItem(editKey, { promptBody: originalPromptBody });
-    }
+  var restorePrompt = /1/.test(scope);
+  var restoreFields = /2/.test(scope);
+  var restoreAch = /3/.test(scope);
+  var restoreHidden = /4/.test(scope);
+
+  if (!restorePrompt && !restoreFields && !restoreAch && !restoreHidden) {
+    dom.settingsMsg.textContent = '⚠ 未选择任何恢复项';
+    dom.settingsMsg.style.color = 'var(--red)';
+    return;
   }
 
-  // 恢复当前模板的 promptBody（不修改 _originalTemplate 原版快照）
-  tpl.promptBody = originalPromptBody;
+  var restored = [];
 
-  // 重建系统提示词
+  // 恢复提示词正文
+  if (restorePrompt && orig.promptBody) {
+    dom.promptEditor.value = orig.promptBody;
+    dom.promptLength.textContent = '字数: ' + orig.promptBody.length;
+    gameState.customPrompt = '';
+    tpl.promptBody = orig.promptBody;
+    restored.push('提示词正文');
+  }
+
+  // 恢复字段结构
+  if (restoreFields && orig.outputSections) {
+    tpl.outputSections = JSON.parse(JSON.stringify(orig.outputSections));
+    restored.push('字段结构');
+  }
+
+  // 恢复可见成就
+  if (restoreAch && orig.achievements) {
+    tpl.achievements = JSON.parse(JSON.stringify(orig.achievements));
+    restored.push('可见成就');
+  }
+
+  // 恢复隐藏成就
+  if (restoreHidden && orig.hiddenAchievements) {
+    tpl.hiddenAchievements = JSON.parse(JSON.stringify(orig.hiddenAchievements));
+    restored.push('隐藏成就');
+  }
+
+  // 持久化
+  const editKey = LS_KEYS.editedTemplate(saveId);
+  var edited = {};
+  try {
+    var ej = localStorage.getItem(editKey);
+    if (ej) edited = JSON.parse(ej);
+  } catch (e) { /* corrupt */ }
+  if (restorePrompt) edited.promptBody = orig.promptBody;
+  if (restoreFields) edited.outputSections = tpl.outputSections;
+  if (restoreAch) edited.achievements = tpl.achievements;
+  if (restoreHidden) edited.hiddenAchievements = tpl.hiddenAchievements;
+  safeSetItem(editKey, edited);
+
+  // 刷新
+  if (restoreFields) {
+    renderStatusContainers(tpl);
+    renderFieldEditor();
+  }
+  refreshSystemPrompt();
   gameState.activeSystemPrompt = buildSystemPrompt(tpl);
   gameState.customPrompt = gameState.activeSystemPrompt;
 
-  dom.settingsMsg.textContent = '✅ 已恢复原始提示词（仅限当前存档：' + saveId + '）';
+  dom.settingsMsg.textContent = '✅ 已恢复：' + restored.join('、');
   dom.settingsMsg.style.color = 'var(--green)';
 }
 
@@ -331,8 +416,9 @@ function renderImageManager() {
   const images = tpl.sceneImages || {};
   const defaultImg = tpl.defaultSceneImage || '日常.png';
   const sceneTypes = tpl.sceneTypes || Object.keys(images);
+  const saveId = gameState.activeSaveId || 'default';
   var customImages = {};
-  try { customImages = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}'); } catch (e) { /* corrupt */ }
+  try { customImages = JSON.parse(localStorage.getItem(LS_KEYS.customImages(saveId)) || '{}'); } catch (e) { /* corrupt */ }
 
   container.innerHTML = sceneTypes.map(type => {
     const currentSrc = customImages[type] || images[type] || defaultImg;
@@ -357,9 +443,9 @@ function renderImageManager() {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = () => {
-          var imgs = {}; try { imgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}'); } catch (e) {}
+          var imgs = {}; try { imgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages(saveId)) || '{}'); } catch (e) {}
           imgs[sceneType] = reader.result;
-          if (!safeSetItem(LS_KEYS.customImages, imgs)) {
+          if (!safeSetItem(LS_KEYS.customImages(saveId), imgs)) {
             delete imgs[sceneType];
             return;
           }
@@ -377,9 +463,9 @@ function renderImageManager() {
 
   container.querySelectorAll('.btn-reset-img').forEach(btn => {
     btn.addEventListener('click', () => {
-      var imgs = {}; try { imgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages) || '{}'); } catch (e) {}
+      var imgs = {}; try { imgs = JSON.parse(localStorage.getItem(LS_KEYS.customImages(saveId)) || '{}'); } catch (e) {}
       delete imgs[btn.dataset.scene];
-      localStorage.setItem(LS_KEYS.customImages, JSON.stringify(imgs));
+      localStorage.setItem(LS_KEYS.customImages(saveId), JSON.stringify(imgs));
       renderImageManager();
     });
   });

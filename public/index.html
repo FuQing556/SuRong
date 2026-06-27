@@ -59,18 +59,18 @@
     <div class="modal save-selector-modal">
       <!-- 标签切换栏 -->
       <div class="tab-bar">
-        <button class="tab-btn active" data-tab="my-saves">📂 我的存档</button>
+        <button class="tab-btn active" data-tab="my-saves">📂 我的模板</button>
         <button class="tab-btn" data-tab="tavern">🍻 酒馆</button>
       </div>
 
       <!-- 我的存档面板 -->
       <div class="tab-panel active" id="panel-my-saves">
-        <p class="settings-hint">每个存档对应一个独立的故事世界，使用不同的提示词和设定。</p>
+        <p class="settings-hint">每个模板对应一个独立的故事世界，使用不同的提示词和设定。槽位 1-9 是游戏进度存档。</p>
         <div class="save-grid" id="save-grid">
           <!-- 动态生成存档卡片 -->
         </div>
         <div class="save-selector-footer">
-          <button id="btn-create-save" class="btn btn-primary">＋ 创建新存档</button>
+          <button id="btn-create-save" class="btn btn-primary">＋ 创建新模板</button>
         </div>
       </div>
 
@@ -96,11 +96,11 @@
   <!-- ═══════════ 创建新存档弹窗 ═══════════ -->
   <div id="create-save-overlay" class="overlay">
     <div class="modal create-save-modal">
-      <h2>🆕 创建新存档</h2>
+      <h2>🆕 创建新模板</h2>
       <p class="settings-hint">填写基本设定，AI 将自动生成完整的故事提示词。</p>
       <div class="create-save-form">
         <div class="form-row">
-          <label>存档名称 <span class="required">*</span></label>
+          <label>模板名称 <span class="required">*</span></label>
           <input id="new-save-name" placeholder="例如：修仙·宗门争锋" maxlength="30" autocomplete="off">
         </div>
         <div class="form-row">
@@ -135,15 +135,35 @@
           </div>
         </div>
         <div class="form-row">
+          <label>难度选择</label>
+          <div class="style-chips" id="difficulty-chips">
+            <button class="chip selected" data-difficulty="standard">⚖ 标准</button>
+            <button class="chip" data-difficulty="easy">🌱 简单（NPC敌意低、资源充裕）</button>
+            <button class="chip" data-difficulty="hard">💀 困难（NPC敌意高、代价更大）</button>
+            <button class="chip" data-difficulty="nightmare">☠ 噩梦（每题都是陷阱）</button>
+          </div>
+        </div>
+        <div class="form-row">
           <label>额外要求（可选）</label>
           <textarea id="new-save-extra" placeholder="例如：需要有炼丹系统；加入门派大比；反派可以洗白..." rows="4"></textarea>
         </div>
       </div>
       <div class="create-save-footer">
         <button id="btn-generate-prompt" class="btn btn-primary">🤖 AI 生成提示词</button>
+        <button id="btn-parse-story" class="btn btn-secondary">📄 从故事文本解析</button>
         <button id="btn-cancel-create" class="btn btn-ghost">取消</button>
       </div>
       <div id="create-save-msg"></div>
+      <!-- 故事解析面板（默认折叠） -->
+      <div id="parse-story-panel" style="display:none;margin-top:12px;border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--bg-card);">
+        <p style="font-size:12px;color:var(--text-dim);margin:0 0 8px;">📄 粘贴一段故事文本（≥50字），AI 将自动提取世界观、主角、冲突，生成完整模板。</p>
+        <textarea id="parse-story-input" placeholder="例如：她醒来时发现自己躺在一个陌生的洞穴里，身上穿着不属于她的铠甲。洞外传来沉重的脚步声——" rows="6" style="width:100%;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button id="btn-parse-start" class="btn btn-primary">🔍 开始解析</button>
+          <button id="btn-parse-cancel" class="btn btn-ghost btn-tiny">收起</button>
+        </div>
+        <div id="parse-story-msg" style="font-size:12px;margin-top:4px;"></div>
+      </div>
       <div id="generated-preview" class="hidden">
         <h3>📝 生成预览</h3>
         <textarea id="generated-prompt-preview" rows="8" readonly></textarea>
@@ -266,7 +286,7 @@
     <!-- 右侧：游戏内容 -->
     <main id="content-panel">
       <header id="top-bar">
-        <button id="btn-back-saves" class="btn btn-small" title="返回存档选择">📂 存档</button>
+        <button id="btn-back-saves" class="btn btn-small" title="返回模板选择">📂 模板</button>
         <h1 class="game-title">互动叙事</h1>
         <div class="top-actions">
           <button id="btn-manual-save" class="btn btn-small" title="手动存档到额外槽位">💾 存档</button>
@@ -274,6 +294,7 @@
           <button id="btn-export-story" class="btn btn-small" title="导出故事为txt文件">📄 导出</button>
           <button id="btn-undo" class="btn btn-small" title="撤销上一步操作">↩️ 撤销</button>
           <button id="btn-achievements" class="btn btn-small" title="查看和编辑成就">🏆 成就</button>
+          <button id="btn-endings" class="btn btn-small" title="查看和编辑命运转折">🎭 命运</button>
           <button id="btn-help" class="btn btn-small" title="查看完整使用说明">❓ 帮助</button>
           <button id="btn-settings" class="btn btn-small" title="编辑提示词、字段和主题">⚙️ 设置</button>
           <button id="btn-audio" class="btn btn-small" title="开关音效">🔊</button>
@@ -394,7 +415,7 @@
         <div class="help-section"><h3>⚙️ 设置</h3><p><b>提示词编辑器</b>只显示正文（promptBody），格式模板由字段自动生成。修改后点<b>💾保存</b>，下次对话即生效。<b>字段编辑器</b>可增删改字段（标签/图标/类型/格式提示），支持<b>emoji选择器</b>（点击图标按钮），保存后新字段数值型默认显示0。关闭设置有<b>未保存提醒</b>，防止误丢修改。<b>主题选择器</b>下拉即自动应用，无需额外点击。<b>场景图片管理</b>可为每个场景类型替换本地图片，支持恢复默认。</p></div>
         <div class="help-section"><h3>📂 存档与回溯</h3><p><b>自动存档</b>到槽位0，每回合AI回复后自动保存。<b>手动存档</b>（💾）保存到槽位1-9，槽位轮转使用（不会总覆盖槽位1），满槽时弹出确认。继续游戏时多槽位弹出选择框。<b>↩️撤销</b>回退上一回合（清理摘要防止AI混淆）。<b>🗑清档</b>清除所有进度保留模板和成就。<b>✕</b>删除整个存档模板及关联数据。关闭标签页时游戏进行中有<b>离开警告</b>。</p></div>
         <div class="help-section"><h3>📜 历程与导出</h3><p>点<b>📜历程</b>打开完整回顾弹窗，含每回合选择、结算、现状和资源数值。点<b>📄导出</b>下载整局故事为txt文件。故事框翻看旧回合时新回复<b>不会拽到底部</b>打断阅读。</p></div>
-        <div class="help-section"><h3>🆕 创建存档</h3><p>点<b>＋创建新存档</b>，填写世界观、主角、冲突等设定。选择<b>风格标签</b>和<b>游戏长度</b>（短篇/标准/长篇/沉浸，决定结局回合门槛）。<b>额外要求</b>字段会传递给AI（如"需要炼丹系统""加入门派大比"）。AI自动生成完整模板。生成后可手动编辑任何内容。</p></div>
+        <div class="help-section"><h3>🆕 创建模板</h3><p>点<b>＋创建新模板</b>，填写世界观、主角、冲突等设定。选择<b>风格标签</b>和<b>游戏长度</b>（短篇/标准/长篇/沉浸，决定结局回合门槛）。<b>额外要求</b>字段会传递给AI（如"需要炼丹系统""加入门派大比"）。AI自动生成完整模板。生成后可手动编辑任何内容。</p></div>
         <div class="help-section"><h3>🍻 酒馆</h3><p>在存档卡点<b>☁分享到酒馆</b>发布（自动包含最新编辑）。酒馆支持<b>🔍搜索</b>。导入后自动切换到我的存档并询问<b>是否立即开始</b>。管理员可删除、备份、恢复酒馆数据。</p></div>
         <div class="help-section"><h3>🎨 主题</h3><p>11套主题：暗色、明亮、修仙、赛博、深海、森林、日落、子夜、樱花、黑白、鎏金。每套有独立配色（暖冷撞色设计）、字体、画框形状、粒子特效和选项动画。设置中切换即时生效，按存档隔离保存。</p></div>
         <div class="help-section"><h3>🔊 音效</h3><p>工具栏<b>🔊音效</b>按钮开关。包含UI音效（选项点击/成就解锁/错误提示）和主题氛围音（森林风吟/深海潮汐/赛博底嗡/修仙风铃/子夜宇宙/鎏金共鸣/樱花柔风/日落暖嗡）。切换主题自动切换氛围。浏览器需允许音频播放。</p></div>
@@ -431,6 +452,20 @@
       <div id="achievements-list"></div>
       <br>
       <button id="btn-close-achievements" class="btn btn-secondary">关闭</button>
+    </div>
+  </div>
+
+  <!-- 命运转折编辑面板 -->
+  <div id="endings-overlay" class="overlay">
+    <div class="modal endings-modal">
+      <h2>🎭 命运转折</h2>
+      <p class="settings-hint">命运转折是故事的分岔点——当字段数值满足条件时自动触发。编辑条件、叙事描述和图标。</p>
+      <div id="endings-list"></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button id="btn-add-ending" class="btn btn-small">＋ 添加命运转折</button>
+      </div>
+      <br>
+      <button id="btn-close-endings" class="btn btn-secondary">关闭</button>
     </div>
   </div>
 
