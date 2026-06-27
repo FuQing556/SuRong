@@ -145,29 +145,32 @@ function bindEvents() {
     btn.disabled = true;
     try {
       var reg = await navigator.serviceWorker.ready;
+      var hadUpdate = false;
+      // 1. 检查 SW 自身有无新版本
       await reg.update();
-      // 等待一小段时间让新SW完成安装
       await new Promise(function(r) { setTimeout(r, 1500); });
       if (reg.waiting) {
-        // 有待激活的新SW
         reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        btn.textContent = '✅ 已更新，即将刷新...';
-        setTimeout(function() { window.location.reload(); }, 800);
+        hadUpdate = true;
       } else if (reg.installing) {
-        btn.textContent = '⏳ 正在安装更新...';
-        reg.installing.addEventListener('statechange', function() {
-          if (reg.installing.state === 'installed') {
-            btn.textContent = '✅ 已更新，即将刷新...';
-            setTimeout(function() { window.location.reload(); }, 800);
-          }
+        await new Promise(function(resolve) {
+          reg.installing.addEventListener('statechange', function() {
+            if (reg.installing.state === 'installed') { hadUpdate = true; resolve(); }
+          });
+          setTimeout(resolve, 3000); // 超时兜底
         });
-      } else {
-        btn.textContent = '✅ 已是最新版本';
-        setTimeout(function() { btn.textContent = '🔄 检查更新'; btn.disabled = false; }, 2000);
       }
+      // 2. 不管SW有没有更新，清空静态缓存 + 强制刷新
+      // SW缓存里的HTML/CSS/JS可能仍是旧版，清掉让下次加载重新拉取
+      btn.textContent = hadUpdate ? '✅ SW已更新，清缓存刷新...' : '✅ 已最新，清缓存刷新...';
+      var cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(function(name) { return caches.delete(name); }));
+      setTimeout(function() { window.location.reload(); }, 400);
     } catch (e) {
-      btn.textContent = '❌ 检查失败';
-      setTimeout(function() { btn.textContent = '🔄 检查更新'; btn.disabled = false; }, 2000);
+      // 降级：直接清缓存刷新
+      try { var cns = await caches.keys(); await Promise.all(cns.map(function(n) { return caches.delete(n); })); } catch(e2) {}
+      btn.textContent = '🔄 强制刷新中...';
+      setTimeout(function() { window.location.reload(); }, 300);
     }
   });
 
