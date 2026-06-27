@@ -88,6 +88,9 @@ async function uploadToTavern(saveId) {
     } catch (e) { /* corrupt */ }
   }
 
+  // ── 防御：上传前校验修复模板结构 ──
+  if (typeof validateAndRepairTemplate === 'function') validateAndRepairTemplate(uploadTemplate);
+
   // ── 清理运行时属性 ──
   delete uploadTemplate._preEditFields;
   delete uploadTemplate._originalTemplate;

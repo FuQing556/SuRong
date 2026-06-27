@@ -36,7 +36,7 @@ async function initTemplateSelector() {
     return;
   }
   dom.templateSelect.innerHTML = templates.map(t =>
-    '<option value="' + t.id + '" ' + (t.id === (gameState.activeTemplate?.id || 'surongrong') ? 'selected' : '') + '>' + t.name + '</option>'
+    '<option value="' + escapeHtml(t.id) + '" ' + (t.id === (gameState.activeTemplate?.id || 'surongrong') ? 'selected' : '') + '>' + escapeHtml(t.name) + '</option>'
   ).join('');
   dom.templateSelect.style.display = '';
   dom.templateSelect.addEventListener('change', async (e) => {
@@ -219,10 +219,11 @@ async function confirmCreateSave() {
   });
   saveUserSaves(saves);
 
-  // 保存引用后清除缓存，防止下次创建时恢复旧模板
+  // 保存引用后清除所有缓存，防止下次创建时恢复旧模板/旧表单
   const savedTemplate = generatedTemplate;
   generatedTemplate = null;
   localStorage.removeItem(LS_KEYS.generatedTpl);
+  localStorage.removeItem(FORM_SAVE_KEY);  // 清除表单自动保存缓存
 
   try { await fetch('/api/templates/' + newId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: savedTemplate }) }); } catch (e) { /* server optional */ }
 
@@ -477,6 +478,8 @@ async function saveFields() {
   }
 
   tpl.outputSections = newSections;
+  // 防御：确保保存后的结构完整
+  if (typeof validateAndRepairTemplate === 'function') validateAndRepairTemplate(tpl);
   refreshSystemPrompt();
 
   // ── 字段ID迁移：仅在纯重命名（等长、仅一个ID变化）时迁移，防止插入/删除导致数据错位 ──

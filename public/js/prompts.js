@@ -33,6 +33,8 @@ async function openSettings() {
       if (ed.outputSections) tpl.outputSections = ed.outputSections;
       if (ed.achievements) tpl.achievements = ed.achievements;
       if (ed.hiddenAchievements) tpl.hiddenAchievements = ed.hiddenAchievements;
+      // 防御：编辑版可能损坏，合并后立即校验
+      if (typeof validateAndRepairTemplate === 'function') validateAndRepairTemplate(tpl);
       refreshSystemPrompt();
       // 游戏进行中不重建状态栏DOM — 只在需要时补字段+回填值
       if (gameState.gameStarted) {
@@ -53,17 +55,17 @@ async function openSettings() {
   }
 
   // 始终只显示 promptBody（正文），格式模板由 outputSections 自动生成，不可编辑
-  // 之前显示 activeSystemPrompt 会导致保存后格式模板被嵌套进 promptBody
   const tpl = getActiveTemplate();
-  if (tpl.promptBody && tpl.promptBody.length >= 100) {
+  if (tpl.promptBody) {
     dom.promptEditor.value = tpl.promptBody;
     dom.promptLength.textContent = '字数: ' + dom.promptEditor.value.length + ' (当前模板: ' + (tpl.name || '未命名') + ')';
   } else {
+    // 仅当 promptBody 完全缺失时才尝试加载服务器后备提示词
     try {
       const resp = await fetch('/api/prompt');
       const data = await resp.json();
       dom.promptEditor.value = data.prompt || '';
-      dom.promptLength.textContent = '字数: ' + dom.promptEditor.value.length;
+      dom.promptLength.textContent = '字数: ' + dom.promptEditor.value.length + ' (服务器后备)';
     } catch (e) {
       dom.promptEditor.value = '';
       dom.promptLength.textContent = '字数: 0';
@@ -423,12 +425,14 @@ function renderImageManager() {
   container.innerHTML = sceneTypes.map(type => {
     const currentSrc = customImages[type] || images[type] || defaultImg;
     const isCustom = !!customImages[type];
+    var escType = escapeHtml(type);
+    var escSrc = escapeHtml(currentSrc);
     return '<div class="image-mgr-row">' +
-      '<span class="image-mgr-label">' + type + '</span>' +
-      '<img class="image-mgr-thumb" src="' + currentSrc + '" alt="' + type + '" onerror="this.style.opacity=\'0.3\'">' +
-      '<span class="image-mgr-filename">' + (isCustom ? '📁 自定义' : currentSrc) + '</span>' +
-      '<button class="btn btn-small btn-replace-img" data-scene="' + type + '">📂 替换</button>' +
-      (isCustom ? '<button class="btn btn-ghost btn-tiny btn-reset-img" data-scene="' + type + '">↺ 恢复</button>' : '') +
+      '<span class="image-mgr-label">' + escType + '</span>' +
+      '<img class="image-mgr-thumb" src="' + escSrc + '" alt="' + escType + '" onerror="this.style.opacity=\'0.3\'">' +
+      '<span class="image-mgr-filename">' + (isCustom ? '📁 自定义' : escSrc) + '</span>' +
+      '<button class="btn btn-small btn-replace-img" data-scene="' + escType + '">📂 替换</button>' +
+      (isCustom ? '<button class="btn btn-ghost btn-tiny btn-reset-img" data-scene="' + escType + '">↺ 恢复</button>' : '') +
       '</div>';
   }).join('');
 

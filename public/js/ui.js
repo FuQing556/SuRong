@@ -194,10 +194,10 @@ function renderStatusContainers(template) {
   ];
   if (dom.statusGrid) {
     dom.statusGrid.innerHTML = statusFields.map(f =>
-      `<div class="status-item" data-field="${f.id}">
-        <span class="status-label">${f.icon || ''} ${f.label}</span>
-        <span class="status-value" id="field-${f.id}">—</span>
-      </div>`
+      '<div class="status-item" data-field="' + escapeHtml(f.id) + '">' +
+        '<span class="status-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span>' +
+        '<span class="status-value" id="field-' + escapeHtml(f.id) + '">—</span>' +
+      '</div>'
     ).join('');
   }
 
@@ -205,10 +205,10 @@ function renderStatusContainers(template) {
   const resFields = sections.resources?.fields || [];
   if (dom.resourcesRow) {
     dom.resourcesRow.innerHTML = resFields.length > 0 ? resFields.map(f =>
-      `<div class="status-item resource-item" data-field="${f.id}">
-        <span class="status-label">${f.icon || ''} ${f.label}</span>
-        <span class="status-value" id="field-${f.id}">—</span>
-      </div>`
+      '<div class="status-item resource-item" data-field="' + escapeHtml(f.id) + '">' +
+        '<span class="status-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span>' +
+        '<span class="status-value" id="field-' + escapeHtml(f.id) + '">—</span>' +
+      '</div>'
     ).join('') : '';
     dom.resourcesRow.style.display = resFields.length > 0 ? '' : 'none';
   }
@@ -217,10 +217,10 @@ function renderStatusContainers(template) {
   const varFields = sections.variables?.fields || [];
   if (dom.varsGrid) {
     dom.varsGrid.innerHTML = varFields.map(f =>
-      `<div class="status-item var-item" data-field="${f.id}">
-        <span class="status-label">${f.icon || ''} ${f.label}</span>
-        <span class="status-value" id="field-${f.id}">—</span>
-      </div>`
+      '<div class="status-item var-item" data-field="' + escapeHtml(f.id) + '">' +
+        '<span class="status-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span>' +
+        '<span class="status-value" id="field-' + escapeHtml(f.id) + '">—</span>' +
+      '</div>'
     ).join('');
     dom.varsGrid.classList.remove('collapsed');
     var vp = document.getElementById('variables-panel');
@@ -484,7 +484,7 @@ function renderMySavesPanel() {
     return `
     <div class="save-card" data-save-id="${s.id}">
       <div class="save-card-header">
-        <span class="save-card-icon">${s.icon}</span>
+        <span class="save-card-icon">${escapeHtml(s.icon)}</span>
         <span class="save-card-name">${escapeHtml(s.name)}</span>
       </div>
       ${protagLine ? `<div class="save-card-protag">👤 ${escapeHtml(protagLine)}</div>` : ''}

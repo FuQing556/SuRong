@@ -147,8 +147,6 @@ function checkAchievementsFromState(parsed) {
     } else if (/情报.*交易|情报.*交换/.test(desc)) {
       triggered = !!gameState.achievementFlags.tradeCompleted;
     } else {
-      const nm = desc.match(/(\d+)/);
-      const threshold = nm ? parseInt(nm[1]) : 70;
       const useMax = /曾达|最高/.test(desc);
       const hasGate = /未触发|未被|但未|且未/.test(desc);
       const allLabels = [];
@@ -161,6 +159,11 @@ function checkAchievementsFromState(parsed) {
         if (desc.includes(l)) { matched = l; break; }
       }
       if (matched) {
+        // 找匹配标签后面最近的数字，而非描述中第一个数字
+        const idx = desc.indexOf(matched);
+        const after = desc.substring(idx + matched.length);
+        const nm = after.match(/(\d+)/);
+        const threshold = nm ? parseInt(nm[1]) : 70;
         const val = _fieldVal(matched, useMax);
         triggered = val >= threshold;
         if (triggered && hasGate) triggered = !gameState.achievementFlags.endingTriggered;
