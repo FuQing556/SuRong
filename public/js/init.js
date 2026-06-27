@@ -133,6 +133,69 @@ function bindEvents() {
   $('#btn-reset-prompt').addEventListener('click', resetPrompt);
   $('#btn-save-fields').addEventListener('click', saveFields);
   $('#btn-add-field').addEventListener('click', addField);
+
+  // 检查更新：强制SW检查新版本
+  $('#btn-check-update').addEventListener('click', async function() {
+    if (!('serviceWorker' in navigator)) {
+      if (typeof dlAlert === 'function') dlAlert('⚠ 当前浏览器不支持 Service Worker，无法检查更新。');
+      return;
+    }
+    var btn = $('#btn-check-update');
+    btn.textContent = '⏳ 检查中...';
+    btn.disabled = true;
+    try {
+      var reg = await navigator.serviceWorker.ready;
+      await reg.update();
+      // 等待一小段时间让新SW完成安装
+      await new Promise(function(r) { setTimeout(r, 1500); });
+      if (reg.waiting) {
+        // 有待激活的新SW
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        btn.textContent = '✅ 已更新，即将刷新...';
+        setTimeout(function() { window.location.reload(); }, 800);
+      } else if (reg.installing) {
+        btn.textContent = '⏳ 正在安装更新...';
+        reg.installing.addEventListener('statechange', function() {
+          if (reg.installing.state === 'installed') {
+            btn.textContent = '✅ 已更新，即将刷新...';
+            setTimeout(function() { window.location.reload(); }, 800);
+          }
+        });
+      } else {
+        btn.textContent = '✅ 已是最新版本';
+        setTimeout(function() { btn.textContent = '🔄 检查更新'; btn.disabled = false; }, 2000);
+      }
+    } catch (e) {
+      btn.textContent = '❌ 检查失败';
+      setTimeout(function() { btn.textContent = '🔄 检查更新'; btn.disabled = false; }, 2000);
+    }
+  });
+
+  // 安装到桌面：触发PWA安装
+  $('#btn-force-install').addEventListener('click', async function() {
+    if (_pwaInstallPrompt) {
+      _pwaInstallPrompt.prompt();
+      var result = await _pwaInstallPrompt.userChoice;
+      console.log('PWA 安装:', result.outcome);
+      _pwaInstallPrompt = null;
+      var banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.classList.add('hidden');
+      if (typeof dlAlert === 'function') {
+        dlAlert(result.outcome === 'accepted' ? '✅ 已添加到主屏幕！' : '已取消安装。');
+      }
+    } else if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      // iOS 不支持 beforeinstallprompt，引导用户手动操作
+      if (typeof dlAlert === 'function') {
+        dlAlert('📲 iOS 安装方法：\n\n1. 点击浏览器底部中间的「分享」按钮\n2. 向下滑动找到「添加到主屏幕」\n3. 点击右上角「添加」\n\n安装后可作为独立App使用。');
+      }
+    } else if (window.matchMedia('(display-mode: standalone)').matches) {
+      if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。');
+    } else {
+      if (typeof dlAlert === 'function') {
+        dlAlert('⚠ 暂无可用的安装提示。\n\n可能原因：\n• 已安装（检查桌面）\n• 浏览器不支持（建议用Chrome/Safari）\n• 之前已拒绝安装（需清除浏览器设置后重试）');
+      }
+    }
+  });
   bindOverlayClose('settings-overlay', closeSettings);
 
   // 序章弹窗
