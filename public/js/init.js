@@ -6,7 +6,7 @@
 // ── 数据版本迁移：自动清除旧版缓存 ──
 // 升级时 bump APP_DATA_VERSION，所有客户端打开即自动清旧数据
 (function migrateDataVersion() {
-  var APP_DATA_VERSION = 3;
+  var APP_DATA_VERSION = 4;
   var stored = localStorage.getItem('xixi_data_version');
   if (stored && parseInt(stored, 10) >= APP_DATA_VERSION) return;
 
