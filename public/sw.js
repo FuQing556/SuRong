@@ -1,6 +1,6 @@
 // Service Worker — 离线缓存（网络优先，回退缓存）
-// v8: 恢复完整场景图片预缓存 + 常用主题
-const CACHE = 'xixi-v8';
+// v9: PWA图标更新 + 场景图片预缓存
+const CACHE = 'xixi-v9';
 // 核心shell（install时预缓存）
 const SHELL = [
   '/', '/index.html', '/style.css',

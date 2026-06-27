@@ -90,7 +90,7 @@ check('autocomplete=off', acMissing === 0, acOff + '/' + inputTags.length + ' in
 console.log('\n═══ Service Worker ═══');
 const sw = fs.readFileSync(path.join(__dirname, 'public', 'sw.js'), 'utf8');
 check('sw.js filters POST', sw.includes("method !== 'GET'"));
-check('sw.js cache v8', sw.includes('xixi-v8'));
+check('sw.js cache v9', sw.includes('xixi-v9'));
 
 // ═══════════ 7. 关键 bug 修复验证 ═══════════
 console.log('\n═══ Bug 修复验证 ═══');

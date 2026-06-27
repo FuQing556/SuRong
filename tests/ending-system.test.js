@@ -289,22 +289,22 @@ function makeHistory(rounds) {
 console.log('\n═══ 1. detectEnding（9项）═══');
 
 test('标准格式 【游戏结束·XXX】', () => {
-  assertEq(detectEnding('文本【游戏结束·精神崩溃】结尾'), '精神崩溃');
+  assertEq(detectEnding('文本【游戏结束·月光和六便士】结尾'), '月光和六便士');
 });
 test('冒号分隔 【游戏结束：XXX】', () => {
-  assertEq(detectEnding('【游戏结束：身份暴露】'), '身份暴露');
+  assertEq(detectEnding('【游戏结束：枯萎之刻】'), '枯萎之刻');
 });
 test('无分隔符 【游戏结束 XXX】', () => {
-  assertEq(detectEnding('【命运转折 魂师大赛转折】'), '魂师大赛转折');
+  assertEq(detectEnding('【命运转折 凉面派】'), '凉面派');
 });
 test('半角括号 [命运转折·XXX]', () => {
-  assertEq(detectEnding('[命运转折·精神崩溃]'), '精神崩溃');
+  assertEq(detectEnding('[命运转折·月光和六便士]'), '月光和六便士');
 });
 test('分隔符有空格', () => {
-  assertEq(detectEnding('【游戏结束 · 反向渗透】'), '反向渗透');
+  assertEq(detectEnding('【游戏结束 · 红尘庇佑】'), '红尘庇佑');
 });
 test('破折号分隔', () => {
-  assertEq(detectEnding('【游戏结束——成功撤离】'), '成功撤离');
+  assertEq(detectEnding('【游戏结束——枯萎之刻】'), '枯萎之刻');
 });
 test('无结局返回null', () => {
   assertEq(detectEnding('普通叙事文本'), null);
@@ -326,9 +326,9 @@ test('完整章节原样返回', () => {
   assertEq(r, srTpl.promptBody, '完整章节不应被修改');
 });
 test('缺失单个结局标记→恢复', () => {
-  var crippled = srTpl.promptBody.replace(/【命运转折·圣灵教渗透】/g, '');
+  var crippled = srTpl.promptBody.replace(/【命运转折·暮去朝来】/g, '');
   var r = repairEndingSection(crippled, srTpl);
-  assertContains(r, '圣灵教渗透', '应恢复圣灵教渗透标记');
+  assertContains(r, '暮去朝来', '应恢复快速撤离标记');
 });
 test('结局章节完全缺失→追加', () => {
   var r = repairEndingSection('【你的身份】\n短内容\n【叙事风格】\n风格', srTpl);
@@ -342,11 +342,11 @@ test('originalTemplate为null→返回原值', () => {
 });
 test('缺失多个结局标记→全部恢复', () => {
   var crippled = srTpl.promptBody
-    .replace(/【命运转折·圣灵教渗透】/g, '')
-    .replace(/【命运转折·反向渗透】/g, '');
+    .replace(/【命运转折·暮去朝来】/g, '')
+    .replace(/【命运转折·红尘庇佑】/g, '');
   var r = repairEndingSection(crippled, srTpl);
-  assertContains(r, '圣灵教渗透', '应恢复圣灵教渗透');
-  assertContains(r, '反向渗透', '应恢复反向渗透');
+  assertContains(r, '暮去朝来', '应恢复快速撤离');
+  assertContains(r, '红尘庇佑', '应恢复反向渗透');
 });
 
 // ═══════════════════════════════════════════
@@ -355,85 +355,95 @@ test('缺失多个结局标记→全部恢复', () => {
 console.log('\n═══ 3. collectEligibleEndings（17项）═══');
 
 test('不满足任何条件→空数组', () => {
-  var r = collectEligibleEndings(srTpl, makeFH({ pressure: 10, exposure: 10, intel: 0, hongchen: 0, mingdetang: 0, benzong: -60, guizuxueyuan: -60, progress: 0 }), []);
+  var r = collectEligibleEndings(srTpl, makeFH({ stress: 10, exposure: 10, intel: 0, blackmail: 0, mengHaoGan: 20, xiaoTaiDu: 0, shenglingjiao: 0, infiltration: 0 }), []);
   assertEq(r.length, 0);
 });
 test('压力=100→精神崩溃（精确触发）', () => {
-  var r = collectEligibleEndings(srTpl, makeFH({ pressure: 100 }), []);
-  assert(r.some(function(e) { return e.name === '精神崩溃'; }), '压力100应触发');
+  var r = collectEligibleEndings(srTpl, makeFH({ stress: 100 }), []);
+  assert(r.some(function(e) { return e.name === '月光和六便士'; }), '压力100应触发');
 });
 test('压力=99→精神崩溃（≥95放宽）', () => {
-  var r = collectEligibleEndings(srTpl, makeFH({ pressure: 99 }), []);
-  assert(r.some(function(e) { return e.name === '精神崩溃'; }), '压力99应触发（≥95放宽）');
+  var r = collectEligibleEndings(srTpl, makeFH({ stress: 99 }), []);
+  assert(r.some(function(e) { return e.name === '月光和六便士'; }), '压力99应触发（≥95放宽）');
 });
 test('压力=95→精神崩溃（放宽边界）', () => {
-  var r = collectEligibleEndings(srTpl, makeFH({ pressure: 95 }), []);
-  assert(r.some(function(e) { return e.name === '精神崩溃'; }));
+  var r = collectEligibleEndings(srTpl, makeFH({ stress: 95 }), []);
+  assert(r.some(function(e) { return e.name === '月光和六便士'; }));
 });
 test('压力=94→不触发', () => {
-  var r = collectEligibleEndings(srTpl, makeFH({ pressure: 94 }), []);
-  assert(!r.some(function(e) { return e.name === '精神崩溃'; }), '压力94不应触发');
+  var r = collectEligibleEndings(srTpl, makeFH({ stress: 94 }), []);
+  assert(!r.some(function(e) { return e.name === '月光和六便士'; }), '压力94不应触发');
 });
 test('暴露=99→身份暴露（≥95放宽）', () => {
   var r = collectEligibleEndings(srTpl, makeFH({ exposure: 99 }), []);
-  assert(r.some(function(e) { return e.name === '身份暴露'; }));
+  assert(r.some(function(e) { return e.name === '枯萎之刻'; }));
 });
-test('成功赎回全部条件满足', () => {
+test('成功撤离全部条件满足', () => {
   var r = collectEligibleEndings(srTpl,
-    makeFH({ exposure: 30, intel: 5 }), makeHistory(1));
-  assert(r.some(function(e) { return e.name === '成功赎回'; }));
+    makeFH({ exposure: 30, intel: 5 }), makeHistory(9));
+  assert(r.some(function(e) { return e.name === '归乡'; }));
 });
-test('成功赎回—情报不足不触发', () => {
+test('成功撤离—情报不足不触发', () => {
   var r = collectEligibleEndings(srTpl,
-    makeFH({ exposure: 30, intel: 2 }), makeHistory(1));
-  assert(!r.some(function(e) { return e.name === '成功赎回'; }));
+    makeFH({ exposure: 30, intel: 2 }), makeHistory(9));
+  assert(!r.some(function(e) { return e.name === '归乡'; }));
 });
-test('成功赎回—暴露过高不触发', () => {
+test('成功撤离—暴露过高不触发', () => {
   var r = collectEligibleEndings(srTpl,
-    makeFH({ exposure: 60, intel: 5 }), makeHistory(1));
-  assert(!r.some(function(e) { return e.name === '成功赎回'; }));
+    makeFH({ exposure: 60, intel: 5 }), makeHistory(9));
+  assert(!r.some(function(e) { return e.name === '归乡'; }));
 });
-test('圣灵教渗透—条件满足', () => {
+test('成功撤离—轮次不足不触发', () => {
   var r = collectEligibleEndings(srTpl,
-    makeFH({ benzong: -30, guizuxueyuan: -30 }), []);
-  assert(r.some(function(e) { return e.name === '圣灵教渗透'; }));
+    makeFH({ exposure: 30, intel: 5 }), makeHistory(5));
+  assert(!r.some(function(e) { return e.name === '归乡'; }));
 });
-test('圣灵教渗透—本体宗过高不触发', () => {
+test('快速撤离—条件满足', () => {
   var r = collectEligibleEndings(srTpl,
-    makeFH({ benzong: -60, guizuxueyuan: -30 }), []);
-  assert(!r.some(function(e) { return e.name === '圣灵教渗透'; }));
+    makeFH({ exposure: 20, intel: 4 }), makeHistory(7));
+  assert(r.some(function(e) { return e.name === '暮去朝来'; }));
+});
+test('快速撤离—暴露过高不触发', () => {
+  var r = collectEligibleEndings(srTpl,
+    makeFH({ exposure: 40, intel: 4 }), makeHistory(7));
+  assert(!r.some(function(e) { return e.name === '暮去朝来'; }));
 });
 test('反向渗透全部条件满足', () => {
   var r = collectEligibleEndings(srTpl,
-    makeFH({ mingdetang: 65, hongchen: 65 }), []);
-  assert(r.some(function(e) { return e.name === '反向渗透'; }));
+    makeFH({ exposure: 20, blackmail: 6, mengHaoGan: 75 }), []);
+  assert(r.some(function(e) { return e.name === '红尘庇佑'; }));
 });
-test('反向渗透—明德堂不足不触发', () => {
+test('反向渗透—把柄不足不触发', () => {
   var r = collectEligibleEndings(srTpl,
-    makeFH({ mingdetang: 40, hongchen: 65 }), []);
-  assert(!r.some(function(e) { return e.name === '反向渗透'; }));
+    makeFH({ exposure: 20, blackmail: 3, mengHaoGan: 75 }), []);
+  assert(!r.some(function(e) { return e.name === '红尘庇佑'; }));
 });
-test('魂师大赛转折—条件满足', () => {
+test('反向渗透—梦红尘好感不足不触发', () => {
   var r = collectEligibleEndings(srTpl,
-    makeFH({ progress: 4 }), makeHistory(21));
-  assert(r.some(function(e) { return e.name === '魂师大赛转折'; }));
+    makeFH({ exposure: 20, blackmail: 6, mengHaoGan: 50 }), []);
+  assert(!r.some(function(e) { return e.name === '红尘庇佑'; }));
 });
-test('魂师大赛转折—轮次不足不触发', () => {
+test('魂师大赛—条件满足', () => {
   var r = collectEligibleEndings(srTpl,
-    makeFH({ progress: 4 }), makeHistory(15));
-  assert(!r.some(function(e) { return e.name === '魂师大赛转折'; }));
+    makeFH({ infiltration: 4 }), makeHistory(16));
+  assert(r.some(function(e) { return e.name === '凉面派'; }));
+});
+test('魂师大赛—轮次不足不触发', () => {
+  var r = collectEligibleEndings(srTpl,
+    makeFH({ infiltration: 4 }), makeHistory(10));
+  assert(!r.some(function(e) { return e.name === '凉面派'; }));
 });
 test('> 运算符支持', () => {
   var tpl = JSON.parse(JSON.stringify(srTpl));
-  tpl.endings = null;  // 强制走 promptBody 回退路径
-  tpl.promptBody += '\n测试结局（压力 > 50）：测试大于。标注【命运转折·大于测试】';
-  var r = collectEligibleEndings(tpl, makeFH({ pressure: 60 }), []);
+  tpl.endings = null;
+  tpl.promptBody += '\n测试结局（压力值 > 50）：测试大于。标注【命运转折·大于测试】';
+  var r = collectEligibleEndings(tpl, makeFH({ stress: 60 }), []);
   assert(r.some(function(e) { return e.name === '大于测试'; }));
 });
 test('< 运算符支持', () => {
   var tpl = JSON.parse(JSON.stringify(srTpl));
-  tpl.endings = null;  // 强制走 promptBody 回退路径
-  tpl.promptBody += '\n测试结局（暴露 < 10）：测试小于。标注【命运转折·小于测试】';
+  tpl.endings = null;
+  tpl.promptBody += '\n测试结局（暴露风险 < 10）：测试小于。标注【命运转折·小于测试】';
   var r = collectEligibleEndings(tpl, makeFH({ exposure: 5 }), []);
   assert(r.some(function(e) { return e.name === '小于测试'; }));
 });
@@ -483,24 +493,22 @@ test('轮次+关系相同→模板顺序', () => {
 console.log('\n═══ 5. checkEndingClientSide（5项）═══');
 
 test('无满足→null', () => {
-  assertEq(checkEndingClientSide(srTpl, makeFH({ pressure: 10 }), [], []), null);
+  assertEq(checkEndingClientSide(srTpl, makeFH({ stress: 10 }), [], []), null);
 });
 test('template=null→null', () => {
   assertEq(checkEndingClientSide(null, {}, [], []), null);
 });
 test('精神崩溃被触发', () => {
-  assertEq(checkEndingClientSide(srTpl, makeFH({ pressure: 100 }), [], []), '精神崩溃');
+  assertEq(checkEndingClientSide(srTpl, makeFH({ stress: 100 }), [], []), '月光和六便士');
 });
 test('已触发被跳过', () => {
-  assertEq(checkEndingClientSide(srTpl, makeFH({ pressure: 100 }), [], ['精神崩溃']), null);
+  assertEq(checkEndingClientSide(srTpl, makeFH({ stress: 100 }), [], ['月光和六便士']), null);
 });
 test('多结局同时满足择优', () => {
-  // 压力100 + 轮次22 → 精神崩溃 + 魂师大赛转折同时满足
-  // 魂师大赛转折(轮次20) > 精神崩溃(低轮次要求)
-  var fh = makeFH({ pressure: 100, progress: 4 });
-  var h = makeHistory(22);
+  // 压力100 + 轮次17 + 潜伏进度4 → 月光和六便士 + 凉面派同时满足
+  var fh = makeFH({ stress: 100, infiltration: 4 });
+  var h = makeHistory(17);
   var r = checkEndingClientSide(srTpl, fh, h, []);
-  // 两者都可能满足，择优应选轮次要求更高的
   assert(r !== null, '应触发某结局');
 });
 
@@ -510,9 +518,9 @@ test('多结局同时满足择优', () => {
 console.log('\n═══ 6. buildEndingInjection（4项）═══');
 
 test('生成精神崩溃注入', () => {
-  var r = buildEndingInjection('精神崩溃', srTpl);
-  assertContains(r, '精神崩溃');
-  assertContains(r, '【命运转折·精神崩溃】');
+  var r = buildEndingInjection('月光和六便士', srTpl);
+  assertContains(r, '月光和六便士');
+  assertContains(r, '【命运转折·月光和六便士】');
   assertContains(r, '8-12句');
 });
 test('不存在结局→后备', () => {
@@ -533,44 +541,42 @@ test('endingName=null→空', () => {
 console.log('\n═══ 7. 综合场景（6项）═══');
 
 test('场景：第20回合多结局博弈', () => {
-  var fh = makeFH({ pressure: 98, exposure: 45, intel: 5, hongchen: 20, mingdetang: 20, progress: 4 });
+  var fh = makeFH({ stress: 98, exposure: 45, intel: 5, blackmail: 6, mengHaoGan: 75, infiltration: 4 });
   var eligible = collectEligibleEndings(srTpl, fh, makeHistory(22));
   assertGte(eligible.length, 2, '应≥2个结局满足，实际' + eligible.length + ': ' + eligible.map(function(e){return e.name;}).join(','));
 });
 
 test('场景：AI回复含结局标记的完整流程', () => {
-  var ai = '上回合：她选择承受抽血。现状：窗外传来警报声。【命运转折·精神崩溃】可选行动...';
-  assertEq(detectEnding(ai), '精神崩溃');
+  var ai = '上回合：她选择承受抽血。现状：窗外传来警报声。【命运转折·月光和六便士】可选行动...';
+  assertEq(detectEnding(ai), '月光和六便士');
 });
 
 test('场景：连续3回合结局不重复', () => {
   var triggered = [];
-  var fh = makeFH({ pressure: 100 });
+  var fh = makeFH({ stress: 100 });
   var r1 = checkEndingClientSide(srTpl, fh, makeHistory(5), triggered);
-  assertEq(r1, '精神崩溃');
+  assertEq(r1, '月光和六便士');
   triggered.push(r1);
-  // 同一存档不应再次触发（即使条件仍满足）
   var r2 = checkEndingClientSide(srTpl, fh, makeHistory(6), triggered);
   assertEq(r2, null, '同结局不应重复触发');
 });
 
 test('场景：压力从94升到95时触发', () => {
-  var fh94 = makeFH({ pressure: 94 });
+  var fh94 = makeFH({ stress: 94 });
   var r94 = collectEligibleEndings(srTpl, fh94, []);
   assertEq(r94.length, 0, '压力94无结局');
-  var fh95 = makeFH({ pressure: 95 });
+  var fh95 = makeFH({ stress: 95 });
   var r95 = collectEligibleEndings(srTpl, fh95, []);
-  assert(r95.some(function(e) { return e.name === '精神崩溃'; }), '压力95触发');
+  assert(r95.some(function(e) { return e.name === '月光和六便士'; }), '压力95触发');
 });
 
 test('场景：模板切换后条件重新判定', () => {
-  // 新模板添加低阈值结局，同时压力也会触发精神崩溃
   var tpl2 = JSON.parse(JSON.stringify(srTpl));
-  tpl2.endings = null;  // 强制走 promptBody 回退路径
-  tpl2.promptBody = srTpl.promptBody + '\n自定义结局（压力 ≥ 30）：低阈值测试。标注【命运转折·低阈值】';
-  var r = collectEligibleEndings(tpl2, makeFH({ pressure: 98 }), []);
+  tpl2.endings = null;
+  tpl2.promptBody = srTpl.promptBody + '\n自定义结局（压力值 ≥ 30）：低阈值测试。标注【命运转折·低阈值】';
+  var r = collectEligibleEndings(tpl2, makeFH({ stress: 98 }), []);
   assert(r.some(function(e) { return e.name === '低阈值'; }), '新模板的结局应触发');
-  assert(r.some(function(e) { return e.name === '精神崩溃'; }), '原模板的精神崩溃也应触发（pressure=98≥95）');
+  assert(r.some(function(e) { return e.name === '月光和六便士'; }), '原模板的精神崩溃也应触发（stress=98≥95）');
 });
 
 test('场景：空fieldHistory不崩溃', () => {
