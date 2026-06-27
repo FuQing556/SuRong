@@ -195,23 +195,6 @@ async function savePrompt() {
   dom.promptLength.textContent = '字数: ' + prompt.length;
 }
 
-// ── 重新加载提示词（从原始模板恢复，放弃所有编辑）──
-async function reloadPrompt() {
-  var orig = gameState._originalTemplate;
-  if (!orig || !orig.promptBody) {
-    dom.settingsMsg.textContent = '⚠ 没有可用的原始模板';
-    dom.settingsMsg.style.color = 'var(--red)';
-    return;
-  }
-  dom.promptEditor.value = orig.promptBody;
-  dom.promptLength.textContent = '字数: ' + orig.promptBody.length;
-  gameState.customPrompt = '';
-  var tpl = getActiveTemplate();
-  if (tpl) tpl.promptBody = orig.promptBody;
-  dom.settingsMsg.textContent = '✅ 已重新加载原始提示词（' + orig.promptBody.length + '字）';
-  dom.settingsMsg.style.color = 'var(--green)';
-}
-
 // ── 恢复原始设定（多选范围）──
 async function resetPrompt() {
   const tpl = getActiveTemplate();

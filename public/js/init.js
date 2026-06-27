@@ -130,7 +130,6 @@ function bindEvents() {
   $('#btn-history').addEventListener('click', renderHistoryModal);
   $('#btn-close-settings').addEventListener('click', closeSettings);
   $('#btn-save-prompt').addEventListener('click', savePrompt);
-  $('#btn-reload-prompt').addEventListener('click', reloadPrompt);
   $('#btn-reset-prompt').addEventListener('click', resetPrompt);
   $('#btn-save-fields').addEventListener('click', saveFields);
   $('#btn-add-field').addEventListener('click', addField);
