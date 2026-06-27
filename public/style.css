@@ -113,8 +113,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   margin-bottom: 16px; padding-left: 20px;
 }
 .warning-modal ul li { margin-bottom: 4px; }
-.warning-note { color: var(--text-dim); font-size: 13px !important; }
-.warning-age { color: var(--gold); font-size: 16px !important; font-weight: 600; }
+.warning-note { color: var(--text-dim); font-size: 13px; }
+.warning-age { color: var(--gold); font-size: 16px; font-weight: 600; }
 .warning-buttons {
   display: flex; gap: 12px; justify-content: center;
   margin-top: 20px; flex-wrap: wrap;
@@ -157,11 +157,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   border-top: 1px solid var(--border);
   margin: 16px 0;
 }
-.prologue-question {
+.prologue-body .prologue-question {
   text-align: center;
-  font-size: 16px !important;
-  color: var(--purple-hover) !important;
-  text-indent: 0 !important;
+  font-size: 16px;
+  color: var(--purple-hover);
+  text-indent: 0;
   letter-spacing: 2px;
 }
 .prologue-footer {
@@ -540,9 +540,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 /* 压力值颜色 */
 #status-pressure { font-weight: 600; }
-.pressure-safe { color: var(--green) !important; }
-.pressure-warn { color: #f0c040 !important; }
-.pressure-danger { color: var(--red) !important; }
+.pressure-safe { color: var(--green) ; }
+.pressure-warn { color: #f0c040 ; }
+.pressure-danger { color: var(--red) ; }
 
 /* 变量追踪 */
 .variables-panel {
@@ -617,8 +617,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   transition: opacity .2s; flex-shrink: 0;
 }
 .ach-item:hover .ach-edit-btn, .ach-item:hover .ach-del-btn { opacity: .6; }
-.ach-edit-btn:hover { opacity: 1 !important; color: var(--gold); }
-.ach-del-btn:hover { opacity: 1 !important; color: var(--red); }
+.ach-item .ach-edit-btn:hover { opacity: 1; color: var(--gold); }
+.ach-item .ach-del-btn:hover { opacity: 1; color: var(--red); }
 
 /* ── PWA 安装引导 ── */
 .pwa-install-banner {
@@ -1226,7 +1226,6 @@ input:focus, textarea:focus { border-color: var(--gold); outline: none; }
 /* ── 状态面板 ── */
 #status-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); }
 .status-label { color: var(--gold-dim); }
-.status-value { color: var(--text); }
 .vars-toggle { color: var(--text-dim); }
 .vars-toggle:hover { color: var(--gold); }
 
@@ -1418,8 +1417,8 @@ input:focus, textarea:focus { border-color: var(--gold); outline: none; }
 
 /* ── 状态数值变化闪烁 ── */
 .status-value { transition: color .3s, text-shadow .3s; }
-.status-value.val-up   { color: var(--green) !important; text-shadow: 0 0 8px var(--green); }
-.status-value.val-down { color: var(--red)   !important; text-shadow: 0 0 8px var(--red); }
+.status-value.val-up   { color: var(--green); text-shadow: 0 0 8px var(--green); }
+.status-value.val-down { color: var(--red); text-shadow: 0 0 8px var(--red); }
 .status-value.val-flash { animation: valPop .4s ease; }
 @keyframes valPop {
   0% { transform: scale(1.3); }
