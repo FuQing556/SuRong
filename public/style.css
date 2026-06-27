@@ -506,7 +506,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   flex-shrink: 0;
 }
 
-/* ── 状态面板 ── */
+/* ── 状态面板（统一网格 — 所有字段共享同一组列，天然对齐）── */
 #status-panel {
   flex-shrink: 0;
   background: var(--bg-panel);
@@ -544,7 +544,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .pressure-warn { color: #f0c040 ; }
 .pressure-danger { color: var(--red) ; }
 
-/* 变量追踪 */
+/* 变量追踪（v9.9：变量项在统一网格中，toggle 控制显隐） */
 .variables-panel {
   margin-top: 10px;
   border-top: 1px solid var(--border);
@@ -557,14 +557,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   transition: color .2s;
 }
 .vars-toggle:hover { color: var(--gold); }
-.vars-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 4px 12px;
-  margin-top: 6px;
-}
+/* 变量网格容器已废弃（v9.9 统一网格），保留选择器 */
+.vars-grid { display: none; }
 .vars-grid.collapsed { display: none; }
-.variables-panel.var-collapsed { border-top-color: transparent; padding-top: 2px; }
+/* 折叠时隐藏统一网格中的变量项 */
+#status-panel.var-collapsed .var-item { display: none; }
+#status-panel.var-collapsed .variables-panel { border-top-color: transparent; padding-top: 2px; }
 .var-item .status-label { font-size: 10px; color: var(--text-dim); }
 .var-item .status-value { font-size: 12px; }
 
@@ -648,13 +646,13 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .ai-chat-box { flex: 1; max-height: 25vh; min-width: 0; overflow-y: auto; }
   #content-panel { padding: 8px 12px; }
 
-  /* 顶部栏 — 标题全宽 + 按钮等宽流动 */
-  #top-bar { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 0; justify-content: center; position: relative; }
-  .game-title { font-size: 15px; letter-spacing: 2px; flex: 0 0 100%; text-align: center; margin-bottom: 2px; order: -2; }
+  /* 顶部栏 — 标题全宽 + 10按钮 5×2 网格 */
+  #top-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px 2px; position: relative; align-items: start; }
+  .game-title { font-size: 15px; letter-spacing: 2px; grid-column: 1 / -1; text-align: center; margin-bottom: 2px; }
   .top-actions { display: contents; }
-  #top-bar .btn-small { font-size: 10px; padding: 5px 6px; min-width: 48px; text-align: center; white-space: nowrap; flex: 0 0 auto; }
-  #btn-back-saves { position: static; order: -1; }
-  #save-indicator { position: absolute; right: 8px; bottom: 2px; font-size: 9px; opacity: .4; margin: 0; }
+  #top-bar .btn-small { font-size: 10px; padding: 5px 2px; min-width: 0; text-align: center; white-space: nowrap; }
+  #btn-back-saves { position: static; }
+  #save-indicator { position: absolute; right: 4px; top: 4px; font-size: 9px; opacity: .45; margin: 0; z-index: 1; }
 
   /* 故事框 — 适屏高度 */
   #story-box { max-height: 35vh; }
@@ -665,11 +663,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .option-btn { padding: 12px 14px; min-height: 52px; touch-action: manipulation; }
   .option-num { width: 28px; height: 28px; line-height: 28px; font-size: 14px; flex-shrink: 0; }
 
-  /* 状态面板 — 双列统一左对齐 */
+  /* 状态面板 — 统一网格双列 */
   .status-grid { grid-template-columns: 1fr 1fr; gap: 6px 12px; }
-  #resources-row { grid-template-columns: 1fr 1fr; gap: 6px 12px; align-items: start; }
-  .vars-grid { grid-template-columns: 1fr 1fr; gap: 6px 12px; }
-  #resources-row .resource-item { justify-self: start; text-align: left; }
   .status-item { align-items: start; }
 
   /* 弹窗 — 全宽 */
@@ -720,18 +715,16 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   /* 状态 — 双列紧凑 + 面板缩边距 */
   #status-panel { padding: 8px 10px; }
   .status-item { padding: 4px 6px; font-size: 11px; }
-  #resources-row { gap: 4px 8px; }
 
   /* 弹窗 — 全屏 */
   .modal { max-width: 100vw; width: 100vw; border-radius: 0; padding: 14px; max-height: 100vh; }
   .overlay{ backdrop-filter: none; }
 
-  /* 顶部栏 — 标题缩小，按钮等宽紧凑 + 存档时间丢角落 */
+  /* 顶部栏 — 标题缩小，按钮等宽紧凑 + 存档时间丢最右上角 */
   .game-title { font-size: 14px; }
-  #top-bar .btn-small { font-size: 10px; padding: 5px 4px; min-width: 42px; letter-spacing: 0; }
-  #save-indicator { position: absolute; right: 6px; bottom: 2px; font-size: 9px; opacity: .45; margin: 0; }
-  /* 确保 #btn-back-saves 不在480覆盖中被重设 */
-  #btn-back-saves { position: static; order: -1; }
+  #top-bar .btn-small { font-size: 10px; padding: 4px 2px; min-width: 0; letter-spacing: 0; }
+  #save-indicator { position: absolute; right: 2px; top: 2px; font-size: 8px; opacity: .5; margin: 0; z-index: 1; }
+  #btn-back-saves { position: static; }
 
   /* 创建存档表单 */
   .create-save-form input, .create-save-form textarea { font-size: 12px; }
@@ -866,18 +859,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   font-size: 13px;
   padding: 8px;
 }
-#resources-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 6px 16px;
-  margin-top: 8px;
-}
-#resources-row .resource-item {
-  justify-self: start;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* 资源行容器已废弃（v9.9 统一网格），保留选择器以免旧代码报错 */
+#resources-row { display: none; }
+#resources-row .resource-item { justify-self: start; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── 存档选择器 ── */
 .save-selector-modal {

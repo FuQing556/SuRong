@@ -174,39 +174,57 @@ function bindEvents() {
     }
   });
 
-  // 安装到桌面：触发PWA安装
-  $('#btn-force-install').addEventListener('click', async function() {
+  // 安装到桌面：触发PWA安装（共用逻辑，供 banner 和设置按钮复用）
+  function _tryPwaInstall() {
     if (_pwaInstallPrompt) {
       _pwaInstallPrompt.prompt();
-      var result = await _pwaInstallPrompt.userChoice;
-      console.log('PWA 安装:', result.outcome);
-      _pwaInstallPrompt = null;
-      var banner = document.getElementById('pwa-install-banner');
-      if (banner) banner.classList.add('hidden');
-      if (typeof dlAlert === 'function') {
-        dlAlert(result.outcome === 'accepted' ? '✅ 已添加到主屏幕！' : '已取消安装。');
-      }
-    } else if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-      // iOS 不支持 beforeinstallprompt，引导用户手动操作
-      if (typeof dlAlert === 'function') {
-        dlAlert('📲 iOS 安装方法：\n\n1. 点击浏览器底部中间的「分享」按钮\n2. 向下滑动找到「添加到主屏幕」\n3. 点击右上角「添加」\n\n安装后可作为独立App使用。');
-      }
-    } else if (window.matchMedia('(display-mode: standalone)').matches) {
-      if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。');
-    } else if (/Android/i.test(navigator.userAgent)) {
-      if (typeof dlAlert === 'function') {
-        dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」');
-      }
-    } else if (/Chrome/i.test(navigator.userAgent)) {
-      if (typeof dlAlert === 'function') {
-        dlAlert('📲 安装方法：\n\n点击浏览器地址栏右侧的 ⊕ 安装图标\n\n没看到？之前装过又删了的话，Chrome 会限流一段时间。可尝试 chrome://settings/content/siteDetails 删除本站数据后刷新。');
-      }
-    } else {
-      if (typeof dlAlert === 'function') {
-        dlAlert('📲 安装方法：\n\n查看浏览器菜单中是否有「安装」「添加到桌面」等选项。\n如已装过又删除，可能需要等浏览器重新开放安装权限。');
-      }
+      return _pwaInstallPrompt.userChoice.then(function(result) {
+        console.log('PWA 安装:', result.outcome);
+        _pwaInstallPrompt = null;
+        var banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.classList.add('hidden');
+        if (typeof dlAlert === 'function') {
+          dlAlert(result.outcome === 'accepted' ? '✅ 已添加到主屏幕！' : '已取消安装。');
+        }
+      });
     }
-  });
+    // beforeinstallprompt 不可用 → 判断原因，给出引导
+    var ua = navigator.userAgent;
+    var isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    // iOS（Safari / WKWebView）不支持 beforeinstallprompt
+    if (/iPhone|iPad|iPod/.test(ua)) {
+      if (isStandalone) {
+        if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。\n\n如需重新安装，请先从主屏幕删除旧图标，再在 Safari 中打开本页面。');
+      } else {
+        if (typeof dlAlert === 'function') dlAlert('📲 iOS 安装方法：\n\n1. 点击浏览器底部中间的「分享」按钮\n2. 向下滑动找到「添加到主屏幕」\n3. 点击右上角「添加」\n\n安装后可作为独立App使用。');
+      }
+      return Promise.resolve();
+    }
+    // 已在独立窗口运行
+    if (isStandalone) {
+      if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。\n\n如需重新安装，请先卸载再在浏览器中打开本页面。');
+      return Promise.resolve();
+    }
+    // Android（含 Chrome Android / 国产浏览器）
+    if (/Android/i.test(ua)) {
+      if (/Chrome/i.test(ua)) {
+        if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」\n\n如菜单中无此选项，请确认：\n① 已通过 HTTPS 访问\n② 未在无痕模式下打开\n③ 之前安装过需等 Chrome 解限');
+      } else {
+        if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」\n\n如无此选项，建议使用 Chrome 浏览器打开。');
+      }
+      return Promise.resolve();
+    }
+    // 桌面 Chrome / Edge（Chromium 内核）
+    if (/Chrome/i.test(ua) || /Edg/i.test(ua)) {
+      if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器地址栏右侧的 ⊕ 安装图标\n\n没看到？之前装过又删了的话，Chrome 会限流一段时间（通常1-3天）。\n可尝试 chrome://settings/content/siteDetails 删除本站数据后刷新。');
+      return Promise.resolve();
+    }
+    // 兜底
+    if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n查看浏览器菜单中是否有「安装」「添加到桌面」「添加到主屏幕」等选项。\n如已装过又删除，请稍等一段时间再试。');
+    return Promise.resolve();
+  }
+
+  $('#btn-force-install').addEventListener('click', function() { _tryPwaInstall(); });
   bindOverlayClose('settings-overlay', closeSettings);
 
   // 序章弹窗
@@ -338,14 +356,22 @@ function bindEvents() {
   $('#save-selector-overlay')?.addEventListener('click', e => { /* 必须选存档 */ });
 
   // 变量追踪折叠
-  if (dom.varsToggle && dom.varsGrid) {
+  if (dom.varsToggle) {
     dom.varsToggle.addEventListener('click', () => {
-      dom.varsGrid.classList.toggle('collapsed');
-      var vp = document.getElementById('variables-panel');
-      if (vp) vp.classList.toggle('var-collapsed', dom.varsGrid.classList.contains('collapsed'));
+      var sp = document.getElementById('status-panel');
+      var collapsed;
+      if (sp) {
+        sp.classList.toggle('var-collapsed');
+        collapsed = sp.classList.contains('var-collapsed');
+      } else {
+        // 降级：直接 toggle var-item 显示
+        var items = document.querySelectorAll('#status-grid .var-item');
+        var hide = items.length > 0 && getComputedStyle(items[0]).display !== 'none';
+        for (var i = 0; i < items.length; i++) items[i].style.display = hide ? 'none' : '';
+        collapsed = hide;
+      }
       var label = getActiveTemplate().outputSections?.variables?.label || '变量追踪';
-      dom.varsToggle.textContent = dom.varsGrid.classList.contains('collapsed')
-        ? label + ' ▶' : label + ' ▼';
+      dom.varsToggle.textContent = collapsed ? label + ' ▶' : label + ' ▼';
     });
   }
 
@@ -513,15 +539,7 @@ window.addEventListener('beforeinstallprompt', function(e) {
 
 var btnInstall = document.getElementById('btn-pwa-install');
 if (btnInstall) {
-  btnInstall.addEventListener('click', async function() {
-    if (!_pwaInstallPrompt) return;
-    _pwaInstallPrompt.prompt();
-    var result = await _pwaInstallPrompt.userChoice;
-    console.log('PWA 安装:', result.outcome);
-    _pwaInstallPrompt = null;
-    var banner = document.getElementById('pwa-install-banner');
-    if (banner) banner.classList.add('hidden');
-  });
+  btnInstall.addEventListener('click', function() { _tryPwaInstall(); });
 }
 
 var btnDismiss = document.getElementById('btn-pwa-dismiss');

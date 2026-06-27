@@ -187,49 +187,43 @@ function updateOptionButtons(options) {
 function renderStatusContainers(template) {
   const sections = template?.outputSections || {};
 
-  // 状态栏 + 任务行
-  const statusFields = [
-    ...(sections.statusTop?.fields || []),
-    ...(sections.taskLine?.fields || []),
-  ];
+  // 收集所有字段到统一网格：statusTop → taskLine → resources → variables
+  var allItems = [];
+  function pushFields(fields, cssClass) {
+    if (!fields || !Array.isArray(fields)) return;
+    for (var i = 0; i < fields.length; i++) {
+      allItems.push({ field: fields[i], cssClass: cssClass || '' });
+    }
+  }
+  pushFields(sections.statusTop?.fields, '');
+  pushFields(sections.taskLine?.fields, '');
+  pushFields(sections.resources?.fields, 'resource-item');
+  pushFields(sections.variables?.fields, 'var-item');
+
+  // 渲染到统一网格（所有字段共享同一组列，天然对齐）
   if (dom.statusGrid) {
-    dom.statusGrid.innerHTML = statusFields.map(f =>
-      '<div class="status-item" data-field="' + escapeHtml(f.id) + '">' +
+    dom.statusGrid.innerHTML = allItems.map(function(item) {
+      var f = item.field;
+      var cls = item.cssClass ? ' ' + item.cssClass : '';
+      return '<div class="status-item' + cls + '" data-field="' + escapeHtml(f.id) + '">' +
         '<span class="status-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span>' +
         '<span class="status-value" id="field-' + escapeHtml(f.id) + '">—</span>' +
-      '</div>'
-    ).join('');
+      '</div>';
+    }).join('');
   }
 
-  // 资源行
-  const resFields = sections.resources?.fields || [];
-  if (dom.resourcesRow) {
-    dom.resourcesRow.innerHTML = resFields.length > 0 ? resFields.map(f =>
-      '<div class="status-item resource-item" data-field="' + escapeHtml(f.id) + '">' +
-        '<span class="status-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span>' +
-        '<span class="status-value" id="field-' + escapeHtml(f.id) + '">—</span>' +
-      '</div>'
-    ).join('') : '';
-    dom.resourcesRow.style.display = resFields.length > 0 ? '' : 'none';
-  }
+  // 隐藏旧容器（不再使用独立网格）
+  if (dom.resourcesRow) { dom.resourcesRow.innerHTML = ''; dom.resourcesRow.style.display = 'none'; }
+  if (dom.varsGrid) { dom.varsGrid.innerHTML = ''; }
 
-  // 变量追踪
-  const varFields = sections.variables?.fields || [];
-  if (dom.varsGrid) {
-    dom.varsGrid.innerHTML = varFields.map(f =>
-      '<div class="status-item var-item" data-field="' + escapeHtml(f.id) + '">' +
-        '<span class="status-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span>' +
-        '<span class="status-value" id="field-' + escapeHtml(f.id) + '">—</span>' +
-      '</div>'
-    ).join('');
-    dom.varsGrid.classList.remove('collapsed');
-    var vp = document.getElementById('variables-panel');
-    if (vp) vp.classList.remove('var-collapsed');
-  }
+  // 变量追踪：默认展开
+  var sp = document.getElementById('status-panel');
+  if (sp) sp.classList.remove('var-collapsed');
 
-  // 更新变量追踪标题（强制展开状态）
-  if (dom.varsToggle && sections.variables?.label) {
-    dom.varsToggle.textContent = sections.variables.label + ' ▼';
+  // 更新变量追踪标题
+  if (dom.varsToggle) {
+    var varLabel = (sections.variables && sections.variables.label) || '变量追踪';
+    dom.varsToggle.textContent = varLabel + ' ▼';
     dom.varsToggle.style.cursor = 'pointer';
     dom.varsToggle.style.padding = '8px 0';
     dom.varsToggle.style.fontSize = '13px';
