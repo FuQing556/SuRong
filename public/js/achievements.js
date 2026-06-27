@@ -179,10 +179,14 @@ function checkAchievementsFromState(parsed) {
         if (isNeverExceeded) {
           // "从未超过X"：历史最高值 ≤ X（用max而非current）
           const fid = _findFieldId(matched);
-          const maxVal = fid && gameState.fieldHistory[fid] ? (gameState.fieldHistory[fid].max || 0) : 0;
+          const hasField = fid && gameState.fieldHistory[fid] && gameState.fieldHistory[fid].hasOwnProperty('current');
+          const maxVal = hasField ? (gameState.fieldHistory[fid].max || 0) : Infinity;
           triggered = maxVal <= threshold;
         } else if (isBelow) {
-          triggered = _fieldVal(matched, useMax) <= threshold;
+          // "低于X"：需字段已在 fieldHistory 中（防止未初始化返回0误触发）
+          const fid = _findFieldId(matched);
+          const hasField = fid && gameState.fieldHistory[fid] && gameState.fieldHistory[fid].hasOwnProperty('current');
+          triggered = hasField && _fieldVal(matched, useMax) <= threshold;
         } else if (threshold < 0) {
           // 负阈值：如"圣灵教觊觎达到-50"，下降型字段 ≤ 负阈值
           triggered = _fieldVal(matched, useMax) <= threshold;
@@ -288,7 +292,12 @@ function getAchievementProgress(name) {
     if (isNeverExceeded) {
       return { current: Math.max(v, target), target, text: matched + '最高' + v + '（需≤' + target + '）' };
     }
-    if (isBelow || target < 0) {
+    if (isBelow) {
+      // "低于X"：v≤target 达成；v>target 时 current=0 显示0%进度（防止"生命100/需低于20"显示满条）
+      if (v <= target) return { current: target, target, text: matched + '已降至' + target + '以下 ✓' };
+      return { current: 0, target, text: matched + '需降至' + target + '以下（当前' + v + '）' };
+    }
+    if (target < 0) {
       return { current: Math.max(v, target), target, text: matched + '达到' + target };
     }
     return { current: Math.min(v, target), target, text: matched + '达到' + target };
