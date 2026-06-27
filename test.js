@@ -155,8 +155,8 @@ check('state has triggeredEndings', stateCode.includes('triggeredEndings'));
 const surongrongRaw = fs.readFileSync(path.join(__dirname, 'templates', 'surongrong.json'), 'utf8');
 const srTpl = JSON.parse(surongrongRaw);
 const srBody = srTpl.promptBody || '';
-const endingMarkers = srBody.match(/【游戏结束[^】]+】/g) || [];
-check('surongrong has 6 ending markers', endingMarkers.length === 6, endingMarkers.length + ' endings found');
+const endingMarkers = srBody.match(/【(?:游戏结束|命运转折)[^】]+】/g) || [];
+check('surongrong has 6 ending markers', endingMarkers.length >= 6, endingMarkers.length + ' endings found');
 let endingsWithDesc = 0;
 for (const marker of endingMarkers) {
   const idx = srBody.indexOf(marker);

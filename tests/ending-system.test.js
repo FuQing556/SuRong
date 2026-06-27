@@ -24,8 +24,9 @@ function escapeHtml(str) {
 
 // ── 检测结局标记 ──
 function detectEnding(text) {
-  var em = text.match(/【游戏结束\s*[：:·—\-–]*\s*(.+?)】/);
-  if (!em) em = text.match(/\[游戏结束\s*[：:·—\-–]*\s*(.+?)\]/);
+  // 兼容新旧两种标记格式
+  var em = text.match(/【(?:游戏结束|命运转折)\s*[：:·—\-–]*\s*(.+?)】/);
+  if (!em) em = text.match(/\[(?:游戏结束|命运转折)\s*[：:·—\-–]*\s*(.+?)\]/);
   return em ? em[1].trim() : null;
 }
 
@@ -33,14 +34,17 @@ function detectEnding(text) {
 function repairEndingSection(body, originalTemplate) {
   if (!body || !originalTemplate) return body;
   var origBody = originalTemplate.promptBody || '';
-  var origEm = origBody.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束)[^】]+】|$)/);
+  // 兼容新旧两种章节标题格式
+  var origEm = origBody.match(/【(?:结局系统|命运转折系统)】([\s\S]*?)(?=【(?!游戏结束|命运转折)[^】]+】|$)/)
+    || origBody.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束|命运转折)[^】]+】|$)/);
   if (!origEm) return body;
-  var em = body.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束)[^】]+】|$)/);
+  var em = body.match(/【(?:结局系统|命运转折系统)】([\s\S]*?)(?=【(?!游戏结束|命运转折)[^】]+】|$)/)
+    || body.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束|命运转折)[^】]+】|$)/);
   if (!em) {
-    console.log('🔧 repairEndingSection: 结局章节完全缺失，从原始模板恢复');
+    console.log('🔧 repairEndingSection: 结局/命运转折章节完全缺失，从原始模板恢复');
     return body + '\n\n' + origEm[0];
   }
-  var endingMarkerRe = /【游戏结束[：:·\s]*([^】]+)】/g;
+  var endingMarkerRe = /【(?:游戏结束|命运转折)[：:·\s]*([^】]+)】/g;
   var origMarkers = [];
   var m;
   while ((m = endingMarkerRe.exec(origEm[0])) !== null) origMarkers.push(m[0]);
@@ -51,7 +55,7 @@ function repairEndingSection(body, originalTemplate) {
     if (body.indexOf(origMarkers[i]) === -1) missingMarkers.push(origMarkers[i]);
   }
   if (missingMarkers.length === 0) return body;
-  console.warn('🔧 repairEndingSection: 检测到 ' + missingMarkers.length + ' 个结局标记缺失');
+  console.warn('🔧 repairEndingSection: 检测到 ' + missingMarkers.length + ' 个结局/命运转折标记缺失');
   return body.replace(em[0], origEm[0]);
 }
 
@@ -138,7 +142,7 @@ function collectEligibleEndings(template, fieldHistory, fullHistory) {
     return { ok: true, roundReq: roundReq, hasRelation: hasRel };
   }
 
-  var markerRe = /【游戏结束[·：:\s]*([^】]+)】/g;
+  var markerRe = /【(?:游戏结束|命运转折)[·：:\s]*([^】]+)】/g;
   var mm;
   var results = [];
   var idx = 0;
@@ -310,7 +314,7 @@ test('缺失单个结局标记→恢复', () => {
 });
 test('结局章节完全缺失→追加', () => {
   var r = repairEndingSection('【你的身份】\n短内容\n【叙事风格】\n风格', srTpl);
-  assertContains(r, '【结局系统】', '应追加结局章节');
+  assert(r.indexOf('【结局系统】') >= 0 || r.indexOf('【命运转折系统】') >= 0, '应追加结局/命运转折章节');
 });
 test('body为空→返回空', () => {
   assertEq(repairEndingSection('', srTpl), '');
