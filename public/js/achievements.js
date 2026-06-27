@@ -162,10 +162,24 @@ function checkAchievementsFromState(parsed) {
         // 找匹配标签后面最近的数字，而非描述中第一个数字
         const idx = desc.indexOf(matched);
         const after = desc.substring(idx + matched.length);
-        const nm = after.match(/(\d+)/);
+        const nm = after.match(/(-?\d+)/);
         const threshold = nm ? parseInt(nm[1]) : 70;
-        const val = _fieldVal(matched, useMax);
-        triggered = val >= threshold;
+        // 方向检测：从未超过/低于/不超过/少于/以下/小于 → ≤；负阈值达到 → ≤
+        const isNeverExceeded = /从未超过/.test(desc);
+        const isBelow = /低于|不超过|少于|以下|小于|≤/.test(desc);
+        if (isNeverExceeded) {
+          // "从未超过X"：历史最高值 ≤ X（用max而非current）
+          const fid = _findFieldId(matched);
+          const maxVal = fid && gameState.fieldHistory[fid] ? (gameState.fieldHistory[fid].max || 0) : 0;
+          triggered = maxVal <= threshold;
+        } else if (isBelow) {
+          triggered = _fieldVal(matched, useMax) <= threshold;
+        } else if (threshold < 0) {
+          // 负阈值：如"圣灵教觊觎达到-50"，下降型字段 ≤ 负阈值
+          triggered = _fieldVal(matched, useMax) <= threshold;
+        } else {
+          triggered = _fieldVal(matched, useMax) >= threshold;
+        }
         if (triggered && hasGate) triggered = !gameState.achievementFlags.endingTriggered;
       }
     }
@@ -247,13 +261,27 @@ function getAchievementProgress(name) {
   }
   const matched = _findLabel(desc);
   if (matched) {
-    const nm = desc.match(/(\d+)/);
+    const nm = desc.match(/(-?\d+)/);
     const target = nm ? parseInt(nm[1]) : 70;
-    const useMax = /曾达|最高/.test(desc);
-    const v = _fieldVal(matched, useMax);
+    const isNeverExceeded = /从未超过/.test(desc);
+    const isBelow = /低于|不超过|少于|以下|小于|≤/.test(desc);
+    const useMax = /曾达|最高/.test(desc) || isNeverExceeded;
+    let v;
+    if (isNeverExceeded) {
+      const fid = _findFieldId(matched);
+      v = fid && gameState.fieldHistory[fid] ? (gameState.fieldHistory[fid].max || 0) : 0;
+    } else {
+      v = _fieldVal(matched, useMax);
+    }
+    if (isNeverExceeded) {
+      return { current: Math.max(v, target), target, text: matched + '最高' + v + '（需≤' + target + '）' };
+    }
+    if (isBelow || target < 0) {
+      return { current: Math.max(v, target), target, text: matched + '达到' + target };
+    }
     return { current: Math.min(v, target), target, text: matched + '达到' + target };
   }
-  const nm = desc.match(/(\d+)/);
+  const nm = desc.match(/(-?\d+)/);
   return { current: 0, target: nm ? parseInt(nm[1]) : 1, text: desc };
 }
 
