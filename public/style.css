@@ -648,11 +648,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .ai-chat-box { flex: 1; max-height: 25vh; min-width: 0; overflow-y: auto; }
   #content-panel { padding: 8px 12px; }
 
-  /* 顶部栏 — 标题全宽 + 按钮两排流动 */
-  #top-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 0; justify-content: center; position: relative; }
+  /* 顶部栏 — 标题全宽 + 按钮等宽流动 */
+  #top-bar { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 0; justify-content: center; position: relative; }
   .game-title { font-size: 15px; letter-spacing: 2px; flex: 0 0 100%; text-align: center; margin-bottom: 2px; order: -2; }
   .top-actions { display: contents; }
-  .top-actions .btn-small { font-size: 10px; padding: 4px 7px; }
+  #top-bar .btn-small { font-size: 10px; padding: 5px 6px; min-width: 48px; text-align: center; white-space: nowrap; flex: 0 0 auto; }
   #btn-back-saves { position: static; order: -1; }
   #save-indicator { position: absolute; right: 8px; bottom: 2px; font-size: 9px; opacity: .4; margin: 0; }
 
@@ -660,15 +660,17 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   #story-box { max-height: 35vh; }
 
   /* 选项 — 单列 + 大触控 */
+  #options-container { margin-bottom: 10px; }
   .options-grid { grid-template-columns: 1fr; gap: 8px; }
-  .option-btn { padding: 12px 14px; min-height: 52px; }
+  .option-btn { padding: 12px 14px; min-height: 52px; touch-action: manipulation; }
   .option-num { width: 28px; height: 28px; line-height: 28px; font-size: 14px; flex-shrink: 0; }
 
-  /* 状态面板 — 双列统一对齐 */
+  /* 状态面板 — 双列统一左对齐 */
   .status-grid { grid-template-columns: 1fr 1fr; gap: 6px 12px; }
-  #resources-row { grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  #resources-row { grid-template-columns: 1fr 1fr; gap: 6px 12px; align-items: start; }
   .vars-grid { grid-template-columns: 1fr 1fr; gap: 6px 12px; }
-  #resources-row .resource-item { justify-self: stretch; }
+  #resources-row .resource-item { justify-self: start; text-align: left; }
+  .status-item { align-items: start; }
 
   /* 弹窗 — 全宽 */
   .modal { max-width: 95vw; width: 95vw; padding: 20px; border-radius: 8px; max-height: 90vh; }
@@ -711,18 +713,22 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .story-entry { margin-bottom: 10px; padding-bottom: 8px; }
 
   /* 选项 — 更大触控区 */
-  .option-btn { padding: 14px 12px; min-height: 56px; }
+  .option-btn { padding: 14px 12px; min-height: 56px; touch-action: manipulation; }
+  .option-action { font-size: 13px; line-height: 1.4; }
+  .option-cost { font-size: 11px; max-width: 120px; }
 
-  /* 状态 — 双列紧凑 */
+  /* 状态 — 双列紧凑 + 面板缩边距 */
+  #status-panel { padding: 8px 10px; }
   .status-item { padding: 4px 6px; font-size: 11px; }
+  #resources-row { gap: 4px 8px; }
 
   /* 弹窗 — 全屏 */
   .modal { max-width: 100vw; width: 100vw; border-radius: 0; padding: 14px; max-height: 100vh; }
   .overlay{ backdrop-filter: none; }
 
-  /* 顶部栏 — 标题缩小，按钮两排紧凑 + 存档时间丢角落 */
+  /* 顶部栏 — 标题缩小，按钮等宽紧凑 + 存档时间丢角落 */
   .game-title { font-size: 14px; }
-  .top-actions .btn-small { font-size: 11px; padding: 6px 8px; letter-spacing: 0; }
+  #top-bar .btn-small { font-size: 10px; padding: 5px 4px; min-width: 42px; letter-spacing: 0; }
   #save-indicator { position: absolute; right: 6px; bottom: 2px; font-size: 9px; opacity: .45; margin: 0; }
   /* 确保 #btn-back-saves 不在480覆盖中被重设 */
   #btn-back-saves { position: static; order: -1; }
@@ -742,8 +748,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   /* 选项提示 */
   .options-hint { font-size: 10px; }
 
-  /* iOS Safari 缩放防触发：输入框字号≥16px */
-  input, textarea, select { font-size: 16px !important; }
+  /* iOS Safari 缩放防触发：主交互输入框字号≥16px */
+  #story-box input, #story-box textarea,
+  .modal input[type="text"], .modal input[type="number"],
+  .modal textarea, .modal select,
+  #ai-chat-input { font-size: 16px; }
 }
 
 /* ── 选项悬浮动画 ── */
@@ -1468,6 +1477,14 @@ input:focus, textarea:focus { border-color: var(--gold); outline: none; }
 #error-message { color: #fca5a5; }
 .achievement-toast { border-color: var(--gold); }
 #ach-toast-text { color: var(--gold); }
+
+/* ── 触摸设备：隐藏键盘提示 + 防双击缩放 ── */
+@media (hover: none) and (pointer: coarse) {
+  .options-hint { display: none; }
+  .btn, .option-btn, .chip, .save-card, .tab-btn, .vars-toggle {
+    touch-action: manipulation;
+  }
+}
 
 /* ── 无障碍：减少动画 ── */
 @media (prefers-reduced-motion: reduce) {

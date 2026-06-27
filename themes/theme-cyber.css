@@ -116,8 +116,8 @@ input:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 6px rgba(0,23
 .achievement-toast{border:1px solid var(--gold);background:var(--bg-panel);border-radius:0;box-shadow:0 0 30px rgba(0,232,255,.2)}
 
 /* ── 响应式 ── */
-@media (max-width:900px){.game-title{font-size:15px;letter-spacing:4px}image-frame{margin:12px 6px 20px;padding:6px 8px}}}
-@media (max-width:480px){.option-btn{border-radius:4px}.game-title{font-size:13px;letter-spacing:2px}image-frame{margin:8px 2px 14px;padding:4px 6px}.option-btn{padding:14px 12px;min-height:56px}}.game-title{font-size:12px}}
+@media (max-width:900px){.game-title{font-size:15px;letter-spacing:4px}image-frame{margin:12px 6px 20px;padding:6px 8px}}
+@media (max-width:480px){.option-btn{border-radius:4px}.game-title{font-size:13px;letter-spacing:2px}image-frame{margin:8px 2px 14px;padding:4px 6px}.option-btn{padding:14px 12px;min-height:56px}.game-title{font-size:12px}}}
 
 
 /* 加载 */

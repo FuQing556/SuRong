@@ -267,7 +267,7 @@ function collectEligibleEndings(template) {
       var part = parts[p].trim();
       if (!part) continue;
       // 支持 ≥ ≤ = > < >= <= 七种运算符
-      var m = part.match(/([一-龥\w]{1,8})\s*([≥≤=><]=?)\s*(\d+)/);
+      var m = part.match(/([一-龥\w]{1,8})\s*([≥≤=><]=?)\s*(-?\d+)/);
       if (!m) continue;
       var op = m[2];
       // 规范化双字符运算符
