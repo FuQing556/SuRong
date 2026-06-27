@@ -297,6 +297,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   letter-spacing: 4px;
 }
 .top-actions { display: flex; gap: 8px; }
+#save-indicator { font-size: 10px; color: var(--text-dim); opacity: .7; margin-left: 8px; white-space: nowrap; align-self: center; }
 
 /* 模板选择器 */
 .template-select {
@@ -506,7 +507,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   flex-shrink: 0;
 }
 
-/* ── 状态面板（统一网格 — 所有字段共享同一组列，天然对齐）── */
+/* ── 状态面板（三组独立网格，列宽完全一致）── */
 #status-panel {
   flex-shrink: 0;
   background: var(--bg-panel);
@@ -514,11 +515,15 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   border-radius: var(--radius);
   padding: 12px 20px;
 }
+/* 三个网格共用同一个类，minmax(0,1fr) 防止内容撑开导致列不对齐 */
 .status-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px 16px;
 }
+/* 资源行与变量网格同上（HTML 已加 .status-grid 类） */
+#resources-row { margin-top: 0; }
+#resources-row .status-item { justify-self: start; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .status-item {
   display: flex; gap: 6px;
   align-items: baseline;
@@ -544,7 +549,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .pressure-warn { color: #f0c040 ; }
 .pressure-danger { color: var(--red) ; }
 
-/* 变量追踪（v9.9：变量项在统一网格中，toggle 控制显隐） */
+/* 变量追踪 */
 .variables-panel {
   margin-top: 10px;
   border-top: 1px solid var(--border);
@@ -557,12 +562,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   transition: color .2s;
 }
 .vars-toggle:hover { color: var(--gold); }
-/* 变量网格容器已废弃（v9.9 统一网格），保留选择器 */
-.vars-grid { display: none; }
 .vars-grid.collapsed { display: none; }
-/* 折叠时隐藏统一网格中的变量项 */
-#status-panel.var-collapsed .var-item { display: none; }
-#status-panel.var-collapsed .variables-panel { border-top-color: transparent; padding-top: 2px; }
+.variables-panel.var-collapsed { border-top-color: transparent; padding-top: 2px; }
 .var-item .status-label { font-size: 10px; color: var(--text-dim); }
 .var-item .status-value { font-size: 12px; }
 
@@ -648,7 +649,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
   /* 顶部栏 — 标题全宽 + 10按钮 5×2 网格 */
   #top-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px 2px; position: relative; align-items: start; }
-  .game-title { font-size: 15px; letter-spacing: 2px; grid-column: 1 / -1; text-align: center; margin-bottom: 2px; }
+  .game-title { font-size: 15px; letter-spacing: 2px; grid-column: 1 / -1; grid-row: 1; text-align: center; margin-bottom: 2px; }
   .top-actions { display: contents; }
   #top-bar .btn-small { font-size: 10px; padding: 5px 2px; min-width: 0; text-align: center; white-space: nowrap; }
   #btn-back-saves { position: static; }
@@ -859,9 +860,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   font-size: 13px;
   padding: 8px;
 }
-/* 资源行容器已废弃（v9.9 统一网格），保留选择器以免旧代码报错 */
-#resources-row { display: none; }
-#resources-row .resource-item { justify-self: start; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* 资源行已改用 .status-grid 统一列格式 */
 
 /* ── 存档选择器 ── */
 .save-selector-modal {

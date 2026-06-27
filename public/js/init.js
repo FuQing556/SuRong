@@ -356,22 +356,14 @@ function bindEvents() {
   $('#save-selector-overlay')?.addEventListener('click', e => { /* 必须选存档 */ });
 
   // 变量追踪折叠
-  if (dom.varsToggle) {
+  if (dom.varsToggle && dom.varsGrid) {
     dom.varsToggle.addEventListener('click', () => {
-      var sp = document.getElementById('status-panel');
-      var collapsed;
-      if (sp) {
-        sp.classList.toggle('var-collapsed');
-        collapsed = sp.classList.contains('var-collapsed');
-      } else {
-        // 降级：直接 toggle var-item 显示
-        var items = document.querySelectorAll('#status-grid .var-item');
-        var hide = items.length > 0 && getComputedStyle(items[0]).display !== 'none';
-        for (var i = 0; i < items.length; i++) items[i].style.display = hide ? 'none' : '';
-        collapsed = hide;
-      }
+      dom.varsGrid.classList.toggle('collapsed');
+      var vp = document.getElementById('variables-panel');
+      if (vp) vp.classList.toggle('var-collapsed', dom.varsGrid.classList.contains('collapsed'));
       var label = getActiveTemplate().outputSections?.variables?.label || '变量追踪';
-      dom.varsToggle.textContent = collapsed ? label + ' ▶' : label + ' ▼';
+      dom.varsToggle.textContent = dom.varsGrid.classList.contains('collapsed')
+        ? label + ' ▶' : label + ' ▼';
     });
   }
 

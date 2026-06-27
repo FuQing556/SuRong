@@ -358,13 +358,17 @@
         </div>
       </section>
 
-      <!-- 状态栏（统一网格：所有字段共享同一组列，天然对齐） -->
+      <!-- 状态栏（三组独立网格，列宽完全一致） -->
       <section id="status-panel">
         <div class="status-grid" id="status-grid">
           <span class="status-placeholder">加载模板中...</span>
         </div>
+        <div class="status-grid" id="resources-row"></div>
         <div id="variables-panel" class="variables-panel">
           <div class="vars-toggle" id="vars-toggle">📊 变量追踪 ▼</div>
+          <div class="status-grid" id="vars-grid">
+            <span class="status-placeholder">加载模板中...</span>
+          </div>
         </div>
       </section>
     </main>

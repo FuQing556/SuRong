@@ -187,38 +187,41 @@ function updateOptionButtons(options) {
 function renderStatusContainers(template) {
   const sections = template?.outputSections || {};
 
-  // 收集所有字段到统一网格：statusTop → taskLine → resources → variables
-  var allItems = [];
-  function pushFields(fields, cssClass) {
-    if (!fields || !Array.isArray(fields)) return;
-    for (var i = 0; i < fields.length; i++) {
-      allItems.push({ field: fields[i], cssClass: cssClass || '' });
-    }
+  // 渲染一个字段项的 HTML
+  function renderItem(f, extraClass) {
+    return '<div class="status-item' + (extraClass ? ' ' + extraClass : '') + '" data-field="' + escapeHtml(f.id) + '">' +
+      '<span class="status-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span>' +
+      '<span class="status-value" id="field-' + escapeHtml(f.id) + '">—</span>' +
+    '</div>';
   }
-  pushFields(sections.statusTop?.fields, '');
-  pushFields(sections.taskLine?.fields, '');
-  pushFields(sections.resources?.fields, 'resource-item');
-  pushFields(sections.variables?.fields, 'var-item');
 
-  // 渲染到统一网格（所有字段共享同一组列，天然对齐）
+  // 网格1：状态栏 + 任务行
+  const statusFields = [
+    ...(sections.statusTop?.fields || []),
+    ...(sections.taskLine?.fields || []),
+  ];
   if (dom.statusGrid) {
-    dom.statusGrid.innerHTML = allItems.map(function(item) {
-      var f = item.field;
-      var cls = item.cssClass ? ' ' + item.cssClass : '';
-      return '<div class="status-item' + cls + '" data-field="' + escapeHtml(f.id) + '">' +
-        '<span class="status-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span>' +
-        '<span class="status-value" id="field-' + escapeHtml(f.id) + '">—</span>' +
-      '</div>';
-    }).join('');
+    dom.statusGrid.innerHTML = statusFields.map(function(f) { return renderItem(f, ''); }).join('');
   }
 
-  // 隐藏旧容器（不再使用独立网格）
-  if (dom.resourcesRow) { dom.resourcesRow.innerHTML = ''; dom.resourcesRow.style.display = 'none'; }
-  if (dom.varsGrid) { dom.varsGrid.innerHTML = ''; }
+  // 网格2：资源行（与网格1完全相同的列格式）
+  const resFields = sections.resources?.fields || [];
+  if (dom.resourcesRow) {
+    dom.resourcesRow.innerHTML = resFields.length > 0
+      ? resFields.map(function(f) { return renderItem(f, 'resource-item'); }).join('')
+      : '';
+    dom.resourcesRow.style.display = resFields.length > 0 ? '' : 'none';
+  }
 
-  // 变量追踪：默认展开
-  var sp = document.getElementById('status-panel');
-  if (sp) sp.classList.remove('var-collapsed');
+  // 网格3：变量追踪（与网格1完全相同的列格式）
+  const varFields = sections.variables?.fields || [];
+  if (dom.varsGrid) {
+    dom.varsGrid.innerHTML = varFields.map(function(f) { return renderItem(f, 'var-item'); }).join('');
+    dom.varsGrid.style.display = '';  // 确保可见
+    dom.varsGrid.classList.remove('collapsed');
+    var vp = document.getElementById('variables-panel');
+    if (vp) vp.classList.remove('var-collapsed');
+  }
 
   // 更新变量追踪标题
   if (dom.varsToggle) {
@@ -352,9 +355,9 @@ function updateSaveIndicator() {
   if (!el) {
     el = document.createElement('span');
     el.id = 'save-indicator';
-    el.style.cssText = 'font-size:10px;color:var(--text-dim);margin-left:8px;opacity:.7;';
-    const topActions = document.querySelector('.top-actions');
-    if (topActions) topActions.appendChild(el);
+    el.style.cssText = 'font-size:10px;color:var(--text-dim);opacity:.7;';
+    const topBar = document.getElementById('top-bar');
+    if (topBar) topBar.appendChild(el);
   }
   const now = new Date();
   const ts = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
