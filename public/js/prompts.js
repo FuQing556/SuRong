@@ -199,15 +199,40 @@ async function savePrompt() {
 }
 
 // ── 恢复原始设定（多选范围）──
+// 始终从服务器重新拉取模板，不使用内存快照（防止SW/HTTP缓存的旧版）
 async function resetPrompt() {
   const tpl = getActiveTemplate();
   const saveId = gameState.activeSaveId || tpl.id || 'default';
-  const orig = gameState._originalTemplate;
+
+  // 从服务器强制拉取最新模板
+  let orig = null;
+  try {
+    dom.settingsMsg.textContent = '⏳ 正在从服务器获取最新模板...';
+    dom.settingsMsg.style.color = 'var(--text-dim)';
+    const resp = await fetch('/api/templates/' + saveId);
+    if (resp.ok) {
+      const data = await resp.json();
+      orig = data.template || null;
+    }
+  } catch (e) { /* fall through to _originalTemplate */ }
+
+  // 服务器拉不到则回退到内存快照
+  if (!orig) {
+    orig = gameState._originalTemplate;
+    if (orig) {
+      dom.settingsMsg.textContent = '⚠ 无法连接服务器，使用本地缓存的原始模板';
+      dom.settingsMsg.style.color = 'var(--yellow)';
+    }
+  }
+
   if (!orig) {
     dom.settingsMsg.textContent = '⚠ 没有可恢复的原始模板';
     dom.settingsMsg.style.color = 'var(--red)';
     return;
   }
+
+  // 更新内存快照为最新版本
+  gameState._originalTemplate = JSON.parse(JSON.stringify(orig));
 
   // 多选恢复范围
   var scopeStr = await dlPrompt(

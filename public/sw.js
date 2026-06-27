@@ -1,6 +1,6 @@
 // Service Worker — 离线缓存（网络优先，回退缓存）
-// v9: PWA图标更新 + 场景图片预缓存
-const CACHE = 'xixi-v9';
+// v10: API 请求跳过缓存，模板/酒馆等数据每次拉最新
+const CACHE = 'xixi-v10';
 // 核心shell（install时预缓存）
 const SHELL = [
   '/', '/index.html', '/style.css',
@@ -47,6 +47,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   // 只缓存 GET 请求
   if (e.request.method !== 'GET') return;
+  // API 请求不做缓存——模板/酒馆/生成等数据必须每次拉最新
+  const url = new URL(e.request.url);
+  if (url.pathname.startsWith('/api/')) return;
 
   e.respondWith(
     fetch(e.request).then(response => {
