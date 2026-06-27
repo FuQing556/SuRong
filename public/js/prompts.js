@@ -110,7 +110,7 @@ async function savePrompt() {
   // ── v2: 检查结局标记是否完整 ──
   const origBody = gameState._originalTemplate?.promptBody || '';
   if (origBody) {
-    const endingMarkerRe = /【游戏结束[：:·\s]*([^】]+)】/g;
+    const endingMarkerRe = /【(?:游戏结束|命运转折)[：:·\s]*([^】]+)】/g;
     const missingEndings = [];
     let m;
     while ((m = endingMarkerRe.exec(origBody)) !== null) {

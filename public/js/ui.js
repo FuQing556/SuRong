@@ -85,7 +85,7 @@ function showError(msg) {
   if (gameState.currentOptions.length > 0) updateOptionButtons(gameState.currentOptions);
 }
 
-// ── 选项按钮（资源检测版）──
+// ── 选项按钮（资源检测版 v2：力不能及/代价沉重 分治）──
 function updateOptionButtons(options) {
   const tpl = getActiveTemplate();
 
@@ -104,6 +104,9 @@ function updateOptionButtons(options) {
     });
   }
 
+  // 重置代价沉重标记
+  gameState._heavyCostOptions = [];
+
   dom.optionBtns.forEach(function(btn, i) {
     const opt = options[i];
     const actionEl = btn.querySelector('.option-action');
@@ -112,17 +115,17 @@ function updateOptionButtons(options) {
       const actionText = (opt.action || '').replace(/^\d+[\.\、\s]+/, '');
       const costText = opt.cost || '';
       const fullText = actionText + ' ' + costText;
-      let resourceBlocked = fullText.indexOf('【资源不足】') >= 0;
-      if (!resourceBlocked) {
+      // 检测 AI 标记：力不能及 + 资源不足(旧) = 禁用；代价沉重 = 可选但警告
+      var hasCannotAfford = fullText.indexOf('【力不能及】') >= 0 || fullText.indexOf('【资源不足】') >= 0;
+      var hasHeavyCost = fullText.indexOf('【代价沉重】') >= 0;
+      var resourceBlocked = false;
+      if (!hasCannotAfford) {
         for (const label in resValues) {
           var cur = resValues[label];
-          // 防御：cur 必须是有效数字
           if (typeof cur !== 'number' || isNaN(cur)) continue;
           var escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          // 匹配模式1：label 紧邻数字（如 "情报碎片5"、"情报碎片：3"、"情报碎片-2"）
           var re1 = new RegExp(escaped + '[：:\\s]*[xX×\\-–]?\\s*(\\d+)');
           var m = costText.match(re1) || actionText.match(re1);
-          // 匹配模式2：label 与数字之间有少许文字（如"消耗情报碎片x3"、"需要情报碎片 5 个"）
           if (!m) {
             var re2 = new RegExp(escaped + '[\\s\\S]{0,8}?(\\d+)');
             m = costText.match(re2) || actionText.match(re2);
@@ -132,19 +135,37 @@ function updateOptionButtons(options) {
             if (!isNaN(needed) && cur < needed) { resourceBlocked = true; break; }
           }
         }
+      } else {
+        resourceBlocked = true;
       }
       actionEl.textContent = actionText;
       costEl.textContent = costText ? '— ' + costText : '';
-      btn.disabled = resourceBlocked;
       btn.style.display = '';
-      btn.style.opacity = resourceBlocked ? '0.45' : '';
-      btn.title = resourceBlocked ? '资源不足，无法选择' : '';
+      // 力不能及 → 禁用，代价沉重 → 可选但警告
+      if (hasCannotAfford || resourceBlocked) {
+        btn.disabled = true;
+        btn.style.opacity = '0.4';
+        btn.title = '力不能及 — 当前资源无法执行此选项';
+        btn.style.borderColor = '';
+      } else if (hasHeavyCost) {
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.title = '⚠ 代价沉重 — 选了将付出重大代价，确定后再执行';
+        btn.style.borderColor = 'var(--red)';
+        gameState._heavyCostOptions.push(i);
+      } else {
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.title = '';
+        btn.style.borderColor = '';
+      }
     } else {
       actionEl.textContent = '';
       costEl.textContent = '';
       btn.disabled = true;
       btn.style.opacity = '';
       btn.title = '';
+      btn.style.borderColor = '';
       if (i >= (options.length || 0)) btn.style.display = options.length === 0 ? '' : 'none';
     }
   });
@@ -157,6 +178,7 @@ function updateOptionButtons(options) {
       btn.style.opacity = '';
       btn.title = '';
       btn.style.display = '';
+      btn.style.borderColor = '';
     });
   }
 }

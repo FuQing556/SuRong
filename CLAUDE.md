@@ -568,3 +568,48 @@ AI 回复后调用。如果 AI 未触发但条件满足：
 - 暖色点缀在暗色底上格外重要
 
 **按钮统一**：所有非 dark 主题必须覆盖 `.btn`/`.btn-small`/`.btn-tiny` 尺寸，否则顶部栏会换行。
+
+## v7 更新记录（2026-06-27 上午 — 优化方案 Phase 1+2 完成）
+
+### Phase 1：元提示词重写（`server.js:381-480`）
+
+metaPrompt 从 44 行扩至 ~130 行。新增章节：
+
+| 章节 | 说明 |
+|------|------|
+| **叙事哲学** | AI 的根本立场：讲述者非裁判，数值是叙事语言非积分，允许极端值，禁止"控温" |
+| **叙事节拍** | 快拍(1回)/中拍(2-3回)/大拍(3-5回)，场景切换服务于叙事节奏 |
+| **两难设计** | 每选项都让玩家犹豫，禁止无代价正确选项，失败引出新困境 |
+| **字段叙事效应** | 软阈值定义（如好感度≥60→私下帮忙），数值变化必须有可见叙事后果 |
+| **编辑参考** | 追加到 promptBody 末尾，帮助玩家修改时不出错 |
+| **命运转折系统** | 取代旧"结局系统"，5-8个自由设计（非固定4层），条件括号紧挨标记≤50字符 |
+
+已修改章节：你的身份（加例外条款）、世界观（400-600字+铁律）、主角（300-500字）、冲突（≥3重困境）、开局（N个可配置）、成就（全定制禁止通用名）
+
+**游戏长度联动**（lengthGuide 新增字段）：`openings`, `endings`, `achievements`, `hiddenAch`, `promptBudget`, `longRoad`
+
+**字段架构弹性化**：statusTop 2-4字段 / taskLine 固定2 / resources 1-3 / variables 1-4
+
+### Phase 2：关键词全局重命名
+
+| 旧 | 新 | 影响 |
+|----|-----|------|
+| `【游戏结束·XXX】` | `【命运转折·XXX】` | 所有正则同时兼容新旧格式 |
+| `【资源不足】` | `【力不能及】` | 资源真不够→禁用按钮 |
+| （新增） | `【代价沉重】` | 够但贵→可选但弹确认框+红色边框 |
+
+**关键代码改动**：
+- `utils.js`：buildStatusSnapshot / repairEndingSection / collectEligibleEndings / buildEndingInjection / detectEnding — 全部正则改为 `/(?:游戏结束|命运转折)/` 兼容双格式
+- `server.js`：buildSystemPrompt 叙事法则 + repairEndingSection 统一
+- `core.js`：硬兜底注入 + 结局弹窗标题 + handleChoice 代价沉重确认
+- `ui.js`：updateOptionButtons v2 — 力不能及→禁用，代价沉重→可选+红框，`_heavyCostOptions` 标记
+- `prompts.js` / `prompt.txt`：正则兼容 + 文案更新
+
+**向后兼容**：surongrong.json 保持旧标记不变。所有检测函数同时接收新旧格式。新生成的模板用新格式。
+
+**⚠ 未改的**：tests/ending-system.test.js 保持测试旧格式（验证向后兼容）。函数名暂未重命名（如 detectEnding、buildEndingInjection）。
+
+### 后续 Phase
+
+详见 `优化方案.md` + `PROGRESS.md`。Phase 3→11 待新会话继续。
+

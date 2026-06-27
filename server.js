@@ -115,10 +115,10 @@ function buildSystemPrompt(template) {
 
   const narrativeGuide = `【叙事法则】
 · 每个选项必须推动剧情——不能让玩家选择后原地踏步。至少3个选项带玩家离开当前场景。
-· 代价必须真实：标注【资源不足】的选项被选后，现状中必须体现失败后果，不得让选项正常成功。
+· 代价必须真实：标注【力不能及】的选项禁用（资源真的不够），标注【代价沉重】的选项可选但代价更大。两者被选后，现状中必须体现对应后果，不得让选项正常成功。
 · 结算时如实更新所有字段数值。消耗扣减，获得增加。数值变化要合理——不要凭空增减。
 · 选项之间要有路线分歧：提供至少2条不同的策略方向（如战斗vs谈判、信任vs怀疑、冒险vs保守）。
-· 结局推送：严格按照下方【结局系统】中定义的条件判断。一旦数值达标立即触发结局——不要因轮次不够、剧情未完等理由推迟。触发时输出【游戏结束·结局名】。`;
+· 命运转折推送：严格按照下方【命运转折系统】中定义的条件判断。一旦数值达标立即触发——不要因轮次不够、剧情未完等理由推迟。触发时输出【命运转折·名称】。`;
 
   // 注：状态快照由客户端 buildSystemPrompt 生成（含具体字段数值），
   // 服务端无法访问 gameState.fieldHistory，仅负责格式+叙事法则+正文+结局修复
@@ -144,18 +144,21 @@ function repairEndingSection(body, template) {
   }
   if (!origBody) return body;
 
-  // 匹配到下一个非结局标记的【XXX】章节标题，跳过内部的【游戏结束·XXX】标记
-  const origEm = origBody.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束)[^】]+】|$)/);
+  // 匹配到下一个非结局标记的【XXX】章节标题，跳过内部的【游戏结束·XXX】/【命运转折·XXX】标记
+  // 同时兼容新旧两种章节标题格式
+  const _matchChapter = (text) => text.match(/【(?:结局系统|命运转折系统)】([\s\S]*?)(?=【(?!游戏结束|命运转折)[^】]+】|$)/)
+    || text.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束|命运转折)[^】]+】|$)/);
+  const origEm = _matchChapter(origBody);
   if (!origEm) return body;
 
-  const em = body.match(/【结局系统】([\s\S]*?)(?=【(?!游戏结束)[^】]+】|$)/);
+  const em = _matchChapter(body);
   if (!em) {
-    console.log('🔧 [server] repairEndingSection: 结局章节完全缺失，从磁盘模板恢复');
+    console.log('🔧 [server] repairEndingSection: 结局/命运转折章节完全缺失，从磁盘模板恢复');
     return body + '\n\n' + origEm[0];
   }
 
-  // 逐标记验证
-  const endingMarkerRe = /【游戏结束[：:·\s]*([^】]+)】/g;
+  // 逐标记验证 — 兼容新旧两种标记名
+  const endingMarkerRe = /【(?:游戏结束|命运转折)[：:·\s]*([^】]+)】/g;
   const origMarkers = [];
   let m;
   while ((m = endingMarkerRe.exec(origEm[0])) !== null) {
@@ -174,7 +177,7 @@ function repairEndingSection(body, template) {
 
   if (missingMarkers.length === 0) return body;
 
-  console.warn('🔧 [server] repairEndingSection: 检测到 ' + missingMarkers.length + ' 个结局标记缺失：',
+  console.warn('🔧 [server] repairEndingSection: 检测到 ' + missingMarkers.length + ' 个结局/命运转折标记缺失：',
     missingMarkers.join(', '), '— 从磁盘模板恢复结局章节');
 
   return body.replace(em[0], origEm[0]);
@@ -378,12 +381,12 @@ app.post('/api/generate-prompt', async (req, res) => {
   const styleText = (styles && styles.length > 0) ? styles.join('、') : '综合平衡';
   const length = gameLength || 'medium';
 
-  // 根据游戏长度生成不同的结局回合门槛
+  // 根据游戏长度联动所有参数
   const lengthGuide = {
-    short:    { early:'3-5', mid:'6-10', late:'10-15', epic:'15+' },
-    medium:   { early:'5-8', mid:'10-15', late:'15-25', epic:'25+' },
-    long:     { early:'8-12', mid:'15-25', late:'25-40', epic:'40+' },
-    immersive:{ early:'10-15', mid:'20-30', late:'35-50', epic:'50+' },
+    short:    { early:'3-5', mid:'6-10', late:'10-15', epic:'15+',  openings:'3-4', endings:'3-5',  achievements:'6-8',  hiddenAch:'3-4', promptBudget:'2000-3000', longRoad:'10' },
+    medium:   { early:'5-8', mid:'10-15', late:'15-25', epic:'25+',  openings:'4-5', endings:'5-7',  achievements:'8-10', hiddenAch:'4-5', promptBudget:'3000-5000', longRoad:'20' },
+    long:     { early:'8-12',mid:'15-25', late:'25-40', epic:'40+',  openings:'5-6', endings:'6-8',  achievements:'10-12',hiddenAch:'5-6', promptBudget:'4000-6000', longRoad:'30' },
+    immersive:{ early:'10-15',mid:'20-30',late:'35-50', epic:'50+',  openings:'6',   endings:'7-8',  achievements:'12-14',hiddenAch:'6-7', promptBudget:'5000-7000', longRoad:'40' },
   }[length];
 
   const metaPrompt = `你是互动叙事游戏设计AI。输出纯JSON，不要markdown包裹。
@@ -391,44 +394,95 @@ app.post('/api/generate-prompt', async (req, res) => {
 【玩家需求】
 名称：${name} | 世界观：${world} | 主角：${protagonist}
 核心冲突：${conflict || '自由发挥'} | 风格：${styleText} | 长度：${length}
-结局门槛：早${lengthGuide.early}回/中${lengthGuide.mid}回/后${lengthGuide.late}回/大后${lengthGuide.epic}回
 ${extra ? '★ 额外要求：' + extra : ''}
 
-【字段架构 outputSections】
-固定4段key：statusTop(状态栏,inline,3字段)/taskLine(null,inline,2字段)/resources(资源,inline,2字段)/variables(关系,grid,2字段)
-statusTop: 生命线 — 2个数字(0-100)+1个文本状态
-taskLine: 必须含 round(轮次,number) + 主线进度(0-5数字)
-resources: 2个可消耗数字资源，每个必须在选项代价/收益中体现
-variables: 2个关系值(-100~100)，每个必须被至少1个结局引用
+【字段架构 outputSections — 弹性化】
+固定4段key。字段数量按故事需求决定（谍战要多个关系值但只需1个资源，生存游戏要3个资源但只需1个关系）：
+  statusTop(状态栏,inline): ${lengthGuide.openings}个字段 — 2-3个数字(0-100)+0-1个文本状态
+  taskLine(null,inline): 2字段 — 固定含 round(轮次,number) + 主线进度(0-5数字)
+  resources(资源,inline): 1-3个可消耗数字资源，每个必须在选项代价/收益中体现且叙事中有对应事件（获取情报→写出获取过程，消耗把柄→写出用在了谁身上）
+  variables(关系,grid): 1-4个数值(-100~100)，每个必须被至少1个命运转折条件引用
 字段格式: {"id":"camelCase","label":"2-4字中文","icon":"emoji","formatHint":"[范围]","type":"number或text"}
 
-【提示词正文 promptBody — 3000-5000字，用【】分章节】
+【提示词正文 promptBody — ${lengthGuide.promptBudget}字，用【】分章节】
 你是这个世界的AI主持人。每次回复 = 结算上轮后果 + 全新场景 + 4选项 + 状态字段。
 
-必含章节（顺序）：
-【你的身份】AI行为准则。因果结算+选项生成。不替玩家选择，不评价对错。
+必含章节（严格按此顺序）：
+
+【叙事哲学】（新增 — 放在最前面，定义AI的根本立场）
+· 你是故事讲述者，不是游戏裁判，不是数值平衡师。
+· 数值是叙事语言，不是积分。压力值70→90意味着主角正在崩溃——你要写出手抖、失眠、幻听、失控。
+· 允许极端。如果叙事推动数值到极端（100或0），就让它到极端。命运转折是故事的一部分，不是失败。
+· 字段变化幅度必须匹配叙事事件。被围堵→压力+15~25，不是+1~3。不要在数值90-99之间反复横跳来"保护"玩家。
+· 这个游戏没有"失败"——只有不同的后果。每个选项都是一条路，每条路都通向新的困境。
+· 禁止替玩家"控温"。不要因为数值快触顶就主动降它。遵循叙事因果，而非游戏平衡。
+
+【你的身份】AI行为准则：
+· 因果结算：如实更新所有字段数值——消耗扣减，获得增加。数值变化幅度与叙事事件严重程度匹配。
+· 选项生成：从不替玩家选择，从不评价对错。
+· ★ 例外条款：当本回合出现【★ 命运转折回合 ★】系统消息时，本回合现状就是该命运转折的场景叙事。命运转折后故事继续，必须给4个选项。不要因"触发命运转折"而省略选项或提前终止。
+
 【叙事风格】这个世界独有的叙事语调。是冷峻、荒诞、温情还是史诗？用2-3句定义。每回合保持一致的叙事声音。
-【场景跳跃】★ 每回合强制切换：时间+地点+事件至少换其二。禁止连续同场景。关键轮次(10/20/30)可延续2回合。给正确+错误示例。
-【主角设定】外貌/能力/身世/处境。150-250字。只写能影响选项设计的。
-【世界观】势力/NPC/规则。200-350字。每个NPC/势力必须能在选项中使用。
-【结局系统】★ 4层结局，每层引用具体字段+数值。格式示例：
-  早期(${lengthGuide.early}回): 条件(字段名=数值/范围) — 结局名 — 触发【游戏结束·结局名】
-  中期(${lengthGuide.mid}回): 条件 — 结局名
-  后期(${lengthGuide.late}回): 条件 — 结局名
-  大后期(${lengthGuide.epic}回): 多条件 — 结局名
-★ 条件必须引用具体字段标签和数值。每个结局必须附带1-2句具体叙事描述（如"苏蓉蓉发现守卫换岗空隙，当机立断孤身越过边界"），使AI能据此展开8-12句完整结局场景。"轮次≥15后积极推结局。结局触发后保留继续选项。
-【资源系统】2个资源各列3种获取+3种消耗方式。资源不足→标的【资源不足】→下回合体现失败后果。
-【选项设计】每回合4选项 = 动作+代价+风险(低/中/高/孤注)。≥3个带玩家离开当前场景。≥2条不同策略路线。禁止无代价、禁止"等待/观察"。选项之间形成真正的两难——没有明显最优解。
-【开局系统】3个开局(编号1-3)，不同场景+初始数值。openingMessages:["开始游戏。【开局编号：1】",...]
 
-【成就 achievements — 6-8个】
-命名创意化，禁止"{字段}大师"等公式。用世界观特有名词。每个含字段+阈值。必含3通用成就(命名创意化): 轮次≥30未结局/触发结局/孤注一掷成功。格式:{"名":{"icon":"emoji","desc":"含检测条件"}}
+【叙事节拍】（新增大章节）
+三种节拍混合使用，不要每回合都强制切换场景：
+· 快拍（1回合）：小冲突——走廊偶遇→一句话交锋→结束。三者切换其二。
+· 中拍（2-3回合）：同一事件链升级。上一回合你拒绝了体检→这一回合医官带着签字命令和两个保安又来了。连续2-3回合围绕同一事件的不同阶段。
+· 大拍（3-5回合）：关键事件弧线。第一回合爆发，中间回合局势变化/转折，最后回合后果。大拍期间不受场景跳跃限制——事件弧本身就是场景的有机延续。
+设计原则：不是"换了场景才能继续"，而是"故事需要换场景时才换"。
 
-【隐藏成就 hiddenAchievements — 3-5个】
-每个含trigger。类型: choice(pattern+count)/gambit(count)/rounds_under(round)/field_zero(fieldLabel)/field_max_under(fieldLabel+threshold)/response_match(pattern+count)
+【场景跳跃】每回合时间+地点+事件至少换其二。关键轮次可延续2回合。给正确+错误示例。不要为了换场景而换——场景跳跃服务于叙事节奏，而非反过来。
+
+【主角设定】300-500字。外貌/武魂/能力/身世/处境/可选行动路线。写出主角在故事中的行动空间——不是被动等待事件，而是有选择余地的（哪怕选项都很糟）。
+
+【世界观】400-600字。≥3个命名地点（各1-2句描述）。≥5个命名NPC（各含一句动机）。≥2条世界规则（"这个世界里X是不可能的/被禁止的"）。
+★ 铁律：叙事中只能使用 promptBody 已列出的 NPC、地点和规则。禁止即兴创造新势力/新人名/新地点。
+
+【核心冲突】300-500字。≥3重困境层层嵌套。写出核心张力——为什么每条出路都有代价，为什么主角无法简单脱身。
+
+【两难设计】（新增大章节）
+每个选项必须让玩家犹豫：
+· 选项A安全但丢资源，选项B危险但得情报，选项C稳妥但得罪NPC，选项D冒险但可能翻盘。四个选项之间没有明显最优解。
+· 禁止"无代价正确选项"。如果有一个选项几乎没代价也没风险，重写它。
+· 禁止"等待/观察/不反应"类选项——除非当前是关键大拍且确实需要停顿。
+· 失败选项的后果不是"扣分+骂一句"。要引出新的困境：你选了忍→对方觉得你好欺负→下次更过分。你选了打→短期赢了但惹了更大麻烦。每条路都通向新困境，没有死胡同。
+
+【命运转折系统】（原"结局系统" — 自由设计${lengthGuide.endings}个命运转折）
+★ 每个命运转折必须引用具体字段标签+数值+运算符（≥ ≤ = > < >= <=），条件括号紧挨标记（≤50字符）。=100自动放宽为≥95。
+★ 每个命运转折必须附带1-2句具体叙事描述（如"苏蓉蓉发现守卫换岗空隙，当机立断孤身越过边界"），使AI能据此展开8-12句完整场景。
+★ 条件必须引用具体字段标签和数值。轮次≥${lengthGuide.early}后积极推命运转折。命运转折触发后保留继续选项——这不是游戏终止，是故事的新阶段。
+格式：命运转折N·名称（字段≥阈值 且 字段≤阈值）：叙事描述。标注【命运转折·名称】
+轮次门槛参考：早${lengthGuide.early}回 / 中${lengthGuide.mid}回 / 后${lengthGuide.late}回 / 大后${lengthGuide.epic}回
+
+【字段叙事效应】（新增大章节）
+每个数字字段必须定义软阈值效应——数值变化必须有可见的叙事后果：
+  字段名（范围）：阈值1→效应 | 阈值2→效应 | 阈值3→效应
+示例：好感度（-100~100）：≤-30→公开敌视 | ≥30→不再敌视 | ≥60→私下帮忙 | ≥80→公开维护 | 100→无法拒绝
+示例：压力值（0-100）：≥50→外在反应可见 | ≥70→手抖/失眠/沉默 | ≥90→濒临崩溃
+AI必须在NPC行为和叙事中体现这些阈值——好感度70的NPC和好感度20时是不同的两个人。阈值效应不是命运转折——到100才触发命运转折，但在此之前，数值变化必须有可见的叙事后果。
+
+【资源系统】1-3个资源，每个列3种获取+3种消耗方式。每个资源变化必须在叙事中有对应事件。资源不足→标的【代价沉重】→选择后体现失败后果（选项仍可选，但代价更大）。
+
+【选项设计】每回合4选项 = 动作+代价+风险(低/中/高/孤注)。≥3个带玩家离开当前场景。≥2条不同策略路线。禁止无代价。选项之间形成真正的两难——没有明显最优解。
+
+【开局系统】${lengthGuide.openings}个开局(编号1-${lengthGuide.openings})，不同场景+不同初始数值+明确叙事钩子。openingMessages:["开始游戏。【开局编号：1】",...]
+同时定义initialState对象，列出所有数字字段的初始值。
+
+【成就 achievements — ${lengthGuide.achievements}个】
+全部世界观定制，禁止通用名（"孤注一掷""长路漫漫""命运之轮"由系统兜底自动生成，你不需要写）。每个含字段+阈值，desc必须嵌入具体字段名+数字阈值。按叙事/关系/资源/行为四类均匀分布。格式:{"名":{"icon":"emoji","desc":"含字段名+数字阈值"}}
+
+【隐藏成就 hiddenAchievements — ${lengthGuide.hiddenAch}个】
+每个含trigger。类型: choice(pattern+count)/gambit(count)/rounds_under(round)/field_zero(字段label)/field_max_under(字段label+阈值)/response_match(pattern+count)。至少2种不同trigger类型。
+
+【编辑参考】（新增 — 追加到promptBody末尾，帮助玩家修改时不出错）
+当前模板字段清单：列出所有字段的label
+命运转折条件格式：字段label 运算符 数值（多条件用 且/，/、 连接，括号紧挨标记≤50字符）
+开局格式：开始游戏。【开局编号：N】（N=1~${lengthGuide.openings}）
+可见成就格式：desc含「字段label+数字阈值」
+隐藏成就触发类型：choice(pattern+count)/gambit(count)/rounds_under(round)/field_zero(字段label)/field_max_under(字段label+阈值)/response_match(pattern+count)
 
 【其他】
-sceneTypes:5-7中文。description:≤20字。worldSetting/protagonist/conflict:各200-400字,\n\n分段。theme:"dark"。styles:标签数组。
+sceneTypes:5-7中文。description:≤20字。worldSetting/protagonist/conflict:各200-400字,\n\n分段。theme:"dark"。styles:标签数组。initialState:对象，列出所有数字字段的初始键值对。
 
 输出纯JSON:`;
 

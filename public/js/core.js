@@ -394,8 +394,8 @@ function _handleParsedResponse(fullContent, tpl, parsed) {
       gameState.achievementFlags.endingTriggered = true;
       gameState.achievementFlags.endingType = clientEnding;
       // 不在这里 push triggeredEndings，交由 renderGameState 统一弹窗+记录
-      parsed.raw = parsed.raw + '\n【游戏结束·' + clientEnding + '】';
-      fullContent = fullContent + '\n【游戏结束·' + clientEnding + '】';
+      parsed.raw = parsed.raw + '\n【命运转折·' + clientEnding + '】';
+      fullContent = fullContent + '\n【命运转折·' + clientEnding + '】';
       gameState.fullHistory[gameState.fullHistory.length - 1].content = fullContent;
       if (!parsed.situation || parsed.situation.length < 20) {
         var inj = typeof buildEndingInjection === 'function'
@@ -541,6 +541,11 @@ async function handleChoice(num) {
         }
       }
     }
+  }
+  // 代价沉重确认
+  if (gameState._heavyCostOptions && gameState._heavyCostOptions.indexOf(num - 1) >= 0) {
+    const confirmed = await dlConfirm('⚠ 此选择将付出沉重代价，确定要继续？');
+    if (!confirmed) return;
   }
   await sendMessage('选择 ' + num);
 }
@@ -885,7 +890,7 @@ function showEndingOverlay(endingType, parsed) {
     if (re.test(endingType)) { icon = emoji; break; }
   }
   $('#ending-icon').textContent = icon;
-  $('#ending-title').textContent = '结局：' + endingType;
+  $('#ending-title').textContent = '命运转折：' + endingType;
   var rawNarrative = parsed.situation || parsed.raw || '故事到此结束。';
   $('#ending-narrative').textContent = rawNarrative.length > 600 ? rawNarrative.substring(0, 600) + '…' : rawNarrative;
 
