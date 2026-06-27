@@ -131,6 +131,9 @@ async function savePrompt() {
     // 排除已知非字段词汇（需与所有模板字段标签不冲突）
     // 注意：模板提示词元指令避免"中文+运算符+数字"格式，如"自动放宽为≥95"→应写成"自动放宽（≥95）"
     if (/^(?:轮次|回合|且|或|则|第|此|该|当前|最大|最小|以上|以下|不超过|不低于|自动放宽为|括号紧挨标记)$/.test(candidate)) continue;
+    // 候选标签是某真实字段的子串（如"压力"⊆"压力值"→提示词中用了简称）→放过
+    var isSubstr = allFieldLabels.some(function(label) { return label.indexOf(candidate) !== -1 && label !== candidate; });
+    if (isSubstr) continue;
     if (allFieldLabels.indexOf(candidate) === -1 && unknownLabels.indexOf(candidate) === -1) {
       unknownLabels.push(candidate);
     }
