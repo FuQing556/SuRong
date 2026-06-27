@@ -388,6 +388,9 @@ var s=document.createElement('script');s.src='/js/test-achievements.js';document
 - **隐藏成就 field 键**：模板用 `trigger.field`（id）、创建器用 `trigger.fieldLabel`（label），读取时需双键回退 `trigger.fieldLabel || trigger.field`
 - **`_fieldVal` 返回 0 陷阱**：`|| 0` 对缺失字段返回 0，在 `isBelow`/`isNeverExceeded` 方向会误判。必须用 `hasOwnProperty('current')` 守卫
 - **CSP 安全**：线上版无 `unsafe-eval`，浏览器诊断脚本必须用 `<script>` 标签注入，不能用 `fetch+eval`
+- **正则 `\d+` 不捕获负号**：条件/阈值正则必须用 `-?\d+`（或 `[+-]?\d+`），不能裸用 `\d+`。涉及：`utils.js:270`、`achievements.js:174/280/305`、`ui.js:139/142`、`prompts.js:126`、`templates.js:669`。新增条件解析时必须检查。
+- **选项消耗 vs 惩罚区分**：`updateOptionButtons` 中 `字段-数字` 的 `-` 是数字符号而非分隔符 — 正则 `[xX×-–]?` 会误吞负号。改为 `[xX×]?([+-]?\d+)`，三路判定：`+X` 增益不锁 / `-X` 惩罚仅跌破字段最小值时锁 / 正数消耗维持 `cur<needed`
+- **`resMins` 字段最小值**：`updateOptionButtons` 从 `f.range` 解析最小值（`/^[-]?\d+/`），惩罚型扣减用 `cur + needed < fMin` 替代 `cur < needed`
 
 ---
 
