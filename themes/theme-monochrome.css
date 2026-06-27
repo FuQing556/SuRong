@@ -141,5 +141,5 @@ input:focus,textarea:focus{border-color:var(--gold)!important;outline:none}
 #btn-retry{background:var(--bg-card);border:2px solid var(--text);color:var(--text)}
 #btn-retry:hover{border-color:var(--gold);color:var(--gold)}
 
-@media (max-width:900px){.game-title{font-size:14px;letter-spacing:8px}}
-@media (max-width:480px){.game-title{font-size:12px;letter-spacing:4px}.option-btn:hover{transform:translateX(2px)}}
+@media (max-width:900px){.game-title{font-size:15px;letter-spacing:4px}image-frame{margin:12px 6px 20px;padding:6px 8px}}}
+@media (max-width:480px){.option-btn{border-radius:4px}.game-title{font-size:13px;letter-spacing:2px}image-frame{margin:8px 2px 14px;padding:4px 6px}.option-btn{padding:14px 12px;min-height:56px}}.option-btn:hover{transform:translateX(2px)}}

@@ -42,7 +42,6 @@ function _processDialogQueue() {
     // 清理事件绑定：克隆节点替换以移除所有监听器
     var newOk = $('#dialog-ok').cloneNode(true);
     var newCancel = $('#dialog-cancel').cloneNode(true);
-    var newOverlay = overlay.cloneNode(true);
     if ($('#dialog-ok').parentNode) $('#dialog-ok').parentNode.replaceChild(newOk, $('#dialog-ok'));
     if ($('#dialog-cancel').parentNode) $('#dialog-cancel').parentNode.replaceChild(newCancel, $('#dialog-cancel'));
     item.resolve(value);

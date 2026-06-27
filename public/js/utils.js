@@ -377,7 +377,7 @@ function collectEligibleEndings(template) {
       idx++;
     }
   }
-  return results;  return results;
+  return results;
 }
 
 /**

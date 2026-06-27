@@ -109,9 +109,9 @@ body::after{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-siz
 .option-btn:nth-child(3) .option-num{background:var(--option-3)}.option-btn:nth-child(4) .option-num{background:var(--option-4)}
 
 /* ── 按钮全局锁死 — 不受 body font-size 影响 ── */
-.btn{font-size:12px!important;line-height:1.3!important}
-.btn-small{font-size:11px!important;padding:4px 10px!important;line-height:1.2!important}
-.btn-tiny{font-size:10px!important;padding:2px 6px!important;line-height:1.2!important}
+.btn{font-size:12px;line-height:1.3}
+.btn-small{font-size:11px;padding:4px 10px;line-height:1.2}
+.btn-tiny{font-size:10px;padding:2px 6px;line-height:1.2}
 #btn-audio{font-size:11px!important;padding:4px 10px!important;width:auto!important;text-align:center!important;transform:none!important}
 #btn-audio:active{transform:none!important}
 
@@ -130,7 +130,7 @@ body::after{content:'🌸';position:fixed;pointer-events:none;z-index:0;font-siz
 .overlay .modal h2::after{content:' —';color:var(--gold-dim)}
 
 /* ── 表单 ── */
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:4px!important;font-family:inherit;font-size:13px!important}
+input,textarea,select{background:var(--bg-card);color:var(--text);border-color:var(--border);border-radius:4px;font-family:inherit;font-size:13px}
 input:focus,textarea:focus{border-color:var(--purple)!important;box-shadow:0 0 4px rgba(61,96,112,.12),0 0 12px rgba(184,80,90,.08)}
 :focus-visible{outline:2px solid var(--purple);outline-offset:2px}
 

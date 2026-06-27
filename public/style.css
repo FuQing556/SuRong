@@ -648,12 +648,13 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .ai-chat-box { flex: 1; max-height: 25vh; min-width: 0; overflow-y: auto; }
   #content-panel { padding: 8px 12px; }
 
-  /* 顶部栏 — 按钮缩小换行 */
-  #top-bar { flex-wrap: wrap; gap: 4px; padding: 8px 0; }
-  .game-title { font-size: 15px; letter-spacing: 2px; flex: 0 0 100%; text-align: center; margin-bottom: 4px; }
-  .top-actions { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; width: 100%; }
+  /* 顶部栏 — 标题全宽 + 按钮两排流动 */
+  #top-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 0; justify-content: center; position: relative; }
+  .game-title { font-size: 15px; letter-spacing: 2px; flex: 0 0 100%; text-align: center; margin-bottom: 2px; order: -2; }
+  .top-actions { display: contents; }
   .top-actions .btn-small { font-size: 10px; padding: 4px 7px; }
-  #btn-back-saves { position: absolute; left: 12px; top: 8px; z-index: 10; }
+  #btn-back-saves { position: static; order: -1; }
+  #save-indicator { position: absolute; right: 8px; bottom: 2px; font-size: 9px; opacity: .4; margin: 0; }
 
   /* 故事框 — 适屏高度 */
   #story-box { max-height: 35vh; }
@@ -718,9 +719,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .modal { max-width: 100vw; width: 100vw; border-radius: 0; padding: 14px; max-height: 100vh; }
   .overlay{ backdrop-filter: none; }
 
-  /* 顶部栏 — 标题缩小，按钮更紧凑 */
+  /* 顶部栏 — 标题缩小，按钮两排紧凑 + 存档时间丢角落 */
   .game-title { font-size: 14px; }
   .top-actions .btn-small { font-size: 11px; padding: 6px 8px; letter-spacing: 0; }
+  #save-indicator { position: absolute; right: 6px; bottom: 2px; font-size: 9px; opacity: .45; margin: 0; }
+  /* 确保 #btn-back-saves 不在480覆盖中被重设 */
+  #btn-back-saves { position: static; order: -1; }
 
   /* 创建存档表单 */
   .create-save-form input, .create-save-form textarea { font-size: 12px; }
@@ -736,6 +740,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
   /* 选项提示 */
   .options-hint { font-size: 10px; }
+
+  /* iOS Safari 缩放防触发：输入框字号≥16px */
+  input, textarea, select { font-size: 16px !important; }
 }
 
 /* ── 选项悬浮动画 ── */
@@ -1458,3 +1465,14 @@ input:focus, textarea:focus { border-color: var(--gold); outline: none; }
 #error-message { color: #fca5a5; }
 .achievement-toast { border-color: var(--gold); }
 #ach-toast-text { color: var(--gold); }
+
+/* ── 无障碍：减少动画 ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  #character-image { animation: none !important; }
+  .achievement-toast { animation: achBounce .3s ease !important; }
+}

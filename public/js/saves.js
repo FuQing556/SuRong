@@ -131,6 +131,7 @@ function deleteSave(saveId) {
     saveUserSaves(saves.filter(s => s.id !== saveId));
     // 清理所有相关存储
     try {
+      // 清理旧版遗留 key（v1-v3 格式，非 LS_KEYS 管理）
       localStorage.removeItem('xixi_template_' + saveId);
       for (let s = 0; s < 10; s++) localStorage.removeItem(LS_KEYS.save(saveId, s));
       localStorage.removeItem(LS_KEYS.achievements(saveId));
