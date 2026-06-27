@@ -88,8 +88,17 @@ function updateFieldHistoryFromParsed(parsed) {
 
 // ── 辅助：根据标签词查找字段ID ──
 function _findFieldId(labelPart) {
+  // 防御：空字符串被所有 label.includes('') 命中，返回第一个字段（错误）
+  if (!labelPart || !labelPart.trim()) return null;
   const tpl = getActiveTemplate();
   const sections = tpl.outputSections || {};
+  // 精确匹配优先（label 或 id）
+  for (const sec of Object.values(sections)) {
+    for (const f of (sec.fields || [])) {
+      if ((f.label && f.label === labelPart) || (f.id && f.id === labelPart)) return f.id;
+    }
+  }
+  // 子串匹配
   for (const sec of Object.values(sections)) {
     for (const f of (sec.fields || [])) {
       if (f.label && f.label.includes(labelPart)) return f.id;
@@ -213,16 +222,19 @@ function checkHiddenAchievements(parsed) {
         }
         break;
       case 'field_zero': {
-        const fid = _findFieldId(trigger.fieldLabel || '');
-        if (fid && gameState.fieldHistory[fid] && gameState.fieldHistory[fid].hasOwnProperty('current')) {
-          triggered = (gameState.fieldHistory[fid].current || 0) === 0;
+        if (gameState.achievementFlags.endingTriggered) {
+          const fid = _findFieldId(trigger.fieldLabel || trigger.field || '');
+          if (fid && gameState.fieldHistory[fid] && gameState.fieldHistory[fid].hasOwnProperty('current')) {
+            triggered = (gameState.fieldHistory[fid].current || 0) === 0;
+          }
         }
         break;
       }
       case 'field_max_under':
         if (gameState.achievementFlags.endingTriggered) {
-          const v = _fieldVal(trigger.fieldLabel || '', true);
-          triggered = v > 0 && v <= (trigger.threshold || 50);
+          const v = _fieldVal(trigger.fieldLabel || trigger.field || '', true);
+          // v > 0 守卫放行 0 和负数 — 字段 max=0 时 threshold>0 也应触发（如"把柄始终为0"）
+          triggered = (v > 0 || (v === 0 && trigger.threshold > 0)) && v <= (trigger.threshold || 50);
         }
         break;
       case 'response_match':
@@ -302,10 +314,19 @@ function renderAchievementsPanelV2() {
   function buildItem(name, ach, unlocked) {
     const progress = unlocked ? null : getAchievementProgress(name);
     let pb = '';
-    if (progress && progress.target > 1) {
-      const cur = Math.max(0, progress.current || 0);
-      const tgt = Math.max(1, progress.target || 1);
-      const pct = Math.min(100, Math.max(0, Math.round((cur / tgt) * 100)));
+    if (progress && (progress.target > 1 || progress.target < 0)) {
+      const tgt = progress.target;
+      const raw = progress.current || 0;
+      let cur, pct;
+      if (tgt < 0) {
+        // 负阈值：从 0 降到 target（如圣灵教觊觎 0→-50，当前-30 = 60%进度）
+        cur = Math.max(tgt, Math.min(0, raw));
+        pct = Math.round(((0 - cur) / (0 - tgt)) * 100);
+      } else {
+        cur = Math.max(0, Math.min(tgt, raw));
+        pct = Math.round((cur / tgt) * 100);
+      }
+      pct = Math.min(100, Math.max(0, pct));
       pb = '<div class="ach-progress-bar"><div class="ach-progress-fill" style="width:' + pct + '%"></div></div><div class="ach-progress-text">' + progress.current + '/' + progress.target + ' ' + progress.text + '</div>';
     } else if (progress && progress.target === 1 && !unlocked) {
       pb = '<div class="ach-progress-text" style="color:var(--text-dim);">' + progress.text + '</div>';
@@ -491,7 +512,7 @@ async function addNewAchievement(isHidden) {
         var fmIdx = (parseInt(fmChoice) || 1) - 1;
         triggerParams = { fieldLabel: (allFieldOpts[fmIdx] || allFieldOpts[0]).label, threshold: 50 };
         var thr = await dlPrompt('最高值阈值（≤此值触发）：', '50');
-        if (thr !== null) triggerParams.threshold = Math.max(0, parseInt(thr) || 50);
+        if (thr !== null) triggerParams.threshold = parseInt(thr) || 50;
         break;
       case 6: // response_match
         triggerType = 'response_match';
