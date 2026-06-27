@@ -666,7 +666,7 @@ function renderEndingsPanel() {
     var fieldChecks = {};
     var condParts = condition.split(/[且，,、]/);
     for (var cp = 0; cp < condParts.length; cp++) {
-      var cm = condParts[cp].match(/(\S{1,8})\s*([≥≤=><]=?)\s*(\d+)/);
+      var cm = condParts[cp].match(/(\S{1,8})\s*([≥≤=><]=?)\s*(-?\d+)/);
       if (cm) {
         var fn = cm[1], op = cm[2], val = parseInt(cm[3]);
         if (!fieldChecks[fn]) fieldChecks[fn] = [];

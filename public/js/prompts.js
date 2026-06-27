@@ -123,7 +123,7 @@ async function savePrompt() {
     }
   }
   // 扫描条件中的字段引用：中文+运算符+数字 模式
-  var condRe = /([一-鿿]{1,8})\s*[≥≤=><]=?\s*\d+/g;
+  var condRe = /([一-鿿]{1,8})\s*[≥≤=><]=?\s*-?\d+/g;
   var unknownLabels = [];
   var cm;
   while ((cm = condRe.exec(prompt)) !== null) {
