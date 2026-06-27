@@ -64,6 +64,20 @@
 |------|---------|
 | 场景图片 | `surongrong.json` `sceneImages` 修复 — 7种场景类型从全部指向 `日常.png` 改为各自对应图片（潜伏→潜伏.png、社交→社交.png、冲突→战斗.png、交易→交易.png、危机→崩溃.png、侦查→调查.png、抉择→对峙.png）|
 
+### v9.8.2（2026-06-27）：成就系统全面修复（3轮共9项）
+
+| 类别 | 关键改动 |
+|------|---------|
+| 负数阈值 | `achievements.js` 3处正则 `\d+` → `-?\d+` 捕获负号（"圣灵教觊觎达到-50"不再误判为50）|
+| 方向判定 | 从硬编码 `>=` 升级为方向感知 — `从未超过`→`max≤X`、`低于/不超过/少于`→`≤`、负阈值→`≤` |
+| field 双键兼容 | 模板存 `trigger.field`，代码只读 `trigger.fieldLabel` → 加回退链 `fieldLabel \|\| field`。修复"净身出户"永远不触发、"崩溃边缘"碰巧正确的 bug |
+| `_findFieldId` 加固 | 空串守卫（`''` 被所有 `label.includes('')` 命中返回第一个字段）+ 精确 id/label 匹配优先 |
+| `field_zero` | 补 `endingTriggered` 守卫 — 描述"达成任意命运转折"但之前第2回合把柄=0就触发 |
+| `field_max_under` | `v>0` 放行 `v===0 && threshold>0` — 字段 max=0 且阈值>0 时允许触发 |
+| 未初始化误触发 | `isBelow`/`isNeverExceeded` 加 `hasOwnProperty('current')` 守卫 — 防止 `_fieldVal` 对未初始化字段返回 0 导致 `0≤threshold` 永远为真 |
+| `addNewAchievement` | 移除 `Math.max(0, parseInt(thr))` 负阈值钳制 — 用户可创建负阈值隐藏成就 |
+| 进度条 | 负阈值下降型进度计算（`(0−cur)/(0−tgt)`）、"低于"方向进度文本修正（"已降至X以下"替代"达到X"）|
+
 > **以后需要全量清缓存**：`init.js` 顶部 `APP_DATA_VERSION` 从 `4` 改成 `5`，推送即生效。
 
 ---
@@ -105,10 +119,19 @@
 - [ ] **设置底部按钮**：🔄检查更新（强制SW拉新版+刷新）/ 📲安装到桌面（按平台引导）
 
 ### D. 成就系统
-- [ ] **可见成就**：数值达标自动解锁 → toast 弹窗 + 成就面板显示
+- [ ] **可见成就 — 正阈值达到**：数值达标 → 解锁（如 `情报碎片达到5`，current≥5 触发）
+- [ ] **可见成就 — 负阈值达到**：下降型字段达标 → 解锁（如 `圣灵教觊觎达到-50`，current≤-50 触发）
+- [ ] **可见成就 — 从未超过**：历史最高值未超阈值 → 解锁（如 `暴露风险从未超过20`，max≤20 触发）
+- [ ] **可见成就 — 低于/不超过**：当前值≤阈值 → 解锁（如 `生命值低于20`，current≤20 触发）
+- [ ] **未初始化字段不误触发**：`_fieldVal` 返回 0 时 `isBelow`/`isNeverExceeded` 不误判（`hasOwnProperty('current')` 守卫）
 - [ ] **隐藏成就**：添加时可选择 6 种 trigger 类型（choice/gambit/rounds_under/field_zero/field_max_under/response_match）→ 各类型专属参数输入
+- [ ] **隐藏成就 field 兼容**：`trigger.field` 和 `trigger.fieldLabel` 双键均能正确查找字段
+- [ ] **field_zero**：结局触发 + 字段 current=0 时才解锁（含 `endingTriggered` 守卫）
+- [ ] **field_max_under**：结局触发 + 字段 max≤阈值 时解锁（含 `v>0` 放行 0 值）
 - [ ] **双守卫**：首回合跳过检测 / 读档时跳过检测
+- [ ] **进度条**：正阈值用 `cur/tgt`、负阈值用 `(0−cur)/(0−tgt)`、"低于"方向显示正确文本
 - [ ] **成就面板**：可见+隐藏分开展示，编辑/删除按钮正常
+- [ ] **测试**：浏览器 → `var s=document.createElement('script');s.src='/js/test-achievements.js';document.head.appendChild(s);`
 
 ### E. 存档 / 继续游戏
 - [ ] **新游戏确认**：`selectSave` → 有进度时弹确认窗（含槽位数+回合数）→ 取消回到选择页
@@ -165,7 +188,8 @@
 ### L. 自动化测试
 - [ ] `node test.js` → 74/76（2 失败 = utils.js+core.js 括号计数误报，已知）
 - [ ] `node tests/ending-system.test.js` → 56/56 ✓
-- [ ] 浏览器诊断：F12 → `fetch('/js/test.js').then(r=>r.text()).then(eval)`
+- [ ] 浏览器成就诊断：`var s=document.createElement('script');s.src='/js/test-achievements.js';document.head.appendChild(s);`（CSP安全，适配任意模板）
+- [ ] 浏览器结局诊断：`var s=document.createElement('script');s.src='/js/test.js';document.head.appendChild(s);`（线上 CSP 阻 eval，需 script 标签注入）
 
 ---
 
@@ -180,6 +204,7 @@
 | 5 | 自动存档 localStorage 满时静默失败 | 低 | 手动存档时弹提示 |
 | 6 | Chrome `beforeinstallprompt` 装过又删后会限流，按钮无法触发安装 | 低（浏览器限制） | 已按平台给出菜单手动安装引导 |
 | 7 | `prompt.txt` 111字通用兜底已无实际用途（多模板架构） | 低 | `/api/prompt` 仅 init.js 和 server.js 保留，未清理 |
+| 8 | 线上版 CSP 无 `unsafe-eval` → `fetch+eval` 加载测试脚本被拦截 | 低 | 改用 `<script>` 标签动态注入加载（`test.js` / `test-achievements.js`）|
 
 ---
 
@@ -194,9 +219,9 @@ xixi/
 ├── CLAUDE.md              # 本文件（项目文档 + 审查清单）
 ├── 优化方案.md             # 14 章节完整施工图（47+ 问题）
 ├── PROGRESS.md            # 11 个 Phase 详细进度跟踪
-├── test.js                # 自动化测试（node test.js — 75项检查）
+├── test.js                # 自动化测试（node test.js — 76项检查）
 ├── tests/
-│   └── ending-system.test.js  # 结局系统测试（54 用例）
+│   └── ending-system.test.js  # 结局系统测试（56 用例）
 ├── templates/             # 模板存储
 │   ├── surongrong.json    #   默认模板：苏蓉蓉·潜伏 v2.1（AI标准生成+手工精修）
 │   ├── custom_*.json      #   AI 生成的用户自创模板
@@ -218,13 +243,13 @@ xixi/
     ├── sw.js              #   Service Worker v10（网络优先，API请求跳过缓存）
     ├── manifest.json      #   PWA 清单（Lily of the Valley / 铃兰）
     ├── *.png              #   场景图片
-    └── js/                #   前端模块（13文件，按顺序加载）
+    └── js/                #   前端模块（14文件，按顺序加载）
         ├── state.js       #     全局状态 / DOM引用 / 常量 / LS_KEYS / API Key加解密
         ├── utils.js       #     工具函数 / buildSystemPrompt / 结局全流程 / extractAllFields
         ├── dialogs.js     #     自定义对话框 + Emoji选择器
         ├── saves.js       #     存档管理 / 成就存储隔离
         ├── ui.js          #     界面渲染 / 资源检测 / 主题 / 场景图 / selectSave
-        ├── achievements.js #    成就系统 / checkAchievementsFromState / trigger编辑器
+        ├── achievements.js #    成就系统 / checkAchievementsFromState / 方向判定 / 进度条
         ├── prompts.js     #     提示词管理 / 图片管理 / 主题选择 / 字体选择
         ├── templates.js   #     模板加载/创建 / 字段编辑器 / AI生成
         ├── tavern.js      #     酒馆分享 / 上传清理 / 导入导出
@@ -232,7 +257,8 @@ xixi/
         ├── audio.js       #     Web Audio 合成音效 + 主题氛围（v3）
         ├── core.js        #     游戏核心循环 / sendMessage / 结局预检 / 硬兜底 / 摘要
         ├── init.js        #     事件绑定 / 启动 / 状态栏编辑 / 全局音效委托
-        └── test.js        #     浏览器端结局诊断脚本
+        ├── test.js        #     浏览器端结局诊断脚本
+        └── test-achievements.js # 浏览器端成就诊断脚本（CSP安全，模板自适应）
 ```
 
 ## JS 模块加载顺序
@@ -276,7 +302,10 @@ state → utils → dialogs → saves → ui → achievements
 | `addField()` | templates.js | 添加字段（叙事含义必填+软阈值） |
 | `savePrompt()` | prompts.js | 保存提示词（字段引用校验+结局标记检查+编辑警告） |
 | `resetPrompt()` | prompts.js | 恢复原始设定（多选范围） |
-| `addNewAchievement(isHidden)` | achievements.js | 添加成就（隐藏含6种trigger编辑器） |
+| `addNewAchievement(isHidden)` | achievements.js | 添加成就（隐藏含6种trigger编辑器，负阈值无钳制） |
+| `getAchievementProgress(name)` | achievements.js | 获取成就进度（正/负阈值/从未超过/低于 方向感知） |
+| `_findFieldId(labelPart)` | achievements.js | 字段查找（空串守卫 + 精确id/label优先 + 子串回退） |
+| `_fieldVal(labelPart, useMax)` | achievements.js | 读取字段 current/max 值（负数值保留） |
 | `uploadToTavern(saveId)` | tavern.js | 上传酒馆（清理+版本+图片打包） |
 | `validateAndRepairTemplate(tpl)` | utils.js | **v9** 模板结构校验修复（outputSections/字段/endings/achievements） |
 | `parseEndingsFromPromptBody(text)` | utils.js | **v9** 从旧 promptBody 迁移命运转折到结构化数组 |
@@ -335,9 +364,12 @@ node test.js               # 76项检查（2项括号误报已知）
 node tests/ending-system.test.js  # 56项结局测试
 ```
 
-浏览器诊断：
+浏览器诊断（CSP安全 — 线上/本地通用）：
 ```js
-fetch('/js/test.js').then(r => r.text()).then(eval)
+// 结局诊断
+var s=document.createElement('script');s.src='/js/test.js';document.head.appendChild(s);
+// 成就诊断
+var s=document.createElement('script');s.src='/js/test-achievements.js';document.head.appendChild(s);
 ```
 
 ## 维护要点
@@ -352,6 +384,10 @@ fetch('/js/test.js').then(r => r.text()).then(eval)
 - **surongrong.json**：默认模板，修改后必须同步 `tests/ending-system.test.js` 字段名和结局名
 - **PWA 图标**：修改 `icon-192.png`/`icon-512.png` 用 `npx sharp` 重切；修改 `icon.svg` 注意保持矢量格式
 - **部署前备份酒馆**：`git push` 前必须提醒用户备份 `templates/shared/`
+- **成就方向判定**：新增 desc 方向词（低于/不超过/从未超过）必须在 `isBelow`/`isNeverExceeded` 正则中覆盖；`checkAchievementsFromState` 和 `getAchievementProgress` 须同步
+- **隐藏成就 field 键**：模板用 `trigger.field`（id）、创建器用 `trigger.fieldLabel`（label），读取时需双键回退 `trigger.fieldLabel || trigger.field`
+- **`_fieldVal` 返回 0 陷阱**：`|| 0` 对缺失字段返回 0，在 `isBelow`/`isNeverExceeded` 方向会误判。必须用 `hasOwnProperty('current')` 守卫
+- **CSP 安全**：线上版无 `unsafe-eval`，浏览器诊断脚本必须用 `<script>` 标签注入，不能用 `fetch+eval`
 
 ---
 
