@@ -179,17 +179,17 @@ body::after{
 .overlay .modal h2{color:var(--sun)}
 
 /* ── 按钮 ── */
-.btn{font-size:12px!important;line-height:1.3!important}
-.btn-small{font-size:11px!important;padding:4px 10px!important;line-height:1.2!important}
-.btn-tiny{font-size:10px!important;padding:2px 6px!important;line-height:1.2!important}
-#btn-audio{font-size:11px!important;padding:4px 10px!important}
+.btn{font-size:12px;line-height:1.3}
+.btn-small{font-size:11px;padding:4px 10px;line-height:1.2}
+.btn-tiny{font-size:10px;padding:2px 6px;line-height:1.2}
+#btn-audio{font-size:11px;padding:4px 10px}
 .btn-primary{background:var(--gold);border-color:var(--gold);color:#0c1a10;font-weight:700;border-radius:8px}
 .btn-primary:hover{background:#f8b850;box-shadow:0 4px 18px rgba(240,168,64,.3)}
 .btn-ghost:hover{color:var(--gold)}
 .btn-secondary:hover{border-color:var(--gold);box-shadow:0 2px 10px rgba(240,168,64,.12)}
 
-input,textarea,select{background:var(--bg-card)!important;color:var(--text)!important;border-color:var(--border)!important;border-radius:10px!important;font-size:13px!important}
-input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 8px rgba(240,168,64,.25),0 0 18px rgba(232,104,144,.08)}
+input,textarea,select{background:var(--bg-card);color:var(--text);border-color:var(--border);border-radius:10px;font-size:13px}
+input:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 8px rgba(240,168,64,.25),0 0 18px rgba(232,104,144,.08)}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .chip{border-radius:18px}.chip.selected{background:var(--gold);color:#0c1a10;font-weight:700}
 .tab-btn{font-size:13px}.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
@@ -200,9 +200,9 @@ input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 8px
 .status-label{color:var(--gold-dim);font-size:10px;letter-spacing:1px}
 .status-value{color:var(--text-bright);cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s}
 .status-value:hover{border-bottom-color:var(--gold)}
-.pressure-safe{color:var(--green)!important}
-.pressure-warn{color:var(--sun)!important}
-.pressure-danger{color:var(--red)!important}
+.pressure-safe{color:var(--green)}
+.pressure-warn{color:var(--sun)}
+.pressure-danger{color:var(--red)}
 
 /* ── AI对话框 ── */
 .ai-chat-box{border:2px solid var(--border);border-radius:14px;background:var(--bg-card)}

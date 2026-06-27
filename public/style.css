@@ -664,10 +664,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .option-btn { padding: 12px 14px; min-height: 52px; }
   .option-num { width: 28px; height: 28px; line-height: 28px; font-size: 14px; flex-shrink: 0; }
 
-  /* 状态面板 — 双列 */
-  .status-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
-  #resources-row { grid-template-columns: 1fr 1fr; gap: 6px; }
-  .vars-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  /* 状态面板 — 双列统一对齐 */
+  .status-grid { grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  #resources-row { grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  .vars-grid { grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  #resources-row .resource-item { justify-self: stretch; }
 
   /* 弹窗 — 全宽 */
   .modal { max-width: 95vw; width: 95vw; padding: 20px; border-radius: 8px; max-height: 90vh; }
@@ -864,6 +865,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 #resources-row .resource-item {
   justify-self: start;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── 存档选择器 ── */
