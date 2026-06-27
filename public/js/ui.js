@@ -90,10 +90,20 @@ function updateOptionButtons(options) {
   const tpl = getActiveTemplate();
 
   // 收集所有区段的数值型字段（不仅 resources，AI 模板可能把资源放在 variables 等区段）
+  // v9.8.3: 同时追踪字段最小值（从 range 解析），用于惩罚型扣减校验
   const resValues = {};
+  const resMins = {};
   for (const [sectionKey, section] of Object.entries(tpl.outputSections || {})) {
     const fields = section.fields || [];
     fields.forEach(function(f) {
+      // 解析字段最小值（如 "0-100" → 0, "-100~100" → -100）
+      var fMin = 0;
+      if (f.range) {
+        var rm = String(f.range).match(/^[-]?\d+/);
+        if (rm) fMin = parseInt(rm[0]);
+      }
+      resMins[f.label] = fMin;
+
       const hist = gameState.fieldHistory[f.id];
       if (hist && hist.current !== undefined && hist.current !== null) {
         resValues[f.label] = hist.current;
@@ -124,15 +134,29 @@ function updateOptionButtons(options) {
           var cur = resValues[label];
           if (typeof cur !== 'number' || isNaN(cur)) continue;
           var escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          var re1 = new RegExp(escaped + '[：:\\s]*[xX×\\-–]?\\s*(\\d+)');
+          // v9.8.3: [+-]?\d+ 统一捕获正负号 — 不再把 - 误吞为分隔符
+          // 移除旧 [xX×-–]? 中的 -–，让符号由数字正则统一捕获
+          var re1 = new RegExp(escaped + '[：:\\s]*[xX×]?\\s*([+-]?\\d+)');
           var m = costText.match(re1) || actionText.match(re1);
           if (!m) {
-            var re2 = new RegExp(escaped + '[\\s\\S]{0,8}?(\\d+)');
+            var re2 = new RegExp(escaped + '[\\s\\S]{0,8}?([+-]?\\d+)');
             m = costText.match(re2) || actionText.match(re2);
           }
           if (m) {
-            var needed = parseInt(m[1]);
-            if (!isNaN(needed) && cur < needed) { resourceBlocked = true; break; }
+            var neededStr = m[1];
+            var needed = parseInt(neededStr);
+            if (!isNaN(needed)) {
+              if (neededStr.charAt(0) === '+') {
+                // 增益（如 关系+40）：永不禁用
+              } else if (needed < 0) {
+                // 惩罚型扣减（如 关系-40）：检查结果不低于字段最小值
+                var fMin = resMins[label];
+                if (fMin !== undefined && cur + needed < fMin) { resourceBlocked = true; break; }
+              } else if (cur < needed) {
+                // 正向消耗（如 把柄: 3）：当前值不足
+                resourceBlocked = true; break;
+              }
+            }
           }
         }
       } else {
