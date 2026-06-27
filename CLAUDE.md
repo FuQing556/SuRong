@@ -8,7 +8,24 @@
 
 ---
 
-## v8 更新概览（2026-06-27，11 个 Phase 全部完成）
+## v9 更新概览（2026-06-27，2 轮共 23 项修复 + 命运转折结构化）
+
+**第一轮（17项）**：元提示词质量 + 模板数据安全 + UI修复
+**第二轮（6项）**：XSS防护 + 数据残留清理 + 成就匹配修复
+
+| 类别 | 关键改动 |
+|------|---------|
+| 致命崩溃 | `extractAllFields` 字段缺 label 时排序崩溃 → 加 `.filter(f=>f.label)` 防线 |
+| 数据结构兜底 | 新增 `validateAndRepairTemplate()` — 每次加载模板自动修复 outputSections/字段/endings/achievements |
+| AI输出防御 | `outputSections`/`achievements`/`hiddenAchievements` AI返回数组时自动包裹为对象 |
+| 命运转折结构化 | 新增 `template.endings` 数组（name/condition/narrative/icon），自动从旧 promptBody 迁移，自动生成【命运转折系统】章节 |
+| 命运转折面板 | 🎭 按钮+编辑弹窗，增删改+触发状态显示+矛盾条件检测 |
+| 结局注入强化 | 从独立 system 消息 → 拼入 user 消息最前面，AI 无法忽略 |
+| 结局字段匹配 | 中文语义重叠检测（"觉醒度"↔"妖血觉醒"）+ 英文 id 双索引（"wakening"↔vals["wakening"]） |
+| metaPrompt | 新增【最高铁律】防跑偏；成就/结局数量从范围值"3-5"→明确下限数字；强调用中文标签写条件 |
+| XSS 防护 | 6处 innerHTML 增加 escapeHtml（状态栏/资源/变量/模板选择器/图片管理/存档卡片） |
+| UI | 难度chip事件绑定；"存档"→"模板"文案修正；AI解析故事入口；资源行flex→grid对齐；表单缓存清理 |
+| 数据安全 | `LS_KEYS.customImages(saveId)` 补漏参数；3处 outputSections 修改后加 validateAndRepairTemplate |
 
 | Phase | 主题 | 关键改动 |
 |-------|------|---------|
@@ -130,9 +147,11 @@
 | # | 问题 | 严重度 | 状态 |
 |---|------|--------|------|
 | 1 | `test.js` utils.js + core.js 括号平衡检查失败 | 低（误报） | 已知，正则中的 `[]` 被朴素计数法误判 |
-| 2 | server.js 和 utils.js 的 buildSystemPrompt / repairEndingSection 代码重复 | 中（维护风险） | 已加 ⚠ 同步注释，未做物理去重（需 Node.js 模块共享方案） |
-| 3 | 函数名未同步重命名（detectEnding/buildEndingInjection 等仍用旧名"Ending"） | 低（技术债） | 内部逻辑已升级，仅函数名未改。新代码兼容 |
+| 2 | server.js 和 utils.js 的 buildSystemPrompt / repairEndingSection 代码重复 | 中（维护风险） | 已加 ⚠ 同步注释，未做物理去重 |
+| 3 | 函数名未同步重命名（detectEnding/buildEndingInjection 等仍用旧名"Ending"） | 低（技术债） | 内部逻辑已升级，仅函数名未改 |
 | 4 | `tests/ending-system.test.js` 仍测试旧格式 `【游戏结束】` | 低（有意保留） | 验证向后兼容 |
+| 5 | 多槽位存档选择用文本输入而非可点击卡片 | 低（UX） | 功能正确，体验待优化 |
+| 6 | 自动存档 localStorage 满时静默失败 | 低 | 手动存档时弹提示 |
 
 ---
 
@@ -231,6 +250,16 @@ state → utils → dialogs → saves → ui → achievements
 | `resetPrompt()` | prompts.js | 恢复原始设定（多选范围） |
 | `addNewAchievement(isHidden)` | achievements.js | 添加成就（隐藏含6种trigger编辑器） |
 | `uploadToTavern(saveId)` | tavern.js | 上传酒馆（清理+版本+图片打包） |
+| `validateAndRepairTemplate(tpl)` | utils.js | **v9** 模板结构校验修复（outputSections/字段/endings/achievements） |
+| `parseEndingsFromPromptBody(text)` | utils.js | **v9** 从旧 promptBody 迁移命运转折到结构化数组 |
+| `generateEndingsSection(endings)` | utils.js | **v9** 从 endings 数组生成【命运转折系统】章节 |
+| `renderEndingsPanel()` | templates.js | **v9** 命运转折编辑面板渲染 |
+| `addEnding()` | templates.js | **v9** 添加命运转折（弹窗引导） |
+| `editEnding(index)` | templates.js | **v9** 编辑命运转折 |
+| `deleteEnding(index)` | templates.js | **v9** 删除命运转折 |
+| `saveEndingsToTemplate(tpl)` | templates.js | **v9** 持久化 endings 到 localStorage |
+| `toggleParseStoryPanel()` | templates.js | **v9** 展开/收起AI解析故事面板 |
+| `parseStoryToTemplate()` | templates.js | **v9** 调用 /api/parse-story 并填充表单 |
 
 ## localStorage Key 规范
 
