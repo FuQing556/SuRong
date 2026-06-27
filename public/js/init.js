@@ -190,9 +190,17 @@ function bindEvents() {
       }
     } else if (window.matchMedia('(display-mode: standalone)').matches) {
       if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。');
+    } else if (/Android/i.test(navigator.userAgent)) {
+      if (typeof dlAlert === 'function') {
+        dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」');
+      }
+    } else if (/Chrome/i.test(navigator.userAgent)) {
+      if (typeof dlAlert === 'function') {
+        dlAlert('📲 安装方法：\n\n点击浏览器地址栏右侧的 ⊕ 安装图标\n\n没看到？之前装过又删了的话，Chrome 会限流一段时间。可尝试 chrome://settings/content/siteDetails 删除本站数据后刷新。');
+      }
     } else {
       if (typeof dlAlert === 'function') {
-        dlAlert('⚠ 暂无可用的安装提示。\n\n可能原因：\n• 已安装（检查桌面）\n• 浏览器不支持（建议用Chrome/Safari）\n• 之前已拒绝安装（需清除浏览器设置后重试）');
+        dlAlert('📲 安装方法：\n\n查看浏览器菜单中是否有「安装」「添加到桌面」等选项。\n如已装过又删除，可能需要等浏览器重新开放安装权限。');
       }
     }
   });
