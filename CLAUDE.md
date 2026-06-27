@@ -8,38 +8,40 @@
 
 ---
 
-## v9 更新概览（2026-06-27，2 轮共 23 项修复 + 命运转折结构化）
+## v9 更新概览
 
-**第一轮（17项）**：元提示词质量 + 模板数据安全 + UI修复
-**第二轮（6项）**：XSS防护 + 数据残留清理 + 成就匹配修复
+### v9.0–v9.5（2026-06-27，2 轮共 23 项修复 + 命运转折结构化）
 
 | 类别 | 关键改动 |
 |------|---------|
 | 致命崩溃 | `extractAllFields` 字段缺 label 时排序崩溃 → 加 `.filter(f=>f.label)` 防线 |
 | 数据结构兜底 | 新增 `validateAndRepairTemplate()` — 每次加载模板自动修复 outputSections/字段/endings/achievements |
 | AI输出防御 | `outputSections`/`achievements`/`hiddenAchievements` AI返回数组时自动包裹为对象 |
-| 命运转折结构化 | 新增 `template.endings` 数组（name/condition/narrative/icon），自动从旧 promptBody 迁移，自动生成【命运转折系统】章节 |
-| 命运转折面板 | 🎭 按钮+编辑弹窗，增删改+触发状态显示+矛盾条件检测 |
-| 结局注入强化 | 从独立 system 消息 → 拼入 user 消息最前面，AI 无法忽略 |
-| 结局字段匹配 | 中文语义重叠检测（"觉醒度"↔"妖血觉醒"）+ 英文 id 双索引（"wakening"↔vals["wakening"]） |
-| metaPrompt | 新增【最高铁律】防跑偏；成就/结局数量从范围值"3-5"→明确下限数字；强调用中文标签写条件 |
-| XSS 防护 | 6处 innerHTML 增加 escapeHtml（状态栏/资源/变量/模板选择器/图片管理/存档卡片） |
-| UI | 难度chip事件绑定；"存档"→"模板"文案修正；AI解析故事入口；资源行flex→grid对齐；表单缓存清理 |
-| 数据安全 | `LS_KEYS.customImages(saveId)` 补漏参数；3处 outputSections 修改后加 validateAndRepairTemplate |
+| 命运转折结构化 | 新增 `template.endings` 数组（name/condition/narrative/icon），自动从旧 promptBody 迁移 |
+| XSS 防护 | 6处 innerHTML 增加 escapeHtml |
+| UI | 难度chip事件绑定；"存档"→"模板"文案修正；资源行flex→grid对齐 |
 
-| Phase | 主题 | 关键改动 |
-|-------|------|---------|
-| 1 | 元提示词重写 | server.js metaPrompt 44→130行，新增叙事哲学/节拍/两难/字段叙事效应/编辑参考，游戏长度联动6参数，字段架构弹性化 |
-| 2 | 关键词重命名 | `【游戏结束】`→`【命运转折】`（正则双兼容），`【资源不足】`→`【力不能及】`+`【代价沉重】`（可选+红框确认） |
-| 3 | 叙事引擎升级 | `startNewGame()` 读取 `template.initialState` 初始化 fieldHistory；状态栏手动改数值后通知 AI |
-| 4 | 结局指令强化 | 结局注入从拼到 user 消息末尾 → 独立 system 消息（覆盖效应）；文案"现状就是"+ "不需要额外切换" |
-| 5 | 编辑系统校验 | 字段改名→promptBody 扫描替换；savePrompt 字段引用校验；addField 叙事含义必填+软阈值；隐藏成就 trigger 6种类型编辑器；resetPrompt 恢复范围多选；游戏中编辑警告 |
-| 6 | 全局状态隔离 | AI 指令 + 自定义图片 localStorage key 按存档隔离（`function(id)` 替代静态字符串） |
-| 7 | 数据安全 | selectSave 有进度时弹确认；closeEndingOverlay 追加系统通知到 fullHistory |
-| 8 | 酒馆分享清理 | 上传前清理 `_preEditFields`/`_originalTemplate`/`【玩家补充规则】`；version 自增；自定义图片可选打包 |
-| 9 | 服务端统一 | buildSystemPrompt/repairEndingSection 加同步注释；摘要格式从 JSON.stringify → 自然对话；maybeSummarize 加 token 估算阈值 |
-| 10 | UI 修复 | "存档"→"模板"命名统一；字段图标 input 改 hidden 去重显；saveFields 用 class 选择器；sunset 移动端按钮防换行 |
-| 11 | 新功能 | 难度选择（简单/标准/困难/噩梦）→ metaPrompt；`POST /api/parse-story` 从故事文本反向解析生成模板 |
+### v9.6（2026-06-27）：模板AI标准生成 + 手机端UI + 主题修复 + 负数阈值
+
+| 类别 | 关键改动 |
+|------|---------|
+| 默认模板替换 | `surongrong.json` 旧版手工提示词 → `POST /api/generate-prompt` 标准流程生成 |
+| 手机端UI | 顶部10按钮等宽统一（`min-width` + `text-align:center`）、资源字段左对齐（`justify-self:start`）、触摸设备隐藏键盘提示+防双击缩放 |
+| iOS输入框 | `font-size:16px !important` 全局 → 精确限定到主交互区，不误伤弹窗表单 |
+| 主题CSS | 4个主题文件 `@media (max-width:480px)` 闭合括号泄漏修复（`.game-title` 误漏到全局） |
+| 负数阈值 | `utils.js` 条件正则 `\d+` → `-?\d+` 支持负数阈值（如 `≥-50`） |
+| 测试 | `ending-system.test.js` 适配新模板字段名 + 结构化 endings 优先路径 + 条件回溯bug修复 |
+
+### v9.7（2026-06-27）：默认模板全面重制 + PWA品牌升级
+
+| 类别 | 关键改动 |
+|------|---------|
+| 字段精简 | 13→10字段：红尘双子分离（梦红尘好感/笑红尘态度）、圣灵教独立字段、恢复魂力状态/把柄、去掉无叙事意义字段 |
+| 命运转折重命名 | 精神崩溃→**月光和六便士**、身份暴露→**枯萎之刻**、成功撤离→**归乡**、快速撤离→**暮去朝来**、反向渗透→**红尘庇佑**、魂师大赛→**凉面派** 🍜 |
+| 成就重命名 | 黑暗中的盟友→**近朱者赤**、笑红尘的认可→**学长的肯定** 等，全部叙事化 |
+| 开局恢复 | 6个详细开局场景恢复（拍卖会/浴室失窃/走廊围堵/学妹扣押/深夜侵入/多方会诊），每个150-200字 |
+| 提示词 | 6912字，15章节完整，保留新版结构+旧版叙事精度 |
+| PWA品牌 | 名称→**Lily of the Valley**（简称铃兰）、图标→苏蓉蓉大头照（192+512 PNG）+ 铃兰矢量 SVG、SW v8→v9 |
 
 ---
 
@@ -49,7 +51,7 @@
 
 ### A. 游戏核心循环
 - [ ] **新游戏启动**：点"进入故事"→ 序章弹窗 → 开始 → 第1回合 AI 正常回复（结算+现状+4选项+状态字段）
-- [ ] **initialState 激活**：F12 → `gameState.fieldHistory` → 确认初始值来自 `surongrong.json:initialState`（压力值10、暴露风险5等），而非全 0
+- [ ] **initialState 激活**：F12 → `gameState.fieldHistory` → 确认初始值来自 `surongrong.json:initialState`（压力值10、暴露风险5、梦红尘好感20等），而非全 0
 - [ ] **选项交互**：点击选项按钮 / 键盘 1-4 → 正常触发 `handleChoice` → `sendMessage` → 下回合
 - [ ] **代价沉重**：选了标注 `【代价沉重】` 的选项 → 弹出确认框 → 确认后才发送
 - [ ] **力不能及**：资源不够时 → 选项灰显禁用
@@ -64,8 +66,8 @@
 - [ ] **结局去重**：同一结局不重复弹窗（`triggeredEndings` 数组）
 - [ ] **结局后继续**：关闭弹窗 → fullHistory 有 `【系统通知】命运转折「XXX」已触发` → 下一回合 AI 正常回复
 - [ ] **结局标记修复**：编辑提示词删除结局标记 → 保存时弹警告 → `repairEndingSection` 自动从 `_originalTemplate` 恢复
-- [ ] **旧标记兼容**：surongrong.json 仍用 `【游戏结束·XXX】` → 所有检测函数同时兼容新旧格式
-- [ ] **测试**：`node tests/ending-system.test.js` → 54/54 ✓
+- [ ] **旧标记兼容**：所有检测函数同时兼容 `【游戏结束·XXX】` 和 `【命运转折·XXX】` 格式
+- [ ] **测试**：`node tests/ending-system.test.js` → 56/56 ✓
 
 ### C. 提示词 / 模板编辑
 - [ ] **打开设置**：`openSettings` 合并编辑版（不串档），只显示 promptBody 正文
@@ -136,8 +138,8 @@
 - [ ] **metaPrompt**：`【难度调整】` 章节根据难度给出不同参数（NPC敌意/资源量/代价/命运转折门槛）
 
 ### L. 自动化测试
-- [ ] `node test.js` → 73/75（2 失败 = utils.js+core.js 括号计数误报，已知）
-- [ ] `node tests/ending-system.test.js` → 54/54 ✓
+- [ ] `node test.js` → 74/76（2 失败 = utils.js+core.js 括号计数误报，已知）
+- [ ] `node tests/ending-system.test.js` → 56/56 ✓
 - [ ] 浏览器诊断：F12 → `fetch('/js/test.js').then(r=>r.text()).then(eval)`
 
 ---
@@ -149,9 +151,9 @@
 | 1 | `test.js` utils.js + core.js 括号平衡检查失败 | 低（误报） | 已知，正则中的 `[]` 被朴素计数法误判 |
 | 2 | server.js 和 utils.js 的 buildSystemPrompt / repairEndingSection 代码重复 | 中（维护风险） | 已加 ⚠ 同步注释，未做物理去重 |
 | 3 | 函数名未同步重命名（detectEnding/buildEndingInjection 等仍用旧名"Ending"） | 低（技术债） | 内部逻辑已升级，仅函数名未改 |
-| 4 | `tests/ending-system.test.js` 仍测试旧格式 `【游戏结束】` | 低（有意保留） | 验证向后兼容 |
-| 5 | 多槽位存档选择用文本输入而非可点击卡片 | 低（UX） | 功能正确，体验待优化 |
-| 6 | 自动存档 localStorage 满时静默失败 | 低 | 手动存档时弹提示 |
+| 4 | 多槽位存档选择用文本输入而非可点击卡片 | 低（UX） | 功能正确，体验待优化 |
+| 5 | 自动存档 localStorage 满时静默失败 | 低 | 手动存档时弹提示 |
+| 6 | PWA SVG 图标为纯矢量铃兰（非大头照），与 PNG 图标不一致 | 低 | PNG 用于实际显示，SVG 用于 maskable 场景 |
 
 ---
 
@@ -161,7 +163,7 @@
 xixi/
 ├── server.js              # Express 后端 + API 代理 + 模板生成 + 酒馆 + metaPrompt + parse-story
 ├── prompt.txt             # 服务端后备提示词（5行通用兜底）
-├── package.json           # 3个依赖：cors/dotenv/express
+├── package.json           # cors/dotenv/express + dev:sharp（图标生成）
 ├── render.yaml            # Railway 部署配置
 ├── CLAUDE.md              # 本文件（项目文档 + 审查清单）
 ├── 优化方案.md             # 14 章节完整施工图（47+ 问题）
@@ -170,7 +172,7 @@ xixi/
 ├── tests/
 │   └── ending-system.test.js  # 结局系统测试（54 用例）
 ├── templates/             # 模板存储
-│   ├── surongrong.json    #   默认模板：苏蓉蓉·潜伏（手工模板，慎改）
+│   ├── surongrong.json    #   默认模板：苏蓉蓉·潜伏 v2.1（AI标准生成+手工精修）
 │   ├── custom_*.json      #   AI 生成的用户自创模板
 │   └── shared/            #   酒馆分享数据（运行时创建，git不追踪）
 ├── themes/                # CSS 主题（10套）
@@ -187,8 +189,8 @@ xixi/
 └── public/                # 前端静态文件
     ├── index.html         #   主页面
     ├── style.css          #   基础样式（变量驱动，暗色主题）
-    ├── sw.js              #   Service Worker v8（网络优先，只缓存GET 200）
-    ├── manifest.json      #   PWA 清单
+    ├── sw.js              #   Service Worker v9（网络优先，只缓存GET 200）
+    ├── manifest.json      #   PWA 清单（Lily of the Valley / 铃兰）
     ├── *.png              #   场景图片
     └── js/                #   前端模块（13文件，按顺序加载）
         ├── state.js       #     全局状态 / DOM引用 / 常量 / LS_KEYS / API Key加解密
@@ -302,8 +304,8 @@ Railway `git push` 会清空文件系统 → 酒馆共享数据丢失。
 
 ```bash
 npm start                  # → http://localhost:3000
-node test.js               # 75项检查（2项括号误报已知）
-node tests/ending-system.test.js  # 54项结局测试
+node test.js               # 76项检查（2项括号误报已知）
+node tests/ending-system.test.js  # 56项结局测试
 ```
 
 浏览器诊断：
@@ -319,4 +321,55 @@ fetch('/js/test.js').then(r => r.text()).then(eval)
 - **server.js ↔ utils.js 同步**：修改 buildSystemPrompt / repairEndingSection 时两端同步
 - **SW 版本号**：修改 `sw.js` 时必须同步 `test.js` 版本检查
 - **prompt.txt**：服务端后备，非必要不改
-- **surongrong.json**：手工模板，谨慎修改
+- **surongrong.json**：默认模板 v2.1（AI标准生成+手工精修），修改后必须同步 `tests/ending-system.test.js` 字段名和结局名
+- **PWA 图标**：修改 `icon-192.png`/`icon-512.png` 用 `npx sharp` 重切；修改 `icon.svg` 注意保持矢量格式
+
+---
+
+## 默认模板速查（surongrong.json v2.1）
+
+### 字段（10个）
+
+| 区段 | id | label | icon | 范围 |
+|------|-----|-------|------|------|
+| 状态栏 | `stress` | 压力值 | 💔 | 0-100 |
+| 状态栏 | `exposure` | 暴露风险 | 🚨 | 0-100 |
+| 状态栏 | `soulState` | 魂力状态 | ✨ | 文本 |
+| 任务行 | `round` | 轮次 | 🔄 | 数字 |
+| 任务行 | `infiltration` | 潜伏进度 | 🎯 | 0-5 |
+| 资源 | `intel` | 情报碎片 | 📜 | 0-10 |
+| 资源 | `blackmail` | 把柄 | 🔑 | 0-10 |
+| 关系 | `mengHaoGan` | 梦红尘好感 | 👑 | -100~100 |
+| 关系 | `xiaoTaiDu` | 笑红尘态度 | ⚔️ | -100~100 |
+| 关系 | `shenglingjiao` | 圣灵教觊觎 | 👁️ | -100~0 |
+
+### 命运转折（6个）
+
+| icon | 名称 | 条件 |
+|------|------|------|
+| 💔 | 月光和六便士 | 压力值≥95 |
+| 🚨 | 枯萎之刻 | 暴露风险≥95 |
+| 🏆 | 归乡 | 情报碎片≥5 且 暴露风险≤50 且 轮次≥8 |
+| 🏃 | 暮去朝来 | 情报碎片≥3 且 暴露风险≤30 且 轮次≥6 |
+| 🕵️ | 红尘庇佑 | 把柄≥5 且 梦红尘好感≥70 且 暴露风险≤30 |
+| 🍜 | 凉面派 | 轮次≥15 且 潜伏进度≥3 |
+
+### 可见成就（10个）
+
+情报拼图📜 / 近朱者赤👑 / 潜行大师👁️ / 把柄收藏家🔑 / 钢丝上的舞者💔 / 铁壁意志🛡️ / 学长的肯定⚔️ / 圣灵教之影🌀 / 潜伏精英🎯 / 情报网🕸️
+
+### 隐藏成就（5个）
+
+初次暗语🤫(choice) / 赌徒之心🎲(gambit) / 闪电撤离⚡(rounds_under) / 净身出户✨(field_zero) / 崩溃边缘💀(field_max_under)
+
+### PWA
+
+| 属性 | 值 |
+|------|-----|
+| name | Lily of the Valley |
+| short_name | Lily of the Valley |
+| iOS title | Lily of the Valley |
+| 浏览器标题 | 互动叙事 · 苏蓉蓉 |
+| icon-192.png | 苏蓉蓉大头照 192×192 |
+| icon-512.png | 苏蓉蓉大头照 512×512 |
+| icon.svg | 铃兰矢量图 512×512 |
