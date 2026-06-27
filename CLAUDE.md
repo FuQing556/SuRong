@@ -43,6 +43,17 @@
 | 提示词 | 6912字，15章节完整，保留新版结构+旧版叙事精度 |
 | PWA品牌 | 名称→**Lily of the Valley**（简称铃兰）、图标→苏蓉蓉大头照（192+512 PNG）+ 铃兰矢量 SVG、SW v8→v9 |
 
+### v9.8（2026-06-27）：版本门控自动清缓存 + PWA描述/图标精修
+
+| 类别 | 关键改动 |
+|------|---------|
+| 数据版本迁移 | `init.js` 新增 `migrateDataVersion()` — 升级时 bump `APP_DATA_VERSION`，所有客户端（含手机PWA）下次打开自动清除旧 localStorage 缓存。仅保留 API Key + 模板列表 + 年龄确认 |
+| 提示词冲突根治 | 旧版 `xixi_edited_template_*` 自动清除，不再覆盖新版 `surongrong.json` |
+| PWA 描述 | `manifest.json` + `package.json` → **互动叙事 · 苏蓉蓉**（去掉斗罗大陆前缀，通用化） |
+| PWA 图标 | `icon-192.png` + `icon-512.png` 四角切圆角（18% 半径），与其他 App 图标一致 |
+
+> **以后需要全量清缓存**：把 `init.js` 顶部 `APP_DATA_VERSION` 从 `3` 改成 `4`，所有客户端下次访问即自动清除。
+
 ---
 
 ## 🔍 审查清单（按功能域，非按 Phase）
@@ -283,6 +294,7 @@ state → utils → dialogs → saves → ui → achievements
 | `xixi_last_save_id` | 上次游玩的模板ID | |
 | `xixi_active_template_id` | 当前活动模板ID | |
 | `xixi_last_manual_slot_{id}` | 上次手动存档槽位号 | |
+| `xixi_data_version` | 数据版本号，升级时自动清缓存 | **v9.8 新增** |
 
 ## 结局检测正则（兼容格式）
 
@@ -370,6 +382,6 @@ fetch('/js/test.js').then(r => r.text()).then(eval)
 | short_name | Lily of the Valley |
 | iOS title | Lily of the Valley |
 | 浏览器标题 | 互动叙事 · 苏蓉蓉 |
-| icon-192.png | 苏蓉蓉大头照 192×192 |
-| icon-512.png | 苏蓉蓉大头照 512×512 |
+| icon-192.png | 苏蓉蓉大头照 192×192（圆角 r=34px） |
+| icon-512.png | 苏蓉蓉大头照 512×512（圆角 r=90px） |
 | icon.svg | 铃兰矢量图 512×512 |

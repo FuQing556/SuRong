@@ -3,6 +3,36 @@
    依赖：所有以上模块
    ═══════════════════════════════════════════ */
 
+// ── 数据版本迁移：自动清除旧版缓存 ──
+// 升级时 bump APP_DATA_VERSION，所有客户端打开即自动清旧数据
+(function migrateDataVersion() {
+  var APP_DATA_VERSION = 3;
+  var stored = localStorage.getItem('xixi_data_version');
+  if (stored && parseInt(stored, 10) >= APP_DATA_VERSION) return;
+
+  console.log('🧹 数据版本升级: ' + (stored || '首次') + ' → v' + APP_DATA_VERSION + '，清除所有旧缓存...');
+
+  // 仅保留：API Key、模板列表、年龄确认
+  var keep = {};
+  keep[LS_KEYS.apikey] = true;
+  keep[LS_KEYS.saves] = true;
+  keep[LS_KEYS.ageVerified] = true;
+
+  var keys = [];
+  try { for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i)); } catch(e) {}
+
+  var cleared = 0;
+  keys.forEach(function(k) {
+    if (!k || k.indexOf('xixi_') !== 0) return;
+    if (keep[k]) return;
+    localStorage.removeItem(k);
+    cleared++;
+  });
+
+  localStorage.setItem('xixi_data_version', String(APP_DATA_VERSION));
+  console.log('✅ 已清理 ' + cleared + ' 项旧版数据。模板列表和 API Key 已保留。');
+})();
+
 // ── 工具：overlay 背景点击关闭 ──
 function bindOverlayClose(overlayId, closeFn) {
   const overlay = document.getElementById(overlayId);

@@ -1,7 +1,7 @@
 {
   "name": "xixi-interactive-narrative",
   "version": "1.0.0",
-  "description": "互动叙事游戏 · 苏蓉蓉 — 基于DeepSeek API的斗罗大陆世界观互动叙事",
+  "description": "互动叙事 · 苏蓉蓉 — 基于DeepSeek API的多世界观互动叙事引擎",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
