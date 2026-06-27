@@ -43,16 +43,22 @@
 | 提示词 | 6912字，15章节完整，保留新版结构+旧版叙事精度 |
 | PWA品牌 | 名称→**Lily of the Valley**（简称铃兰）、图标→苏蓉蓉大头照（192+512 PNG）+ 铃兰矢量 SVG、SW v8→v9→v10 |
 
-### v9.8（2026-06-27）：版本门控自动清缓存 + PWA描述/图标精修
+### v9.8（2026-06-27）：版本门控清缓存 + 缓存根治 + PWA精修 + 校验加固 + 帮助重写
 
 | 类别 | 关键改动 |
 |------|---------|
-| 数据版本迁移 | `init.js` 新增 `migrateDataVersion()` — 升级时 bump `APP_DATA_VERSION`，所有客户端（含手机PWA）下次打开自动清除旧 localStorage 缓存。仅保留 API Key + 模板列表 + 年龄确认 |
-| 提示词冲突根治 | 旧版 `xixi_edited_template_*` 自动清除，不再覆盖新版 `surongrong.json` |
-| PWA 描述 | `manifest.json` + `package.json` → **互动叙事 · 苏蓉蓉**（去掉斗罗大陆前缀，通用化） |
-| PWA 图标 | `icon-192.png` + `icon-512.png` 四角切圆角（18% 半径），与其他 App 图标一致 |
+| 数据版本迁移 | `init.js` `migrateDataVersion()` — bump `APP_DATA_VERSION` 后所有客户端自动清旧缓存。当前 v4 |
+| SW 缓存根治 | v9→v10：`/api/*` 请求跳过缓存，模板/酒馆每次拉最新。`resetPrompt` 强制 fetch 服务器而非内存快照 |
+| 字段校验加固 | 候选标签是真实字段真子串时智能放过（如"压力"⊆"压力值"）+ 排除列表新增元指令误报词 |
+| reloadPrompt 删除 | 原实现加载 `/api/prompt` 的 111 字废文，与 `resetPrompt` 功能重复。已删除按钮+函数 |
+| 提示词文本修复 | `surongrong.json` 三处歧义文本消歧（压力→压力值、自动放宽为（≥95）→自动放宽（≥95）等） |
+| PWA 描述 | `manifest.json` + `package.json` → **互动叙事 · 苏蓉蓉** |
+| PWA 图标 | `icon-192.png` + `icon-512.png` 四角切圆角（18% 半径）|
+| 浏览器图标 | favicon 从铃兰 SVG（看着像一根草）→ 苏蓉蓉大头照 `icon-192.png` |
+| PWA 手动按钮 | 设置底部：🔄检查更新（强制 SW 拉新版+刷新）/ 📲安装到桌面（按平台给引导） |
+| 帮助面板 | 全面重写，去冗余（不列固定数目/具体结局），覆盖 v9.7–v9.8 所有新特性 |
 
-> **以后需要全量清缓存**：把 `init.js` 顶部 `APP_DATA_VERSION` 从 `3` 改成 `4`，所有客户端下次访问即自动清除。
+> **以后需要全量清缓存**：`init.js` 顶部 `APP_DATA_VERSION` 从 `4` 改成 `5`，推送即生效。
 
 ---
 
@@ -82,13 +88,15 @@
 
 ### C. 提示词 / 模板编辑
 - [ ] **打开设置**：`openSettings` 合并编辑版（不串档），只显示 promptBody 正文
-- [ ] **保存提示词**：`savePrompt` → 字段引用校验（扫描 `字段名≥数字` 与 outputSections 比对）→ 结局标记完整性检查 → 持久化到 `xixi_edited_template_{id}`
-- [ ] **恢复原始**：`resetPrompt` → 多选弹窗（提示词/字段/可见成就/隐藏成就）→ 从 `_originalTemplate` 恢复
+- [ ] **保存提示词**：`savePrompt` → 字段引用校验（扫描 `字段名≥数字` 与 outputSections 比对，子串智能放过）→ 结局标记完整性检查 → 持久化到 `xixi_edited_template_{id}`
+- [ ] **字段引用子串放过**：候选标签是真实字段真子串时自动放过（如"压力"⊆"压力值"），不弹误报警告
+- [ ] **恢复默认**：`resetPrompt` → 多选弹窗 → **从服务器强制拉取最新模板**（离线时回退内存快照）→ 更新 `_originalTemplate`
 - [ ] **字段编辑器**：`renderFieldEditor` 正常渲染 → 图标仅按钮可见（input 为 hidden）→ 添加/删除字段正常
-- [ ] **添加字段**：`addField` → 7步弹窗链（区段→ID→标签→图标→类型→叙事含义必填→软阈值可选）→ 字段定义追加到 promptBody `【编辑参考】` 之前
+- [ ] **添加字段**：`addField` → 7步弹窗链（区段→ID→标签→图标→类型→叙事含义必填→软阈值可选）→ 字段定义追加到 promptBody
 - [ ] **保存字段**：`saveFields` → 字段标签改名 → 扫描 promptBody 中旧标签 → 确认后替换；游戏中编辑弹警告
 - [ ] **字段 ID 迁移**：仅等长+单ID重命名+无冲突时自动迁移 fieldHistory
 - [ ] **游戏中编辑警告**：游戏进行中 → `saveFields` / `savePrompt` 均弹确认
+- [ ] **设置底部按钮**：🔄检查更新（强制SW拉新版+刷新）/ 📲安装到桌面（按平台引导）
 
 ### D. 成就系统
 - [ ] **可见成就**：数值达标自动解锁 → toast 弹窗 + 成就面板显示
@@ -164,7 +172,8 @@
 | 3 | 函数名未同步重命名（detectEnding/buildEndingInjection 等仍用旧名"Ending"） | 低（技术债） | 内部逻辑已升级，仅函数名未改 |
 | 4 | 多槽位存档选择用文本输入而非可点击卡片 | 低（UX） | 功能正确，体验待优化 |
 | 5 | 自动存档 localStorage 满时静默失败 | 低 | 手动存档时弹提示 |
-| 6 | PWA SVG 图标为纯矢量铃兰（非大头照），与 PNG 图标不一致 | 低 | PNG 用于实际显示，SVG 用于 maskable 场景 |
+| 6 | Chrome `beforeinstallprompt` 装过又删后会限流，按钮无法触发安装 | 低（浏览器限制） | 已按平台给出菜单手动安装引导 |
+| 7 | `prompt.txt` 111字通用兜底已无实际用途（多模板架构） | 低 | `/api/prompt` 仅 init.js 和 server.js 保留，未清理 |
 
 ---
 
@@ -331,10 +340,12 @@ fetch('/js/test.js').then(r => r.text()).then(eval)
 - **`??` 而非 `||`**：`updateAllDynamicFields` 用空值合并，防数值 0 显示为"—"
 - **LS_KEYS 集中管理**：禁止硬编码 `'xixi_'` 字符串
 - **server.js ↔ utils.js 同步**：修改 buildSystemPrompt / repairEndingSection 时两端同步
-- **SW 版本号**：修改 `sw.js` 时必须同步 `test.js` 版本检查
+- **SW 版本号**：修改 `sw.js` 时必须同步 `test.js` 版本检查 + `CLAUDE.md` 版本引用
+- **APP_DATA_VERSION**：需要全量清缓存时 bump `init.js` 顶部 `APP_DATA_VERSION`（当前 v4 → 改 v5）
 - **prompt.txt**：服务端后备，非必要不改
-- **surongrong.json**：默认模板 v2.1（AI标准生成+手工精修），修改后必须同步 `tests/ending-system.test.js` 字段名和结局名
+- **surongrong.json**：默认模板，修改后必须同步 `tests/ending-system.test.js` 字段名和结局名
 - **PWA 图标**：修改 `icon-192.png`/`icon-512.png` 用 `npx sharp` 重切；修改 `icon.svg` 注意保持矢量格式
+- **部署前备份酒馆**：`git push` 前必须提醒用户备份 `templates/shared/`
 
 ---
 
