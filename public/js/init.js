@@ -174,56 +174,6 @@ function bindEvents() {
     }
   });
 
-  // 安装到桌面：触发PWA安装（共用逻辑，供 banner 和设置按钮复用）
-  function _tryPwaInstall() {
-    if (_pwaInstallPrompt) {
-      _pwaInstallPrompt.prompt();
-      return _pwaInstallPrompt.userChoice.then(function(result) {
-        console.log('PWA 安装:', result.outcome);
-        _pwaInstallPrompt = null;
-        var banner = document.getElementById('pwa-install-banner');
-        if (banner) banner.classList.add('hidden');
-        if (typeof dlAlert === 'function') {
-          dlAlert(result.outcome === 'accepted' ? '✅ 已添加到主屏幕！' : '已取消安装。');
-        }
-      });
-    }
-    // beforeinstallprompt 不可用 → 判断原因，给出引导
-    var ua = navigator.userAgent;
-    var isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    // iOS（Safari / WKWebView）不支持 beforeinstallprompt
-    if (/iPhone|iPad|iPod/.test(ua)) {
-      if (isStandalone) {
-        if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。\n\n如需重新安装，请先从主屏幕删除旧图标，再在 Safari 中打开本页面。');
-      } else {
-        if (typeof dlAlert === 'function') dlAlert('📲 iOS 安装方法：\n\n1. 点击浏览器底部中间的「分享」按钮\n2. 向下滑动找到「添加到主屏幕」\n3. 点击右上角「添加」\n\n安装后可作为独立App使用。');
-      }
-      return Promise.resolve();
-    }
-    // 已在独立窗口运行
-    if (isStandalone) {
-      if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。\n\n如需重新安装，请先卸载再在浏览器中打开本页面。');
-      return Promise.resolve();
-    }
-    // Android（含 Chrome Android / 国产浏览器）
-    if (/Android/i.test(ua)) {
-      if (/Chrome/i.test(ua)) {
-        if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」\n\n如菜单中无此选项，请确认：\n① 已通过 HTTPS 访问\n② 未在无痕模式下打开\n③ 之前安装过需等 Chrome 解限');
-      } else {
-        if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」\n\n如无此选项，建议使用 Chrome 浏览器打开。');
-      }
-      return Promise.resolve();
-    }
-    // 桌面 Chrome / Edge（Chromium 内核）
-    if (/Chrome/i.test(ua) || /Edg/i.test(ua)) {
-      if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器地址栏右侧的 ⊕ 安装图标\n\n没看到？之前装过又删了的话，Chrome 会限流一段时间（通常1-3天）。\n可尝试 chrome://settings/content/siteDetails 删除本站数据后刷新。');
-      return Promise.resolve();
-    }
-    // 兜底
-    if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n查看浏览器菜单中是否有「安装」「添加到桌面」「添加到主屏幕」等选项。\n如已装过又删除，请稍等一段时间再试。');
-    return Promise.resolve();
-  }
-
   $('#btn-force-install').addEventListener('click', function() { _tryPwaInstall(); });
   bindOverlayClose('settings-overlay', closeSettings);
 
@@ -521,6 +471,50 @@ if ('serviceWorker' in navigator) {
 
 // ── PWA 安装引导 ──
 var _pwaInstallPrompt = null;
+
+// 共用安装逻辑（供 banner 和设置按钮复用）
+function _tryPwaInstall() {
+  if (_pwaInstallPrompt) {
+    _pwaInstallPrompt.prompt();
+    return _pwaInstallPrompt.userChoice.then(function(result) {
+      console.log('PWA 安装:', result.outcome);
+      _pwaInstallPrompt = null;
+      var banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.classList.add('hidden');
+      if (typeof dlAlert === 'function') {
+        dlAlert(result.outcome === 'accepted' ? '✅ 已添加到主屏幕！' : '已取消安装。');
+      }
+    });
+  }
+  var ua = navigator.userAgent;
+  var isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+  if (/iPhone|iPad|iPod/.test(ua)) {
+    if (isStandalone) {
+      if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。\n\n如需重新安装，请先从主屏幕删除旧图标，再在 Safari 中打开本页面。');
+    } else {
+      if (typeof dlAlert === 'function') dlAlert('📲 iOS 安装方法：\n\n1. 点击浏览器底部中间的「分享」按钮\n2. 向下滑动找到「添加到主屏幕」\n3. 点击右上角「添加」\n\n安装后可作为独立App使用。');
+    }
+    return Promise.resolve();
+  }
+  if (isStandalone) {
+    if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。\n\n如需重新安装，请先卸载再在浏览器中打开本页面。');
+    return Promise.resolve();
+  }
+  if (/Android/i.test(ua)) {
+    if (/Chrome/i.test(ua)) {
+      if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」\n\n如菜单中无此选项，请确认：\n① 已通过 HTTPS 访问\n② 未在无痕模式下打开\n③ 之前安装过需等 Chrome 解限');
+    } else {
+      if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」\n\n如无此选项，建议使用 Chrome 浏览器打开。');
+    }
+    return Promise.resolve();
+  }
+  if (/Chrome/i.test(ua) || /Edg/i.test(ua)) {
+    if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器地址栏右侧的 ⊕ 安装图标\n\n没看到？之前装过又删了的话，Chrome 会限流一段时间（通常1-3天）。\n可尝试 chrome://settings/content/siteDetails 删除本站数据后刷新。');
+    return Promise.resolve();
+  }
+  if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n查看浏览器菜单中是否有「安装」「添加到桌面」「添加到主屏幕」等选项。\n如已装过又删除，请稍等一段时间再试。');
+  return Promise.resolve();
+}
 
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
