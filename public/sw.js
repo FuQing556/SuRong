@@ -1,6 +1,6 @@
 // Service Worker — 离线缓存（网络优先，回退缓存）
-// v10: API 请求跳过缓存，模板/酒馆等数据每次拉最新
-const CACHE = 'xixi-v10';
+// v11: 修复 SW 每次 activate 都弹更新窗口；仅在真正的版本升级时通知
+const CACHE = 'xixi-v11';
 // 核心shell（install时预缓存）
 const SHELL = [
   '/', '/index.html', '/style.css',
@@ -27,21 +27,41 @@ self.addEventListener('install', e => {
   );
 });
 
+// ★ SW 版本真正更新标记 — install 时检测旧缓存，activate 时决定是否通知
+let _isGenuineUpdate = false;
+
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(
+    caches.keys().then(keys => {
+      // 如果存在任何 xixi 旧版本缓存（非当前 CACHE），说明是真正的版本更新
+      _isGenuineUpdate = keys.some(k => k.startsWith('xixi-v') && k !== CACHE);
+      return caches.open(CACHE).then(c =>
+        Promise.allSettled(SHELL.map(f =>
+          c.add(f).catch(() => console.debug('SW: skip cache', f))
+        ))
+      );
+    })
+  );
+});
+
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys => Promise.all(
       keys.filter(k => k !== CACHE).map(k => caches.delete(k))
     ))
   );
-  // 立即接管所有页面，并通知刷新
   e.waitUntil(clients.claim());
-  e.waitUntil(
-    clients.matchAll({ type: 'window' }).then(clients => {
-      clients.forEach(client => {
-        client.postMessage({ type: 'SW_UPDATED', version: CACHE });
-      });
-    })
-  );
+  // ★ 只在真正的版本更新时通知页面。首次安装 / SW进程被杀后重启 / 清缓存刷新 均不弹窗
+  if (_isGenuineUpdate) {
+    e.waitUntil(
+      clients.matchAll({ type: 'window' }).then(clients => {
+        clients.forEach(client => {
+          client.postMessage({ type: 'SW_UPDATED', version: CACHE });
+        });
+      })
+    );
+  }
 });
 
 self.addEventListener('fetch', e => {

@@ -124,8 +124,14 @@ function _findFieldId(labelPart) {
 
 function _fieldVal(labelPart, useMax) {
   const id = _findFieldId(labelPart);
-  if (!id || !gameState.fieldHistory[id]) return 0;
-  return useMax ? (gameState.fieldHistory[id].max || 0) : (gameState.fieldHistory[id].current || 0);
+  if (!id || !gameState.fieldHistory[id]) return undefined;
+  const hist = gameState.fieldHistory[id];
+  if (useMax) {
+    // hasOwnProperty 守卫：max 可能为 0（合法值），与从未设置过（undefined）不同
+    return hist.hasOwnProperty('max') ? hist.max : undefined;
+  }
+  // current 可能为 0（合法值），必须检查是否真正初始化过
+  return hist.hasOwnProperty('current') ? hist.current : undefined;
 }
 
 // ── 检测可见成就（字段数值型+行为型）──
@@ -236,9 +242,12 @@ function checkHiddenAchievements(parsed) {
       }
       case 'field_max_under':
         if (gameState.achievementFlags.endingTriggered) {
-          const v = _fieldVal(trigger.fieldLabel || trigger.field || '', true);
-          // v > 0 守卫放行 0 和负数 — 字段 max=0 时 threshold>0 也应触发（如"把柄始终为0"）
-          triggered = (v > 0 || (v === 0 && trigger.threshold > 0)) && v <= (trigger.threshold || 50);
+          const fid = _findFieldId(trigger.fieldLabel || trigger.field || '');
+          // hasOwnProperty 守卫：防止未初始化字段 _fieldVal 返回 undefined → undefined>0=false 误放行
+          const hasF = fid && gameState.fieldHistory[fid] && gameState.fieldHistory[fid].hasOwnProperty('current');
+          const v = hasF ? _fieldVal(trigger.fieldLabel || trigger.field || '', true) : undefined;
+          // v>0 守卫放行 0 和负数 — 字段 max=0 时 threshold>0 也应触发（如"把柄始终为0"）
+          triggered = v !== undefined && (v > 0 || (v === 0 && trigger.threshold > 0)) && v <= (trigger.threshold || 50);
         }
         break;
       case 'response_match':
@@ -285,12 +294,18 @@ function getAchievementProgress(name) {
     let v;
     if (isNeverExceeded) {
       const fid = _findFieldId(matched);
-      v = fid && gameState.fieldHistory[fid] ? (gameState.fieldHistory[fid].max || 0) : 0;
+      // hasOwnProperty 守卫：防止未初始化字段 max=undefined||0→0 导致 0≤threshold 误显示满条
+      const hasF = fid && gameState.fieldHistory[fid] && gameState.fieldHistory[fid].hasOwnProperty('current');
+      v = hasF ? (gameState.fieldHistory[fid].max || 0) : undefined;
     } else {
       v = _fieldVal(matched, useMax);
     }
+    // 字段未初始化时显示 0 进度（不显示 NaN 或虚假满条）
+    if (v === undefined) v = 0;
     if (isNeverExceeded) {
-      return { current: Math.max(v, target), target, text: matched + '最高' + v + '（需≤' + target + '）' };
+      // v≤target 时达成（显示 100%）；v>target 时失败（显示 0%），防止 Math.max(v,target) 误显满条
+      if (v <= target) return { current: target, target, text: matched + '最高' + v + '（≤' + target + ' ✓）' };
+      return { current: 0, target, text: matched + '最高' + v + '（需≤' + target + '，已超标）' };
     }
     if (isBelow) {
       // "低于X"：v≤target 达成；v>target 时 current=0 显示0%进度（防止"生命100/需低于20"显示满条）

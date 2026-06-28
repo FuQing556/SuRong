@@ -22,9 +22,10 @@ function saveGameState(slot) {
   var truncatedHistory = wasTruncated
     ? gameState.fullHistory.slice(-MAX_STORED_ROUNDS * 2)
     : gameState.fullHistory;
-  // 截断后重置摘要索引，防止 summarisedCount 越界
+  // 截断后重置摘要索引（旧索引基于截断前的 fullHistory，已失效）
+  // 但摘要文本必须保留 — 它存着早期轮次的 AI 上下文，丢弃会导致 AI 失忆
   var clampedSummarisedCount = wasTruncated ? 0 : gameState.summarisedCount;
-  var clampedSummary = wasTruncated ? '' : gameState.summary;
+  var clampedSummary = gameState.summary;
 
   const saveData = {
     dataVersion: 2,  // 存档格式版本，continueGame时做兼容迁移

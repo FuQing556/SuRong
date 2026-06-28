@@ -57,7 +57,8 @@ function extractAllFields(text, allFields) {
       var after = line.substring(idx + f.label.length);
       var colonM = after.match(/^\s*[：:]\s*([^|\n]+?)(?:\s*[|]|\s*$)/);
       if (colonM) {
-        result[f.id] = colonM[1].trim();
+        var val = colonM[1].trim();
+        result[f.id] = val || '—';  // 空值回退为占位符，防止 UI 显示空白
         matched[f.id] = true;
       }
     }
@@ -251,12 +252,15 @@ function collectEligibleEndings(template) {
   vals['轮次'] = roundNum;
   vals['round'] = roundNum;  // 英文id也可匹配
 
-  // 提取关系字段的 label 列表（用于判断条件中是否含关系条件）
+  // 提取所有区段字段的 label 列表（用于判断条件中是否含关系条件）
+  // v2: 检查所有区段，不仅 variables（自定义模板可能将关系字段放在其他区段）
   var relLabels = [];
-  var varFields = (template.outputSections && template.outputSections.variables)
-    ? (template.outputSections.variables.fields || []) : [];
-  for (var rl = 0; rl < varFields.length; rl++) {
-    relLabels.push(varFields[rl].label);
+  for (var sk2 in template.outputSections) {
+    if (!template.outputSections.hasOwnProperty(sk2)) continue;
+    var secFields = template.outputSections[sk2].fields || [];
+    for (var rl = 0; rl < secFields.length; rl++) {
+      relLabels.push(secFields[rl].label);
+    }
   }
 
   // 辅助：解析条件文本并检查是否满足
@@ -280,8 +284,8 @@ function collectEligibleEndings(template) {
     var hasRel = false;
     for (var c = 0; c < checks.length; c++) {
       var chk = checks[c];
-      // 检查是否引用轮次
-      if (chk.label === '轮次' || chk.label.indexOf('轮') >= 0) {
+      // 检查是否引用轮次（精确匹配，防止"轮"匹配到"车轮"等无关字段）
+      if (chk.label === '轮次' || chk.label === 'round' || chk.label === '回合') {
         roundReq = chk.threshold;
       }
       // 检查是否引用关系字段

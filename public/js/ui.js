@@ -96,12 +96,11 @@ function updateOptionButtons(options) {
   for (const [sectionKey, section] of Object.entries(tpl.outputSections || {})) {
     const fields = section.fields || [];
     fields.forEach(function(f) {
-      // 解析字段最小值（如 "0-100" → 0, "-100~100" → -100）
+      // 解析字段最小值（f.range 优先；回退到 f.formatHint，如 "[-100~0]" → -100）
       var fMin = 0;
-      if (f.range) {
-        var rm = String(f.range).match(/^[-]?\d+/);
-        if (rm) fMin = parseInt(rm[0]);
-      }
+      var rangeSrc = f.range || f.formatHint || '';
+      var rm = String(rangeSrc).match(/[\[\(]?\s*([-]?\d+)/);
+      if (rm) fMin = parseInt(rm[1]);
       resMins[f.label] = fMin;
 
       const hist = gameState.fieldHistory[f.id];

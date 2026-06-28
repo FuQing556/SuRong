@@ -122,8 +122,8 @@ async function savePrompt() {
       labelToField[_f2.label] = _f2;
     }
   }
-  // 扫描条件中的字段引用：中文+运算符+数字 模式
-  var condRe = /([一-鿿]{1,8})\s*[≥≤=><]=?\s*-?\d+/g;
+  // 扫描条件中的字段引用：支持纯中文/中英混合/纯英文标签（如 "HP值"、"SAN"、"压力值"）
+  var condRe = /([一-鿿\w]{1,12})\s*[≥≤=><]=?\s*-?\d+/g;
   var unknownLabels = [];
   var cm;
   while ((cm = condRe.exec(prompt)) !== null) {

@@ -488,31 +488,91 @@ function _tryPwaInstall() {
   }
   var ua = navigator.userAgent;
   var isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-  if (/iPhone|iPad|iPod/.test(ua)) {
-    if (isStandalone) {
-      if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。\n\n如需重新安装，请先从主屏幕删除旧图标，再在 Safari 中打开本页面。');
-    } else {
-      if (typeof dlAlert === 'function') dlAlert('📲 iOS 安装方法：\n\n1. 点击浏览器底部中间的「分享」按钮\n2. 向下滑动找到「添加到主屏幕」\n3. 点击右上角「添加」\n\n安装后可作为独立App使用。');
-    }
-    return Promise.resolve();
-  }
+  var isIOS = /iPhone|iPad|iPod/.test(ua);
+
+  // ── 已被 App 安装（独立模式运行）──
   if (isStandalone) {
-    if (typeof dlAlert === 'function') dlAlert('✅ 已安装！当前正在以独立App模式运行。\n\n如需重新安装，请先卸载再在浏览器中打开本页面。');
-    return Promise.resolve();
-  }
-  if (/Android/i.test(ua)) {
-    if (/Chrome/i.test(ua)) {
-      if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」\n\n如菜单中无此选项，请确认：\n① 已通过 HTTPS 访问\n② 未在无痕模式下打开\n③ 之前安装过需等 Chrome 解限');
-    } else {
-      if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」\n\n如无此选项，建议使用 Chrome 浏览器打开。');
+    if (typeof dlAlert === 'function') {
+      if (isIOS) dlAlert('✅ 已安装！当前正在以独立App模式运行。\n\n如需重新安装：\n1. 长按桌面图标 → 删除\n2. 在 Safari 中重新打开本页面\n3. 按下方分享按钮 → 添加到主屏幕');
+      else dlAlert('✅ 已安装！当前正在以独立App模式运行。\n\n如需重新安装，请先卸载再在浏览器中打开本页面。');
     }
     return Promise.resolve();
   }
-  if (/Chrome/i.test(ua) || /Edg/i.test(ua)) {
-    if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器地址栏右侧的 ⊕ 安装图标\n\n没看到？之前装过又删了的话，Chrome 会限流一段时间（通常1-3天）。\n可尝试 chrome://settings/content/siteDetails 删除本站数据后刷新。');
+
+  // ── 处理无法安装 PWA 的浏览器（QQ/微信/UC/百度等内置WebView）──
+  // 这些浏览器不支持 beforeinstallprompt，也不支持添加到主屏幕
+  // ── 辅助：复制链接到剪贴板 ──
+  function _copyUrl() {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = window.location.href;
+      ta.style.cssText = 'position:fixed;left:-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return true;
+    } catch(e) { return false; }
+  }
+
+  if (/MicroMessenger/i.test(ua)) {
+    var copied = _copyUrl();
+    if (typeof dlAlert === 'function') dlAlert('⚠ 微信不支持安装到桌面\n\n'
+      + (copied ? '✅ 链接已自动复制到剪贴板！\n\n' : '')
+      + '📲 下一步：\n'
+      + '1. 打开手机自带浏览器（Safari / Chrome / 系统浏览器）\n'
+      + '2. 粘贴链接并打开\n'
+      + '3. 按浏览器菜单 →「添加到主屏幕」\n\n'
+      + '提示：微信里也可以点右上角 ··· →「在浏览器中打开」');
     return Promise.resolve();
   }
-  if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n查看浏览器菜单中是否有「安装」「添加到桌面」「添加到主屏幕」等选项。\n如已装过又删除，请稍等一段时间再试。');
+  if (/QQ\//i.test(ua) || /MQQBrowser/i.test(ua)) {
+    var copied2 = _copyUrl();
+    if (typeof dlAlert === 'function') dlAlert('⚠ QQ 不支持安装到桌面\n\n'
+      + (copied2 ? '✅ 链接已自动复制！\n\n' : '')
+      + '📲 下一步：\n'
+      + '1. 打开手机自带浏览器（Safari / Chrome / 系统浏览器）\n'
+      + '2. 粘贴链接并打开\n'
+      + '3. 按浏览器菜单 →「添加到主屏幕」\n\n'
+      + '提示：QQ里也可以点右上角 ··· →「在浏览器中打开」');
+    return Promise.resolve();
+  }
+  if (/UCBrowser|UCWEB/i.test(ua) || /baidubrowser|baiduboxapp/i.test(ua)) {
+    var copied3 = _copyUrl();
+    if (typeof dlAlert === 'function') dlAlert('⚠ 当前浏览器不支持安装到桌面\n\n'
+      + (copied3 ? '✅ 链接已复制！\n\n' : '')
+      + '📲 请用手机自带浏览器（Safari / Chrome）打开此链接：\n'
+      + window.location.href + '\n\n'
+      + '然后在浏览器菜单中选「添加到主屏幕」');
+    return Promise.resolve();
+  }
+
+  // ── iOS Safari（正常浏览器，但需要手动添加到主屏幕）──
+  if (isIOS) {
+    if (typeof dlAlert === 'function') dlAlert('📲 添加到主屏幕：\n\n1. 点击浏览器底部中间的「分享」按钮\n2. 向下滑动找到「添加到主屏幕」\n3. 确认名称后点击「添加」\n\n安装后可作为独立App使用，桌面会出现铃兰图标。');
+    return Promise.resolve();
+  }
+
+  // ── Android Chrome（支持原生 PWA 安装）──
+  if (/Android/i.test(ua) && /Chrome/i.test(ua)) {
+    if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器右上角 ⋮ 菜单\n→ 「安装应用」或「添加到主屏幕」\n\n如菜单中无此选项：\n① 确认通过 HTTPS 访问\n② 关闭无痕模式\n③ 之前安装过又删除需等 Chrome 解限（1-3天）');
+    return Promise.resolve();
+  }
+
+  // ── Android 其他浏览器 ──
+  if (/Android/i.test(ua)) {
+    if (typeof dlAlert === 'function') dlAlert('📲 建议使用 Chrome 浏览器打开本页面以获得最佳安装体验。\n\n当前浏览器安装方法：\n查看菜单中是否有「安装应用」「添加到桌面」等选项。\n\n没有？复制链接到 Chrome 打开。');
+    return Promise.resolve();
+  }
+
+  // ── 桌面 Chrome / Edge（支持原生安装）──
+  if (/Chrome/i.test(ua) || /Edg/i.test(ua)) {
+    if (typeof dlAlert === 'function') dlAlert('📲 安装方法：\n\n点击浏览器地址栏右侧的 ⊕ 安装图标\n\n没看到？\n· 之前装过又删了 → Chrome 会限流1-3天\n· 尝试访问 chrome://settings/content/siteDetails 删除本站数据后刷新\n\n⬇ 仍装不了？可以直接下载 APK 安装包：\nhttps://pwabuilder.com?url=' + encodeURIComponent(window.location.href));
+    return Promise.resolve();
+  }
+
+  // ── 其他桌面浏览器（Safari / Firefox 等）──
+  if (typeof dlAlert === 'function') dlAlert('📲 当前浏览器可能不完全支持桌面安装。\n\n尝试：浏览器菜单 → 添加到桌面 / 安装应用\n\n推荐使用 Chrome 或 Edge 获得最佳体验。\n\n⬇ 或直接下载 APK：\nhttps://pwabuilder.com?url=' + encodeURIComponent(window.location.href));
   return Promise.resolve();
 }
 

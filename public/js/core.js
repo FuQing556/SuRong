@@ -356,8 +356,9 @@ async function _streamResponse(resp, liveEl) {
       if (line.startsWith('data: ') && line.length > 6) {
         try {
           const json = JSON.parse(line.slice(6));
-          // 检测 API 错误（如余额不足、key无效等）
+          // 检测 API 错误（如余额不足、key无效等）— 必须向外抛出，不能被 catch 静默吞掉
           if (json.error) {
+            liveEl.remove();
             throw new Error('API 错误: ' + (json.error.message || JSON.stringify(json.error)));
           }
           const delta = json.choices?.[0]?.delta?.content;
@@ -372,7 +373,11 @@ async function _streamResponse(resp, liveEl) {
             var sb3 = $('#story-box');
             if (sb3.scrollHeight - sb3.scrollTop - sb3.clientHeight < 50) sb3.scrollTop = sb3.scrollHeight;
           }
-        } catch (e) { /* 跳过非JSON行 */ }
+        } catch (e) {
+          // API 错误必须向外层抛出；JSON 解析错误才静默跳过
+          if (e.message && e.message.indexOf('API 错误:') === 0) throw e;
+          /* 跳过非JSON行（SSE 注释/空行等） */
+        }
       }
     }
   }
@@ -405,10 +410,23 @@ function _handleParsedResponse(fullContent, tpl, parsed) {
       fullContent = fullContent + '\n【命运转折·' + clientEnding + '】';
       gameState.fullHistory[gameState.fullHistory.length - 1].content = fullContent;
       if (!parsed.situation || parsed.situation.length < 20) {
-        var inj = typeof buildEndingInjection === 'function'
-          ? buildEndingInjection(clientEnding, tpl) : '';
-        var descM = inj.match(/结局主题[：:]\s*(.+?)[。]/);
-        parsed.situation = '【' + clientEnding + '】\n' + (descM ? descM[1] : '这一刻终于到来。' + clientEnding + '。');
+        // 从模板 endings 数组提取叙事描述（优先），回退到 injection 文本
+        var fallbackNarrative = '';
+        if (tpl.endings && Array.isArray(tpl.endings)) {
+          for (var ei = 0; ei < tpl.endings.length; ei++) {
+            if (tpl.endings[ei].name === clientEnding) {
+              fallbackNarrative = tpl.endings[ei].narrative || '';
+              break;
+            }
+          }
+        }
+        if (!fallbackNarrative) {
+          var inj = typeof buildEndingInjection === 'function'
+            ? buildEndingInjection(clientEnding, tpl) : '';
+          var descM = inj.match(/叙事（\d+-\d+句）[：:]\s*([^。]+)/);
+          fallbackNarrative = descM ? descM[1].trim() : '';
+        }
+        parsed.situation = '【' + clientEnding + '】\n' + (fallbackNarrative || '这一刻终于到来。「' + clientEnding + '」。故事尚未结束——新的篇章即将开始。');
       }
     }
   } else if (endingType && typeof checkEndingClientSide === 'function') {
@@ -920,7 +938,17 @@ function showEndingOverlay(endingType, parsed) {
   }
   $('#ending-icon').textContent = icon;
   $('#ending-title').textContent = '命运转折：' + endingType;
-  var rawNarrative = parsed.situation || parsed.raw || '故事到此结束。';
+  // 优先使用模板结构化 endings 的 narrative，其次 parsed.situation，最后 raw
+  var tplNarrative = '';
+  if (tpl.endings && Array.isArray(tpl.endings)) {
+    for (var ei2 = 0; ei2 < tpl.endings.length; ei2++) {
+      if (tpl.endings[ei2].name === endingType) {
+        tplNarrative = tpl.endings[ei2].narrative || '';
+        break;
+      }
+    }
+  }
+  var rawNarrative = tplNarrative || parsed.situation || parsed.raw || '故事到此结束。';
   $('#ending-narrative').textContent = rawNarrative.length > 600 ? rawNarrative.substring(0, 600) + '…' : rawNarrative;
 
   const rn = gameState.fieldHistory['round']?.current || gameState.fullHistory.filter(m => m.role === 'user').length;
@@ -934,7 +962,7 @@ function showEndingOverlay(endingType, parsed) {
   sf.forEach(f => {
     if (f.type === 'number') {
       const h = gameState.fieldHistory[f.id];
-      sh += '<div class="ending-stat"><span class="ending-stat-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span><span class="ending-stat-value">' + escapeHtml(String(h ? (h.current || h.currentText || '—') : '—')) + '</span></div>';
+      sh += '<div class="ending-stat"><span class="ending-stat-label">' + escapeHtml(f.icon || '') + ' ' + escapeHtml(f.label) + '</span><span class="ending-stat-value">' + escapeHtml(String(h ? (h.current != null ? h.current : (h.currentText || '—')) : '—')) + '</span></div>';
     }
   });
   $('#ending-stats').innerHTML = sh;
@@ -1067,7 +1095,7 @@ function exportStory() {
     for (var fi2 = 0; fi2 < (secs[sk2].fields || []).length; fi2++) {
       var ff = secs[sk2].fields[fi2];
       var hh = gameState.fieldHistory[ff.id];
-      var vv = hh ? (hh.currentText || (hh.current != null ? String(hh.current) : '—')) : '—';
+      var vv = hh ? (hh.current != null ? String(hh.current) : (hh.currentText || '—')) : '—';
       txt += '  ' + (ff.icon || '') + ' ' + ff.label + ': ' + vv + '\n';
     }
   }
