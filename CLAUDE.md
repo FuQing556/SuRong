@@ -4,7 +4,7 @@
 
 基于 DeepSeek API 驱动的多模板互动叙事引擎。默认模板「苏蓉蓉·潜伏」为斗罗大陆世界观卧底叙事，支持 AI 辅助创建任意世界观的自定义模板。
 
-**在线版**：`xixi-fable.up.railway.app` | **本地**：`npm start` → `http://localhost:3000`
+**在线版**：`xixi-fables.up.railway.app` | **本地**：`npm start` → `http://localhost:3000`
 
 ---
 

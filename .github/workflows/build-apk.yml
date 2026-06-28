@@ -93,7 +93,7 @@ jobs:
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           public class MainActivity extends Activity {
-              private static final String URL = "https://xixi-fable.up.railway.app";
+              private static final String URL = "https://xixi-fables.up.railway.app";
               private WebView wv;
               @Override
               protected void onCreate(Bundle s) {
