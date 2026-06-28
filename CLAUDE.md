@@ -97,6 +97,16 @@
 | **Manifest 图标** | 移除 `icon.svg`（铃兰矢量图，手机端支持差且占用第一位），PNG 苏蓉蓉大头照排到第一 |
 | **APK** | 放弃——PWABuilder 不管选什么都给 TWA 格式，TWA 需联网验证且手机无网不可用。已清空所有 APK 相关代码和文件 |
 
+### v9.10（2026-06-28）：Railway Volume 持久化存储
+
+| 类别 | 关键改动 |
+|------|---------|
+| **Railway Volume** | 创建 `xixi-data` 500MB Volume，挂载到 `/data`。部署不再丢失酒馆共享数据和用户编辑模板 |
+| **server.js** | `DATA_BASE` 自动检测 `/data`（线上）vs `./data/`（本地回退）；`ensureDataDirs()` 启动时创建子目录 |
+| **双层 overlay** | `loadTemplate`/`loadTemplates` 先读 `/data/` 再读项目目录——用户编辑版优先，默认版兜底 |
+| **写入分离** | 所有模板保存/酒馆上传/备份恢复写 `/data/` 子目录；`surongrong.json` 默认模板仍在项目目录只读 |
+| **CLAUDE.md** | 部署前检查移除手动备份步骤；维护要点标注旧备份流程已废弃 |
+
 ---
 
 ## 🔍 审查清单（按功能域，非按 Phase）
@@ -224,6 +234,7 @@
 | 6 | QQ/微信内置浏览器无法安装 PWA（已做自动复制链接+指引） | 低（平台限制） | 无解 |
 | 7 | `prompt.txt` 111字通用兜底已无实际用途 | 低 | 未清理 |
 | 8 | Manifest 图标已改为 PNG 苏蓉蓉大头照，SVG 铃兰已移除 | — | ✅ 已修复 |
+| 9 | 部署丢酒馆数据 | — | ✅ 已修复 — Railway Volume `/data` 持久化 |
 
 ---
 
@@ -238,11 +249,15 @@ xixi/
 ├── CLAUDE.md              # 本文件（项目文档 + 审查清单）
 ├── 优化方案.md             # 14 章节完整施工图（47+ 问题）
 ├── PROGRESS.md            # 11 个 Phase 详细进度跟踪
-├── test.js                # 自动化测试（node test.js — 76项检查）
+├── test.js                 # 自动化测试（node test.js — 76项检查）
 ├── tests/
 │   └── ending-system.test.js  # 结局系统测试（56 用例）
-├── templates/             # 模板存储
-│   ├── surongrong.json    #   默认模板：苏蓉蓉·潜伏 v2.1（AI标准生成+手工精修）
+├── /data/                  # 🔒 Railway Volume 持久化存储（部署不丢）
+│   ├── templates/          #   用户编辑/生成的模板（覆盖项目默认版）
+│   ├── shared/             #   酒馆分享数据
+│   └── backups/            #   酒馆备份
+├── templates/              # 模板存储（项目内，默认模板只读）
+│   ├── surongrong.json     #   默认模板：苏蓉蓉·潜伏 v2.1（AI标准生成+手工精修）
 │   ├── custom_*.json      #   AI 生成的用户自创模板
 │   └── shared/            #   酒馆分享数据（运行时创建，git不追踪）
 ├── themes/                # CSS 主题（10套）
@@ -407,6 +422,7 @@ var s=document.createElement('script');s.src='/js/test-achievements.js';document
 - **`_fieldVal` 返回 0 陷阱**：`|| 0` 对缺失字段返回 0，在 `isBelow`/`isNeverExceeded` 方向会误判。必须用 `hasOwnProperty('current')` 守卫
 - **CSP 安全**：线上版无 `unsafe-eval`，浏览器诊断脚本必须用 `<script>` 标签注入，不能用 `fetch+eval`
 - **正则 `\d+` 不捕获负号**：条件/阈值正则必须用 `-?\d+`（或 `[+-]?\d+`），不能裸用 `\d+`。涉及：`utils.js:270`、`achievements.js:174/280/305`、`ui.js:139/142`、`prompts.js:126`、`templates.js:669`。新增条件解析时必须检查。
+- **Railway Volume**：`/data` 持久化存储。本地开发自动回退 `./data/`。修改 `ensureDataDirs()` 或路径常量时注意保持 `fs.existsSync('/data')` 检测逻辑。
 - **选项消耗 vs 惩罚区分**：`updateOptionButtons` 中 `字段-数字` 的 `-` 是数字符号而非分隔符 — 正则 `[xX×-–]?` 会误吞负号。改为 `[xX×]?([+-]?\d+)`，三路判定：`+X` 增益不锁 / `-X` 惩罚仅跌破字段最小值时锁 / 正数消耗维持 `cur<needed`
 - **`resMins` 字段最小值**：`updateOptionButtons` 从 `f.range` 解析最小值（`/^[-]?\d+/`），惩罚型扣减用 `cur + needed < fMin` 替代 `cur < needed`
 
