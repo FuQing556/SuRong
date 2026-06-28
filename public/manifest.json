@@ -3,6 +3,7 @@
   "short_name": "Lily of the Valley",
   "description": "互动叙事 · 苏蓉蓉",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0a12",
