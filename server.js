@@ -13,9 +13,21 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/themes', express.static(path.join(__dirname, 'themes')));
 
+// ── 持久化数据目录（Railway Volume /data，本地回退到项目目录）──
+const DATA_BASE = fs.existsSync('/data') ? '/data' : path.join(__dirname, 'data');
+const DATA_TEMPLATES_DIR = path.join(DATA_BASE, 'templates');
+const DATA_SHARED_DIR = path.join(DATA_BASE, 'shared');
+const DATA_BACKUPS_DIR = path.join(DATA_BASE, 'backups');
+
+function ensureDataDirs() {
+  for (const dir of [DATA_TEMPLATES_DIR, DATA_SHARED_DIR, DATA_BACKUPS_DIR]) {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
 // ── 提示词管理 ──
 const PROMPT_PATH = path.join(__dirname, 'prompt.txt');
-const TEMPLATES_DIR = path.join(__dirname, 'templates');
+const TEMPLATES_DIR = path.join(__dirname, 'templates');   // 项目内默认模板（只读）
 
 function loadPrompt() {
   try {
@@ -40,31 +52,37 @@ let templateCache = null;
 
 function loadTemplates() {
   const templates = [];
-  try {
-    if (!fs.existsSync(TEMPLATES_DIR)) return templates;
-    const files = fs.readdirSync(TEMPLATES_DIR).filter(f => f.endsWith('.json'));
-    for (const file of files) {
-      try {
-        const raw = fs.readFileSync(path.join(TEMPLATES_DIR, file), 'utf-8');
-        const t = JSON.parse(raw);
-        // 返回摘要（不含完整 promptBody）
-        templates.push({
-          id: t.id,
-          name: t.name,
-          description: t.description || '',
-          theme: t.theme || 'dark',
-          author: t.author || '',
-          version: t.version || '1.0.0',
-          sceneTypes: t.sceneTypes || [],
-          hasFields: !!(t.outputSections),
-          worldSetting: t.worldSetting || '',
-          protagonist: t.protagonist || '',
-          conflict: t.conflict || '',
-          styles: t.styles || [],
-        });
-      } catch (e) { console.error(`模板 ${file} 解析失败:`, e.message); }
-    }
-  } catch (e) { console.error('加载模板目录失败:', e.message); }
+  const seen = new Set();
+  // 从两个目录加载：/data 版优先，项目内版兜底
+  const dirs = [DATA_TEMPLATES_DIR, TEMPLATES_DIR];
+  for (const dir of dirs) {
+    try {
+      if (!fs.existsSync(dir)) continue;
+      const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+      for (const file of files) {
+        try {
+          const raw = fs.readFileSync(path.join(dir, file), 'utf-8');
+          const t = JSON.parse(raw);
+          if (!t.id || seen.has(t.id)) continue;  // /data 版已加载则跳过项目版
+          seen.add(t.id);
+          templates.push({
+            id: t.id,
+            name: t.name,
+            description: t.description || '',
+            theme: t.theme || 'dark',
+            author: t.author || '',
+            version: t.version || '1.0.0',
+            sceneTypes: t.sceneTypes || [],
+            hasFields: !!(t.outputSections),
+            worldSetting: t.worldSetting || '',
+            protagonist: t.protagonist || '',
+            conflict: t.conflict || '',
+            styles: t.styles || [],
+          });
+        } catch (e) { console.error(`模板 ${file} 解析失败:`, e.message); }
+      }
+    } catch (e) { console.error('加载模板目录失败:', e.message); }
+  }
   return templates;
 }
 
@@ -72,8 +90,12 @@ function loadTemplate(id) {
   // 优先从缓存
   if (templateCache && templateCache.id === id) return templateCache;
 
-  const filePath = path.join(TEMPLATES_DIR, `${id}.json`);
-  if (!fs.existsSync(filePath)) return null;
+  // /data 优先（用户编辑版），项目目录兜底（默认版）
+  let filePath = path.join(DATA_TEMPLATES_DIR, `${id}.json`);
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(TEMPLATES_DIR, `${id}.json`);
+    if (!fs.existsSync(filePath)) return null;
+  }
   try {
     const raw = fs.readFileSync(filePath, 'utf-8');
     templateCache = JSON.parse(raw);
@@ -243,15 +265,15 @@ app.get('/api/templates/:id', (req, res) => {
   res.json({ template });
 });
 
-// ── API: 保存模板（写入 templates/ 目录，本地开发用）──
+// ── API: 保存模板（写入 /data/templates/，持久化存储）──
 app.post('/api/templates/:id', (req, res) => {
   const { template } = req.body;
   if (!template || !template.id) {
     return res.status(400).json({ error: '无效的模板数据' });
   }
   try {
-    if (!fs.existsSync(TEMPLATES_DIR)) fs.mkdirSync(TEMPLATES_DIR, { recursive: true });
-    const filePath = path.join(TEMPLATES_DIR, `${template.id}.json`);
+    ensureDataDirs();
+    const filePath = path.join(DATA_TEMPLATES_DIR, `${template.id}.json`);
     fs.writeFileSync(filePath, JSON.stringify(template, null, 2), 'utf-8');
     templateCache = template;
     res.json({ success: true, id: template.id });
@@ -780,10 +802,9 @@ app.post('/api/summarize', async (req, res) => {
 });
 
 // ── 酒馆分享系统 ──
-const SHARED_DIR = path.join(__dirname, 'templates', 'shared');
-
+// 注：共享数据存在 /data/shared/（Railway Volume），部署不丢失
 function ensureSharedDir() {
-  if (!fs.existsSync(SHARED_DIR)) fs.mkdirSync(SHARED_DIR, { recursive: true });
+  ensureDataDirs();  // 统一走 /data 目录树
 }
 
 // API: 列出所有分享模板
@@ -791,10 +812,10 @@ app.get('/api/shared', (_req, res) => {
   ensureSharedDir();
   const shared = [];
   try {
-    const files = fs.readdirSync(SHARED_DIR).filter(f => f.endsWith('.json'));
+    const files = fs.readdirSync(DATA_SHARED_DIR).filter(f => f.endsWith('.json'));
     for (const file of files) {
       try {
-        const raw = fs.readFileSync(path.join(SHARED_DIR, file), 'utf-8');
+        const raw = fs.readFileSync(path.join(DATA_SHARED_DIR, file), 'utf-8');
         const t = JSON.parse(raw);
         shared.push({
           id: t.id,
@@ -834,7 +855,7 @@ app.post('/api/shared', (req, res) => {
     delete shared.apiKey;
 
     const fileName = `${template.id}.json`;
-    fs.writeFileSync(path.join(SHARED_DIR, fileName), JSON.stringify(shared, null, 2), 'utf-8');
+    fs.writeFileSync(path.join(DATA_SHARED_DIR, fileName), JSON.stringify(shared, null, 2), 'utf-8');
     res.json({ success: true, id: template.id });
   } catch (err) {
     res.status(500).json({ error: '上传分享失败: ' + err.message });
@@ -844,7 +865,7 @@ app.post('/api/shared', (req, res) => {
 // API: 下载单个分享模板
 app.get('/api/shared/:id', (req, res) => {
   ensureSharedDir();
-  const filePath = path.join(SHARED_DIR, `${req.params.id}.json`);
+  const filePath = path.join(DATA_SHARED_DIR, `${req.params.id}.json`);
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: '分享模板未找到' });
   }
@@ -862,7 +883,7 @@ app.get('/api/shared/:id', (req, res) => {
 // API: 删除分享模板
 app.delete('/api/shared/:id', (req, res) => {
   ensureSharedDir();
-  const filePath = path.join(SHARED_DIR, `${req.params.id}.json`);
+  const filePath = path.join(DATA_SHARED_DIR, `${req.params.id}.json`);
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: '分享模板未找到' });
   }
@@ -878,10 +899,10 @@ app.delete('/api/shared/:id', (req, res) => {
 app.get('/api/tavern/backup', (_req, res) => {
   ensureSharedDir();
   try {
-    const files = fs.readdirSync(SHARED_DIR).filter(f => f.endsWith('.json'));
+    const files = fs.readdirSync(DATA_SHARED_DIR).filter(f => f.endsWith('.json'));
     const data = files.map(f => {
       try {
-        return JSON.parse(fs.readFileSync(path.join(SHARED_DIR, f), 'utf-8'));
+        return JSON.parse(fs.readFileSync(path.join(DATA_SHARED_DIR, f), 'utf-8'));
       } catch (e) { return null; }
     }).filter(Boolean);
     res.setHeader('Content-Type', 'application/json');
@@ -903,7 +924,7 @@ app.post('/api/tavern/restore', (req, res) => {
     let imported = 0;
     for (const tpl of shared) {
       if (!tpl || !tpl.id || !tpl.name) continue;
-      const filePath = path.join(SHARED_DIR, `${tpl.id}.json`);
+      const filePath = path.join(DATA_SHARED_DIR, `${tpl.id}.json`);
       if (!overwrite && fs.existsSync(filePath)) continue; // 不覆盖已存在的
       fs.writeFileSync(filePath, JSON.stringify(tpl, null, 2), 'utf-8');
       imported++;
@@ -931,10 +952,12 @@ app.get('/api/debug', (_req, res) => {
 });
 
 if (require.main === module) {
+  ensureDataDirs();
   app.listen(PORT, () => {
     const templates = loadTemplates();
     console.log(`\n🎮 互动叙事游戏服务已启动`);
     console.log(`   地址: http://localhost:${PORT}`);
+    console.log(`   数据目录: ${DATA_BASE} (持久化${fs.existsSync('/data') ? ' ✅ Railway Volume' : ' ⚠ 本地回退'})`);
     console.log(`   提示词: ${gamePrompt ? '✅ 已加载 (' + gamePrompt.length + ' 字符)' : '❌ 未加载'}`);
     console.log(`   模板: ${templates.length} 个已加载`);
     const keyOk = !!process.env.DEEPSEEK_API_KEY;

@@ -369,11 +369,10 @@ state → utils → dialogs → saves → ui → achievements
 
 ## 部署前检查
 
-Railway `git push` 会清空文件系统 → 酒馆共享数据丢失。
+Railway Volume（`/data`）持久化存储已启用 → 酒馆共享数据、用户模板不再丢失，无需手动备份。
 
-1. 打开线上版 → 酒馆 → 🔑 管理员登录 → 📥 备份 `tavern_backup.json`
-2. `git add -A && git commit -m "..." && git push origin master`
-3. 部署完成后 → 📤 恢复上传备份
+1. `git add -A && git commit -m "..." && git push origin master`
+2. 部署完成后验证：酒馆数据仍在、自定义模板未丢失
 
 ## 启动与测试
 
@@ -402,7 +401,7 @@ var s=document.createElement('script');s.src='/js/test-achievements.js';document
 - **prompt.txt**：服务端后备，非必要不改
 - **surongrong.json**：默认模板，修改后必须同步 `tests/ending-system.test.js` 字段名和结局名
 - **PWA 图标**：修改 `icon-192.png`/`icon-512.png` 用 `npx sharp` 重切；修改 `icon.svg` 注意保持矢量格式
-- **部署前备份酒馆**：`git push` 前必须提醒用户备份 `templates/shared/`
+- **部署前备份酒馆**：❌ 已废弃。Railway Volume `/data` 持久化，部署不丢数据。
 - **成就方向判定**：新增 desc 方向词（低于/不超过/从未超过）必须在 `isBelow`/`isNeverExceeded` 正则中覆盖；`checkAchievementsFromState` 和 `getAchievementProgress` 须同步
 - **隐藏成就 field 键**：模板用 `trigger.field`（id）、创建器用 `trigger.fieldLabel`（label），读取时需双键回退 `trigger.fieldLabel || trigger.field`
 - **`_fieldVal` 返回 0 陷阱**：`|| 0` 对缺失字段返回 0，在 `isBelow`/`isNeverExceeded` 方向会误判。必须用 `hasOwnProperty('current')` 守卫
