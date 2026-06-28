@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.railway.up.xixi_fables.twa",
+    "sha256_cert_fingerprints": ["1e08a903aef9c3a721510b64ec764d01d3d094eb954161b62544ea8f187b5953"]
+  }
+}]
