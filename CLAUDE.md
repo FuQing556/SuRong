@@ -80,6 +80,23 @@
 
 > **以后需要全量清缓存**：`init.js` 顶部 `APP_DATA_VERSION` 从 `4` 改成 `5`，推送即生效。
 
+### v9.9（2026-06-28）：数值判定全面加固 + SW更新修复 + PWA安装引导重写
+
+| 类别 | 关键改动 |
+|------|---------|
+| **`_fieldVal` 核心修复** | `|| 0` → `hasOwnProperty` 守卫 + 返回 `undefined`。未初始化字段不再被误判为零值，`undefined` 在任何比较中天然返回 `false` |
+| **选项资源检测** | `resMins` 新增 `formatHint` 回退解析（`[-100~0]` → min=-100）。惩罚型扣减校验不再误锁合法选项（如圣灵教觊觎 -30→-50）|
+| **成就系统** | `field_max_under` 加 `hasOwnProperty` + `v !== undefined` 双重守卫；`isNeverExceeded` 进度条修复（超标显示 0% 而非 100%）；`getAchievementProgress` 补守卫 |
+| **结局系统** | `relLabels` 遍历全部区段（不仅 variables）；轮次检测改为精确匹配；硬兜底叙事从模板 `endings[].narrative` 提取，不再依赖失效正则；结局弹窗 0 值不再被吞 |
+| **SSE 流** | API 错误不再被 `catch` 静默吞掉，区分 JSON 解析错误 vs 真实 API 错误 |
+| **存档** | 截断（>30轮）时保留摘要文本，防止 AI 丢失早期上下文 |
+| **字段提取** | `extractAllFields` 空值回退 `—`；`h.current \|\| h.currentText` 替换为 `!= null` 检查，0 值不再被当成空 |
+| **字段引用校验** | 正则从 `[一-鿿]{1,8}` 扩展为 `[一-鿿\w]{1,12}`，支持中英混合标签 |
+| **SW v11** | `activate` 事件仅在真正版本升级时通知，不再每次 SW 激活都弹"有新版本"。更新检查→清缓存→刷新不再形成死循环 |
+| **PWA 安装引导** | `_tryPwaInstall()` 全面重写：检测 QQ/微信/UC/百度 4 种内置浏览器 → 自动复制链接 + 给出一键操作指引；各平台独立分支 |
+| **Manifest 图标** | 移除 `icon.svg`（铃兰矢量图，手机端支持差且占用第一位），PNG 苏蓉蓉大头照排到第一 |
+| **APK** | 放弃——PWABuilder 不管选什么都给 TWA 格式，TWA 需联网验证且手机无网不可用。已清空所有 APK 相关代码和文件 |
+
 ---
 
 ## 🔍 审查清单（按功能域，非按 Phase）
@@ -186,10 +203,12 @@
 - [ ] **metaPrompt**：`【难度调整】` 章节根据难度给出不同参数（NPC敌意/资源量/代价/命运转折门槛）
 
 ### L. 自动化测试
-- [ ] `node test.js` → 74/76（2 失败 = utils.js+core.js 括号计数误报，已知）
+- [ ] `node test.js` → 73/76（3 失败 = utils.js/ui.js/core.js 括号计数误报，已知）
 - [ ] `node tests/ending-system.test.js` → 56/56 ✓
-- [ ] 浏览器成就诊断：`var s=document.createElement('script');s.src='/js/test-achievements.js';document.head.appendChild(s);`（CSP安全，适配任意模板）
-- [ ] 浏览器结局诊断：`var s=document.createElement('script');s.src='/js/test.js';document.head.appendChild(s);`（线上 CSP 阻 eval，需 script 标签注入）
+- [ ] `node tests/feature-test.cjs` → 功能集成测试
+- [ ] `node tests/real-api-test.cjs` → 真实 API 对话测试
+- [ ] 浏览器成就诊断：`var s=document.createElement('script');s.src='/js/test-achievements.js';document.head.appendChild(s);`
+- [ ] 浏览器结局诊断：`var s=document.createElement('script');s.src='/js/test.js';document.head.appendChild(s);`
 
 ---
 
@@ -197,14 +216,14 @@
 
 | # | 问题 | 严重度 | 状态 |
 |---|------|--------|------|
-| 1 | `test.js` utils.js + core.js 括号平衡检查失败 | 低（误报） | 已知，正则中的 `[]` 被朴素计数法误判 |
-| 2 | server.js 和 utils.js 的 buildSystemPrompt / repairEndingSection 代码重复 | 中（维护风险） | 已加 ⚠ 同步注释，未做物理去重 |
-| 3 | 函数名未同步重命名（detectEnding/buildEndingInjection 等仍用旧名"Ending"） | 低（技术债） | 内部逻辑已升级，仅函数名未改 |
-| 4 | 多槽位存档选择用文本输入而非可点击卡片 | 低（UX） | 功能正确，体验待优化 |
+| 1 | `test.js` utils.js + ui.js + core.js 括号平衡检查失败 | 低（误报） | 正则中的 `[]` 被朴素计数法误判 |
+| 2 | server.js 和 utils.js 的 buildSystemPrompt / repairEndingSection 代码重复 | 中（维护风险） | 已加 ⚠ 同步注释 |
+| 3 | 函数名未同步重命名（detectEnding/buildEndingInjection 仍用旧名"Ending"） | 低（技术债） | 内部逻辑已升级 |
+| 4 | 多槽位存档选择用文本输入而非可点击卡片 | 低（UX） | 功能正确 |
 | 5 | 自动存档 localStorage 满时静默失败 | 低 | 手动存档时弹提示 |
-| 6 | Chrome `beforeinstallprompt` 装过又删后会限流，按钮无法触发安装 | 低（浏览器限制） | 已按平台给出菜单手动安装引导 |
-| 7 | `prompt.txt` 111字通用兜底已无实际用途（多模板架构） | 低 | `/api/prompt` 仅 init.js 和 server.js 保留，未清理 |
-| 8 | 线上版 CSP 无 `unsafe-eval` → `fetch+eval` 加载测试脚本被拦截 | 低 | 改用 `<script>` 标签动态注入加载（`test.js` / `test-achievements.js`）|
+| 6 | QQ/微信内置浏览器无法安装 PWA（已做自动复制链接+指引） | 低（平台限制） | 无解 |
+| 7 | `prompt.txt` 111字通用兜底已无实际用途 | 低 | 未清理 |
+| 8 | Manifest 图标已改为 PNG 苏蓉蓉大头照，SVG 铃兰已移除 | — | ✅ 已修复 |
 
 ---
 
